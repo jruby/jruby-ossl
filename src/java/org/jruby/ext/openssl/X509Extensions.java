@@ -107,7 +107,7 @@ public class X509Extensions {
         }
 
         public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
-            checkArgumentCount(args,0,4);
+            org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,4);
             if(args.length > 0 && !args[0].isNil()) {
                 set_issuer_cert(args[0]);
             }
@@ -163,7 +163,7 @@ public class X509Extensions {
 
         public IRubyObject create_ext(IRubyObject[] args) throws Exception {
             IRubyObject critical = getRuntime().getFalse();
-            if(checkArgumentCount(args,2,3) == 3 && !args[2].isNil()) {
+            if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,2,3) == 3 && !args[2].isNil()) {
                 critical = args[2];
             }
             String oid = args[0].toString();

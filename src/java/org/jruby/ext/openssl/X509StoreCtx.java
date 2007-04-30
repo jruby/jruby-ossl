@@ -99,7 +99,7 @@ public class X509StoreCtx extends RubyObject {
         X509AuxCertificate x509 = null;
         List x509s = new ArrayList();
 
-        if(checkArgumentCount(args,1,3) > 1) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,3) > 1) {
             cert = args[1];
         }
         if(args.length > 2) {

@@ -109,7 +109,7 @@ public class PKeyDSA extends PKey {
         IRubyObject arg;
         IRubyObject pass = null;
         char[] passwd = null;
-        if(checkArgumentCount(args,0,2) == 0) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2) == 0) {
         } else {
             arg = args[0];
             if(args.length > 1) {
@@ -224,7 +224,7 @@ public class PKeyDSA extends PKey {
 
     public IRubyObject export(IRubyObject[] args) throws Exception {
         StringWriter w = new StringWriter();
-        checkArgumentCount(args,0,2);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
         char[] passwd = null;
         String algo = null;
         if(args.length > 0 && !args[0].isNil()) {

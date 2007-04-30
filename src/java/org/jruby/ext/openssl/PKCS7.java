@@ -140,7 +140,7 @@ public class PKCS7 extends RubyObject {
         IRubyObject data = recv.getRuntime().getNil();
         IRubyObject certs = recv.getRuntime().getNil();
         //IRubyObject flags = recv.getRuntime().getNil();
-        recv.checkArgumentCount(args,3,5);
+        org.jruby.runtime.Arity.checkArgumentCount(recv.getRuntime(),args,3,5);
         switch(args.length) {
         case 5:
             //flags = args[4];
@@ -192,7 +192,7 @@ public class PKCS7 extends RubyObject {
     private CMSSignedData signedData;
 
     public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
-        if(checkArgumentCount(args,0,1) == 0) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             return this;
         }
         IRubyObject arg = OpenSSLImpl.to_der_if_possible(args[0]);
@@ -306,7 +306,7 @@ public class PKCS7 extends RubyObject {
         //IRubyObject store;
         IRubyObject indata = getRuntime().getNil();
         //IRubyObject flags = getRuntime().getNil();
-        switch(checkArgumentCount(args,2,4)) {
+        switch(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,2,4)) {
         case 4:
             //flags = args[3];
         case 3:

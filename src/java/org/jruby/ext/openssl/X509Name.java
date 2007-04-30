@@ -129,7 +129,7 @@ public class X509Name extends RubyObject {
     }
 
     public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
-        if(checkArgumentCount(args,0,2) == 0) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2) == 0) {
             return this;
         }
         IRubyObject arg = args[0];
@@ -226,7 +226,7 @@ public class X509Name extends RubyObject {
     }
 
     public IRubyObject add_entry(IRubyObject[] args) {
-        checkArgumentCount(args,2,3);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,2,3);
         String oid = args[0].toString();
         String value = args[1].toString();
         IRubyObject type = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getClass("Name").getConstant("OBJECT_TYPE_TEMPLATE").callMethod(getRuntime().getCurrentContext(),"[]",args[0]);

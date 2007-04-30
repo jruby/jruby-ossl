@@ -136,7 +136,7 @@ public class X509CRL extends RubyObject {
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
         //        System.err.println("WARNING: unimplemented method called: CRL#initialize");
         extensions = new ArrayList();
-        if(checkArgumentCount(args,0,1) == 0) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             version = getRuntime().getNil();
             issuer = getRuntime().getNil();
             last_update = getRuntime().getNil();

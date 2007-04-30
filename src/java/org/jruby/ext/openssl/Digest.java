@@ -130,7 +130,7 @@ public class Digest extends RubyObject {
     public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
         IRubyObject type;
         IRubyObject data = getRuntime().getNil();
-        if(checkArgumentCount(args,1,2) == 2) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2) {
             data = args[1];
         }
         type = args[0];

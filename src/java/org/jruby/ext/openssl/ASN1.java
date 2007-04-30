@@ -595,7 +595,7 @@ public class ASN1 {
         }
 
         public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
-            checkArgumentCount(args,3,3);
+            org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args,3,3);
             IRubyObject value = args[0];
             IRubyObject tag = args[1];
             IRubyObject tag_class = args[2];
@@ -687,7 +687,7 @@ public class ASN1 {
         }
 
         public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
-            checkArgumentCount(args,1,4);
+            org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args,1,4);
             IRubyObject value = args[0];
             IRubyObject tag = getRuntime().getNil();
             IRubyObject tagging = getRuntime().getNil();
@@ -809,7 +809,7 @@ public class ASN1 {
         }
 
         public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
-            checkArgumentCount(args,1,4);
+            org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,4);
             IRubyObject value = args[0];
             IRubyObject tag = getRuntime().getNil();
             IRubyObject tagging = getRuntime().getNil();
@@ -876,7 +876,7 @@ public class ASN1 {
         public IRubyObject each(Block block) {
             RubyArray arr = (RubyArray)callMethod(getRuntime().getCurrentContext(),"value");
             for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
-                getRuntime().getCurrentContext().yield((IRubyObject)iter.next(), block);
+                block.yield(getRuntime().getCurrentContext(),(IRubyObject)iter.next());
             }
             return getRuntime().getNil();
         }

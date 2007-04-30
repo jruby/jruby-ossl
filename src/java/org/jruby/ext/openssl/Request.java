@@ -105,7 +105,7 @@ public class Request extends RubyObject {
     }
 
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
-        if(checkArgumentCount(args,0,1) == 0) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             return this;
         }
         req = new PKCS10CertificationRequestExt(args[0].convertToString().getBytes());

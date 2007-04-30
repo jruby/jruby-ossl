@@ -148,7 +148,7 @@ public class X509Cert extends RubyObject {
 
     public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
         extensions = new ArrayList();
-        if(checkArgumentCount(args,0,1) == 0) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             return this;
         }
         ThreadContext tc = getRuntime().getCurrentContext();

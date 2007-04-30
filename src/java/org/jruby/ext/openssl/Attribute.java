@@ -97,7 +97,7 @@ public class Attribute extends RubyObject {
     }
 
     public IRubyObject _initialize(IRubyObject[] str, Block unusedBlock) throws Exception {
-        if(checkArgumentCount(str,1,2) == 1) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),str,1,2) == 1) {
             IRubyObject _oid = OpenSSLImpl.to_der_if_possible(str[0]);
             set_oid(_oid);
             return this;

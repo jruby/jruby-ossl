@@ -122,7 +122,7 @@ public class PKeyRSA extends PKey {
         IRubyObject arg;
         IRubyObject pass = null;
         char[] passwd = null;
-        if(checkArgumentCount(args,0,2) == 0) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2) == 0) {
         } else {
             arg = args[0];
             if(args.length > 1) {
@@ -290,7 +290,7 @@ public class PKeyRSA extends PKey {
 
     public IRubyObject export(IRubyObject[] args) throws Exception {
         StringWriter w = new StringWriter();
-        checkArgumentCount(args,0,2);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
         char[] passwd = null;
         String algo = null;
         if(args.length > 0 && !args[0].isNil()) {
@@ -326,7 +326,7 @@ public class PKeyRSA extends PKey {
 
     public IRubyObject private_encrypt(IRubyObject[] args) throws Exception {
         int padding = 1;
-        if(checkArgumentCount(args,1,2) == 2 && !args[1].isNil()) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
             padding = RubyNumeric.fix2int(args[1]);
         }
         String p = getPadding(padding);
@@ -344,7 +344,7 @@ public class PKeyRSA extends PKey {
 
     public IRubyObject private_decrypt(IRubyObject[] args) throws Exception {
         int padding = 1;
-        if(checkArgumentCount(args,1,2) == 2 && !args[1].isNil()) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
             padding = RubyNumeric.fix2int(args[1]);
         }
         String p = getPadding(padding);
@@ -362,7 +362,7 @@ public class PKeyRSA extends PKey {
 
     public IRubyObject public_encrypt(IRubyObject[] args) throws Exception {
         int padding = 1;
-        if(checkArgumentCount(args,1,2) == 2 && !args[1].isNil()) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
             padding = RubyNumeric.fix2int(args[1]);
         }
         String p = getPadding(padding);
@@ -376,7 +376,7 @@ public class PKeyRSA extends PKey {
 
     public IRubyObject public_decrypt(IRubyObject[] args) throws Exception {
         int padding = 1;
-        if(checkArgumentCount(args,1,2) == 2 && !args[1].isNil()) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
             padding = RubyNumeric.fix2int(args[1]);
         }
         String p = getPadding(padding);

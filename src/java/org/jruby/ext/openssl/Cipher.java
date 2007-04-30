@@ -333,7 +333,7 @@ public class Cipher extends RubyObject {
 
     public IRubyObject encrypt(IRubyObject[] args) {
         //TODO: implement backwards compat
-        checkArgumentCount(args,0,2);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
         encryptMode = true;
         //modeParams = args;
         ciphInited = false;
@@ -342,7 +342,7 @@ public class Cipher extends RubyObject {
 
     public IRubyObject decrypt(IRubyObject[] args) {
         //TODO: implement backwards compat
-        checkArgumentCount(args,0,2);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
         encryptMode = false;
         //modeParams = args;
         ciphInited = false;
@@ -363,7 +363,7 @@ public class Cipher extends RubyObject {
     }
 
     public IRubyObject pkcs5_keyivgen(IRubyObject[] args) {
-        checkArgumentCount(args,1,4);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,4);
         byte[] pass = args[0].convertToString().getBytes();
         byte[] salt = null;
         int iter = 2048;

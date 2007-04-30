@@ -114,7 +114,7 @@ public class SSLSocket extends RubyObject {
     public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
         IRubyObject io, ctx;
         ThreadContext tc = getRuntime().getCurrentContext();
-        if(checkArgumentCount(args,1,2) == 1) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 1) {
             ctx = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("SSL"))).getClass("SSLContext").callMethod(tc,"new");
         } else {
             ctx = args[1];
@@ -373,7 +373,7 @@ public class SSLSocket extends RubyObject {
 
     public IRubyObject sysread(IRubyObject[] args) throws Exception {
         //        System.err.println("WARNING: unimplemented method called: SSLSocket#sysread");
-        checkArgumentCount(args,1,2);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2);
         int len = RubyNumeric.fix2int(args[0]);
         IRubyObject str = args.length == 2 ? args[1] : getRuntime().newString("");
         if(len == 0) {

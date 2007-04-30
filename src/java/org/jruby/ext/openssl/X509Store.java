@@ -171,7 +171,7 @@ public class X509Store extends RubyObject {
 
     public IRubyObject verify(IRubyObject[] args, Block block) throws Exception {
         IRubyObject cert, chain;
-        if(checkArgumentCount(args,1,2) == 2) {
+        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2) {
             chain = args[1];
         } else {
             chain = getRuntime().getNil();
