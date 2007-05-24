@@ -14,7 +14,7 @@
   $Id: openssl.rb,v 1.1 2003/07/23 16:11:29 gotoyuzo Exp $
 =end
 
-require 'openssl.so'
+require 'jopenssl'
 
 require 'openssl/bn'
 require 'openssl/cipher'
