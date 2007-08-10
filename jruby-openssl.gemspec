@@ -2,7 +2,7 @@ require 'rubygems'
 
 spec = Gem::Specification.new do |s|
   s.name = "jruby-openssl"
-  s.version = "0.0.2"
+  s.version = "0.0.3"
   s.author = "Ola Bini"
   s.email = "ola.bini@ki.se"
   s.homepage = "http://jruby-extras.rubyforge.org/"
