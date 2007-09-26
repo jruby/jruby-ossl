@@ -322,7 +322,9 @@ public class SSLSocket extends RubyObject {
         int bytesRead = c.read(peerNetData);
         if(bytesRead == -1) {
             //            engine.closeInbound();			
-            return -1;
+            if ((peerNetData.position() == 0) || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
+                return -1;
+            }
         }
         peerAppData.clear();
         peerNetData.flip();
@@ -369,6 +371,10 @@ public class SSLSocket extends RubyObject {
         }
         netData.flip();
         flushData();
+
+        rsel.close();
+        wsel.close();
+        asel.close();
     }
 
     public IRubyObject sysread(IRubyObject[] args) throws Exception {
