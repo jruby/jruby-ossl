@@ -99,13 +99,23 @@ public class Cipher extends RubyObject {
         BLOCK_MODES.add("OFB");
     }
 
-    private static String[] rubyToJavaCipher(String inName) {
+    private static String[] rubyToJavaCipher(String inName, String padding) {
         String[] split = inName.split("-");
         String cryptoBase = split[0];
         String cryptoVersion = null;
         String cryptoMode = null;
         String realName = null;
-        String padding_type = "PKCS5Padding";
+
+        String padding_type;
+        if (padding == null || padding.equalsIgnoreCase("PKCS5Padding")) {
+            padding_type = "PKCS5Padding";
+        } else if (padding.equals("0") || padding.equalsIgnoreCase("NoPadding")) {
+            padding_type = "NoPadding";
+        } else if (padding.equalsIgnoreCase("ISO10126Padding")) {
+            padding_type = "ISO10126Padding";
+        } else {
+            padding_type = "PKCS5Padding";
+        }
 
         if("bf".equalsIgnoreCase(cryptoBase)) {
             cryptoBase = "Blowfish";
@@ -140,7 +150,7 @@ public class Cipher extends RubyObject {
 
     private static boolean tryCipher(String rubyName) {
         try {
-            javax.crypto.Cipher.getInstance(rubyToJavaCipher(rubyName)[3],"BC");
+            javax.crypto.Cipher.getInstance(rubyToJavaCipher(rubyName, null)[3],"BC");
             return true;
         } catch(Exception e) {
             return false;
@@ -194,7 +204,7 @@ public class Cipher extends RubyObject {
 
     public IRubyObject initialize(IRubyObject str, Block unusedBlock) {
         name = str.toString();
-        String[] values = rubyToJavaCipher(name);
+        String[] values = rubyToJavaCipher(name, padding);
         cryptoBase = values[0];
         cryptoVersion = values[1];
         cryptoMode = values[2];
@@ -410,6 +420,8 @@ public class Cipher extends RubyObject {
     private void doInitialize() {
         ciphInited = true;
         try {
+            assert key.length * 8 == keyLen : "Key wrong length";
+            assert iv.length * 8 == ivLen : "IV wrong length";
             if(!"ECB".equalsIgnoreCase(cryptoMode) && this.iv != null) {
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.iv));
             } else {
@@ -473,6 +485,7 @@ public class Cipher extends RubyObject {
 
     public IRubyObject set_padding(IRubyObject padding) {
         this.padding = padding.toString();
+        initialize(RubyString.newString(getRuntime(), name), Block.NULL_BLOCK);
         return padding;
     }
 
