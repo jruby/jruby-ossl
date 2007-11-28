@@ -163,6 +163,15 @@ public class X509Cert extends RubyObject {
         set_subject(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Name").callMethod(tc,"new",RubyString.newString(getRuntime(), cert.getSubjectX500Principal().getEncoded())));
         set_issuer(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Name").callMethod(tc,"new",RubyString.newString(getRuntime(), cert.getIssuerX500Principal().getEncoded())));
 
+        String algorithm = cert.getPublicKey().getAlgorithm();
+        if ("RSA".equalsIgnoreCase(algorithm)) {
+            set_public_key(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSA").callMethod(tc,"new",RubyString.newString(getRuntime(), cert.getPublicKey().getEncoded())));
+        } else if ("DSA".equalsIgnoreCase(algorithm)) {
+            set_public_key(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("DSA").callMethod(tc,"new",RubyString.newString(getRuntime(), cert.getPublicKey().getEncoded())));
+        } else {
+            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("CertificateError")), "The algorithm " + algorithm + " is unsupported for public keys", true);
+        }
+
         IRubyObject extFact = ((RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("ExtensionFactory"))).callMethod(tc,"new");
         extFact.callMethod(tc,"subject_certificate=",this);
 
