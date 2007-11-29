@@ -1,23 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project basedir="." default="build" name="jopenssl">
-  <property environment="env"/>   
-  <property file="build.properties"/>   
-  
+  <property environment="env"/>
+  <property file="build.properties"/>
+
   <property name="src.java" value="src/java"/>
-  <property name="target" value="target"/>   
-  <property name="target.classes" value="${target}/classes"/>   
-  <property name="target.classes.test" value="${target}/test-classes"/>   
-  <property name="lib.dir" value="lib"/>   
+  <property name="target" value="target"/>
+  <property name="target.classes" value="${target}/classes"/>
+  <property name="target.classes.test" value="${target}/test-classes"/>
+  <property name="lib.dir" value="lib"/>
+  <property name="jruby.jar" value="${lib.dir}/jruby.jar"/>
 
   <path id="build.classpath">
-    <fileset dir="${lib.dir}" includes="*.jar" excludes="jopenssl.jar"/>
+    <fileset dir="${lib.dir}" includes="*.jar" excludes="jopenssl.jar,jruby.jar"/>
+    <pathelement location="${jruby.jar}"/>
   </path>
-  
+
   <target name="init">
     <mkdir dir="${target}"/>
     <mkdir dir="${target.classes}"/>
   </target>
-  
+
   <target name="clean">
     <delete dir="target"/>
   </target>
@@ -28,7 +30,7 @@
       <src path="${src.java}"/>
     </javac>
   </target>
- 
+
   <target depends="build" name="jar" description="Build a JAR file with the generated Java class files">
     <path id="bcpath">
       <fileset dir="${lib.dir}" includes="bc*.jar"/>
@@ -40,7 +42,7 @@
       <manifest>
         <attribute name="Built-By" value="${user.name}"/>
         <attribute name="Class-Path" value="${bcjars}"/>
-      </manifest>      
+      </manifest>
     </jar>
-  </target>   
+  </target>
 </project>
