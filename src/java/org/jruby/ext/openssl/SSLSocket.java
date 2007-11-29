@@ -45,10 +45,11 @@ import org.jruby.RubyIO;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallType;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
@@ -63,6 +64,8 @@ public class SSLSocket extends RubyObject {
             return new SSLSocket(runtime, klass);
         }
     };
+
+    private static RubyObjectAdapter api = JavaEmbedUtils.newObjectAdapter();
     
     public static void createSSLSocket(Ruby runtime, RubyModule mSSL) {
         RubyClass cSSLSocket = mSSL.defineClassUnder("SSLSocket",runtime.getObject(),SSLSOCKET_ALLOCATOR);
@@ -113,18 +116,18 @@ public class SSLSocket extends RubyObject {
     
     public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
         IRubyObject io, ctx;
-        ThreadContext tc = getRuntime().getCurrentContext();
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 1) {
-            ctx = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("SSL"))).getClass("SSLContext").callMethod(tc,"new");
+        if (org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 1) {
+            RubyClass sslContext = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("SSL"))).getClass("SSLContext");
+            ctx = api.callMethod(sslContext,"new");
         } else {
             ctx = args[1];
         }
         io = args[0];
-        callMethod(tc,"io=",io);
+        api.callMethod(this,"io=",io);
         c = (SocketChannel)(((RubyIO)io).getChannel());
-        callMethod(tc,"context=",ctx);
-        callMethod(tc,"sync_close=",getRuntime().getFalse());
-        return callMethod(tc,getMetaClass().getSuperClass(),"initialize",args,CallType.SUPER, Block.NULL_BLOCK);
+        api.callMethod(this,"context=",ctx);
+        api.callMethod(this,"sync_close=",getRuntime().getFalse());
+        return api.callSuper(this, args);
     }
 
     private void ossl_ssl_setup() throws Exception {
@@ -455,9 +458,9 @@ public class SSLSocket extends RubyObject {
     }
 
     public IRubyObject peer_cert() throws Exception {
-        java.security.cert.Certificate[] c = engine.getSession().getPeerCertificates();
-        if(c.length > 0) {
-            return X509Cert.wrap(getRuntime(),c[0]);
+        java.security.cert.Certificate[] cert = engine.getSession().getPeerCertificates();
+        if (cert.length > 0) {
+            return X509Cert.wrap(getRuntime(),cert[0]);
         }
         return getRuntime().getNil();
     }

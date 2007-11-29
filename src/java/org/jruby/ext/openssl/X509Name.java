@@ -306,7 +306,7 @@ else
         return getRuntime().newString(sb.toString());
     }
 
-    public IRubyObject to_a() {
+    public RubyArray to_a() {
         List entries = new ArrayList();
         Map lookup = ASN1.getSymLookup(getRuntime());
         Iterator oiter = oids.iterator();

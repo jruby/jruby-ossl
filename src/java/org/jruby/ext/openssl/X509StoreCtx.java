@@ -36,12 +36,14 @@ import org.jruby.RubyArray;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
+import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
 import org.jruby.RubyTime;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.X509_STORE;
 import org.jruby.ext.openssl.x509store.X509_STORE_CTX;
+import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -56,6 +58,8 @@ public class X509StoreCtx extends RubyObject {
             return new X509StoreCtx(runtime, klass);
         }
     };
+
+    private static RubyObjectAdapter api = JavaEmbedUtils.newObjectAdapter();
     
     public static void createX509StoreCtx(Ruby runtime, RubyModule mX509) {
         RubyClass cX509StoreContext = mX509.defineClassUnder("StoreContext",runtime.getObject(),X509STORECTX_ALLOCATOR);
@@ -119,12 +123,12 @@ public class X509StoreCtx extends RubyObject {
         if(ctx.init(x509st,x509,x509s) != 1) {
             raise(null);
         }
-        IRubyObject t = store.getInstanceVariable("@time");
+        IRubyObject t = api.getInstanceVariable(store,"@time");
         if(!t.isNil()) {
             set_time(t);
         }
-        setInstanceVariable("@verify_callback",store.getInstanceVariable("@verify_callback"));
-        setInstanceVariable("@cert",cert);
+        api.setInstanceVariable(this, "@verify_callback", api.getInstanceVariable(store, "@verify_callback"));
+        api.setInstanceVariable(this, "@cert", cert);
         return this;
     }
 
