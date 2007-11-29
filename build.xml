@@ -30,10 +30,16 @@
   </target>
  
   <target depends="build" name="jar" description="Build a JAR file with the generated Java class files">
+    <path id="bcpath">
+      <fileset dir="${lib.dir}" includes="bc*.jar"/>
+    </path>
+    <pathconvert property="bcjars" pathsep=" " refid="bcpath">
+      <map from="${basedir}/${lib.dir}/" to=""/>
+    </pathconvert>
     <jar destfile="${lib.dir}/jopenssl.jar" basedir="${target.classes}">
       <manifest>
         <attribute name="Built-By" value="${user.name}"/>
-        <attribute name="Class-Path" value="bcprov-jdk14-135.jar bcmail-jdk14-135.jar"/>
+        <attribute name="Class-Path" value="${bcjars}"/>
       </manifest>      
     </jar>
   </target>   
