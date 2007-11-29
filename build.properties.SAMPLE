@@ -1,6 +1,5 @@
-# set these to 1.5 to compile for 1.5
-version.target=1.4
-version.source=1.4
+version.target=1.5
+version.source=1.5
 # set this to an alternate location to compile against a different jruby.jar
 jruby.jar=lib/jruby.jar
 

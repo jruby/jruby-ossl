@@ -161,11 +161,11 @@ public class SSLContext extends RubyObject {
         }
     }
 
-    public KM getKM() {
+    KM getKM() {
         return new KM(this);
     }
 
-    public TM getTM() {
+    TM getTM() {
         return new TM(this);
     }
 
@@ -176,7 +176,8 @@ public class SSLContext extends RubyObject {
             this.ctt = ctt;
         }
 
-        public String 	chooseEngineClientAlias(String[] keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
+        @Override
+        public String chooseEngineClientAlias(String[] keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
             PKey k = null;
             if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {
                 k = (PKey)ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key");
@@ -193,7 +194,9 @@ public class SSLContext extends RubyObject {
             }
             return null;
         }
-        public String 	chooseEngineServerAlias(String keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
+
+        @Override
+        public String chooseEngineServerAlias(String keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
             PKey k = null;
             if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {
                 k = (PKey)ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key");
