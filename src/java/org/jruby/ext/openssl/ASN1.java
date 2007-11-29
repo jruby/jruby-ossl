@@ -507,9 +507,11 @@ public class ASN1 {
                 bString.callMethod(tc,"unused_bits=",asnM.getRuntime().newFixnum(((DERBitString)v).getPadBits()));
                 return bString;
             } else if(v instanceof DERString) {
-                String val = ((DERString)v).getString();
-                if(v instanceof DERUTF8String) {
-                    val = new String(ByteList.plain(val.getBytes("UTF-8")));
+                ByteList val; 
+                if (v instanceof DERUTF8String) {
+                    val = new ByteList(((DERUTF8String) v).getString().getBytes("UTF-8"));
+                } else {
+                    val = ByteList.create(((DERString)v).getString());
                 }
                 return c.callMethod(tc,"new",asnM.getRuntime().newString(val));
             } else if(v instanceof ASN1Sequence) {

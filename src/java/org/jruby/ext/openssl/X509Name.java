@@ -95,15 +95,15 @@ public class X509Name extends RubyObject {
 
         cX509Name.setConstant("DEFAULT_OBJECT_TYPE",runtime.newFixnum(DERTags.UTF8_STRING));
 
-        Map val = new HashMap();
-        val.put(runtime.newString("C"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        val.put(runtime.newString("countryName"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        val.put(runtime.newString("serialNumber"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        val.put(runtime.newString("dnQualifier"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        val.put(runtime.newString("DC"),runtime.newFixnum(DERTags.IA5_STRING));
-        val.put(runtime.newString("domainComponent"),runtime.newFixnum(DERTags.IA5_STRING));
-        val.put(runtime.newString("emailAddress"),runtime.newFixnum(DERTags.IA5_STRING));
-        cX509Name.setConstant("OBJECT_TYPE_TEMPLATE",new RubyHash(runtime,val,runtime.newFixnum(DERTags.UTF8_STRING)));
+        RubyHash hash = new RubyHash(runtime, runtime.newFixnum(DERTags.UTF8_STRING));
+        hash.op_aset(runtime.newString("C"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
+        hash.op_aset(runtime.newString("countryName"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
+        hash.op_aset(runtime.newString("serialNumber"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
+        hash.op_aset(runtime.newString("dnQualifier"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
+        hash.op_aset(runtime.newString("DC"),runtime.newFixnum(DERTags.IA5_STRING));
+        hash.op_aset(runtime.newString("domainComponent"),runtime.newFixnum(DERTags.IA5_STRING));
+        hash.op_aset(runtime.newString("emailAddress"),runtime.newFixnum(DERTags.IA5_STRING));
+        cX509Name.setConstant("OBJECT_TYPE_TEMPLATE", hash);
     }
 
     public static final int COMPAT = 0;

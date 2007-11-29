@@ -1,15 +1,18 @@
 
-require 'java'
-
-isFive = false
-begin
-  java.lang.StringBuilder
-  isFive = true
-rescue 
-  nil
+if RUBY_PLATFORM =~ /java/
+  require 'java'
+  runTests = false
+  begin
+    java.lang.StringBuilder
+    runTests = true
+  rescue 
+    nil
+  end
+else
+  runTests = true
 end
 
-if isFive
+if runTests
 # won't work, since kill and pid is used.
 #  require 'test/openssl/test_ssl'
   require 'test/openssl/test_asn1'
