@@ -27,9 +27,13 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
+import org.bouncycastle.crypto.digests.MD5Digest;
+import org.bouncycastle.crypto.digests.SHA1Digest;
+import org.bouncycastle.crypto.digests.SHA224Digest;
+import org.bouncycastle.crypto.digests.SHA256Digest;
+import org.bouncycastle.crypto.digests.SHA384Digest;
+import org.bouncycastle.crypto.digests.SHA512Digest;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
@@ -88,25 +92,49 @@ public class Digest extends RubyObject {
         }
         return inp;
     }
+    
+    public static org.bouncycastle.crypto.Digest getDigest(Ruby runtime, String name) {
+        if (name.equals("MD5")) {
+            return new MD5Digest();
+        } else if (name.equals("SHA")) {
+            return new SHA1Digest();
+        } else if (name.equals("SHA1")) {
+            return new SHA1Digest();
+        } else if (name.equals("SHA224")) {
+            return new SHA224Digest();
+        } else if (name.equals("SHA256")) {
+            return new SHA256Digest();
+        } else if (name.equals("SHA384")) {
+            return new SHA384Digest();
+        } else if (name.equals("SHA512")) {
+            return new SHA512Digest();
+        } else {
+            throw runtime.newNotImplementedError("Unsupported digest algorithm (" + name + ")");
+        }
+    }
 
     public static IRubyObject s_digest(IRubyObject recv, IRubyObject str, IRubyObject data) {
         String name = str.toString();
-        try {
-            MessageDigest md = MessageDigest.getInstance(transformDigest(name));
-            return RubyString.newString(recv.getRuntime(), md.digest(data.convertToString().getBytes()));
-        } catch(NoSuchAlgorithmException e) {
-            throw recv.getRuntime().newNotImplementedError("Unsupported digest algorithm (" + name + ")");
-        }
+
+        org.bouncycastle.crypto.Digest md = getDigest(recv.getRuntime(), name);
+        byte[] bytes = data.convertToString().getBytes();
+        
+        md.update(bytes, 0, bytes.length);
+        byte[] digest = new byte[md.getDigestSize()];
+        md.doFinal(digest, 0);
+        return RubyString.newString(recv.getRuntime(), new ByteList(digest));
     }
 
     public static IRubyObject s_hexdigest(IRubyObject recv, IRubyObject str, IRubyObject data) {
         String name = str.toString();
-        try {
-            MessageDigest md = MessageDigest.getInstance(transformDigest(name));
-            return RubyString.newString(recv.getRuntime(), ByteList.plain(Utils.toHex(md.digest(data.convertToString().getBytes()))));
-        } catch(NoSuchAlgorithmException e) {
-            throw recv.getRuntime().newNotImplementedError("Unsupported digest algorithm (" + name + ")");
-        }
+
+        org.bouncycastle.crypto.Digest md = getDigest(recv.getRuntime(), transformDigest(name));
+        byte[] bytes = data.convertToString().getBytes();
+        
+        md.update(bytes, 0, bytes.length);
+        byte[] digest = new byte[md.getDigestSize()];
+        md.doFinal(digest, 0);
+        return RubyString.newString(recv.getRuntime(), ByteList.plain(Utils.toHex(digest)));
     }
 
     public Digest(Ruby runtime, RubyClass type) {
@@ -114,16 +142,12 @@ public class Digest extends RubyObject {
         data = new StringBuffer();
 
         if(!(type.toString().equals("OpenSSL::Digest::Digest"))) {
-            try {
-                name = type.toString();
-                md = MessageDigest.getInstance(transformDigest(type.toString()));
-            } catch(NoSuchAlgorithmException e) {
-                throw runtime.newNotImplementedError("Unsupported digest algorithm (" + type.toString() + ")");
-            }
+            name = type.toString();
+            md = getDigest(runtime, transformDigest(type.toString()));
         }
     }
 
-    private MessageDigest md;
+    private org.bouncycastle.crypto.Digest md;
     private StringBuffer data;
     private String name;
 
@@ -136,11 +160,8 @@ public class Digest extends RubyObject {
         type = args[0];
 
         name = type.toString();
-        try {
-            md = MessageDigest.getInstance(transformDigest(name));
-        } catch(NoSuchAlgorithmException e) {
-            throw getRuntime().newNotImplementedError("Unsupported digest algorithm (" + name + ")");
-        }
+        md = getDigest(getRuntime(), transformDigest(name));
+            
         if(!data.isNil()) {
             update(data);
         }
@@ -153,19 +174,16 @@ public class Digest extends RubyObject {
         }
         checkFrozen();
         data = new StringBuffer(((Digest)obj).data.toString());
-        name = ((Digest)obj).md.getAlgorithm();
-        try {
-            md = MessageDigest.getInstance(transformDigest(name));
-        } catch(NoSuchAlgorithmException e) {
-            throw getRuntime().newNotImplementedError("Unsupported digest algorithm (" + name + ")");
-        }
+        name = ((Digest)obj).md.getAlgorithmName();
+        md = getDigest(getRuntime(), transformDigest(name));
 
         return this;
     }
 
     public IRubyObject update(IRubyObject obj) {
         data.append(obj);
-        md.update(obj.convertToString().getBytes());
+        byte[] bytes = obj.convertToString().getBytes();
+        md.update(bytes, 0, bytes.length);
         return this;
     }
 
@@ -177,7 +195,11 @@ public class Digest extends RubyObject {
 
     public IRubyObject digest() {
         md.reset();
-        return RubyString.newString(getRuntime(), md.digest(ByteList.plain(data)));
+        byte[] bytes = ByteList.plain(data);
+        md.update(bytes, 0, bytes.length);
+        byte[] digest = new byte[md.getDigestSize()];
+        md.doFinal(digest, 0);
+        return RubyString.newString(getRuntime(), digest);
     }
 
     public IRubyObject name() {
@@ -185,19 +207,23 @@ public class Digest extends RubyObject {
     }
 
     public IRubyObject size() {
-        return getRuntime().newFixnum(md.getDigestLength());
+        return getRuntime().newFixnum(md.getDigestSize());
     }
 
     public IRubyObject hexdigest() {
         md.reset();
-        return RubyString.newString(getRuntime(), ByteList.plain(Utils.toHex(md.digest(ByteList.plain(data)))));
+        byte[] bytes = ByteList.plain(data);
+        md.update(bytes, 0, bytes.length);
+        byte[] digest = new byte[md.getDigestSize()];
+        md.doFinal(digest, 0);
+        return RubyString.newString(getRuntime(), ByteList.plain(Utils.toHex(digest)));
     }
 
     public IRubyObject eq(IRubyObject oth) {
         boolean ret = this == oth;
         if(!ret && oth instanceof Digest) {
             Digest b = (Digest)oth;
-            ret = this.md.getAlgorithm().equals(b.md.getAlgorithm()) &&
+            ret = this.md.getAlgorithmName().equals(b.md.getAlgorithmName()) &&
                 this.digest().equals(b.digest());
         }
 
@@ -205,7 +231,7 @@ public class Digest extends RubyObject {
     }
 
     String getAlgorithm() {
-        return this.md.getAlgorithm();
+        return this.md.getAlgorithmName().replace("-", "");
     }
 }
 

@@ -27,16 +27,31 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.crypto.spec.IvParameterSpec;
-
+import org.bouncycastle.crypto.BlockCipher;
+import org.bouncycastle.crypto.BufferedBlockCipher;
+import org.bouncycastle.crypto.engines.AESEngine;
+import org.bouncycastle.crypto.engines.BlowfishEngine;
+import org.bouncycastle.crypto.engines.CAST5Engine;
+import org.bouncycastle.crypto.engines.CAST6Engine;
+import org.bouncycastle.crypto.engines.DESEngine;
+import org.bouncycastle.crypto.engines.DESedeEngine;
+import org.bouncycastle.crypto.engines.RC2Engine;
+import org.bouncycastle.crypto.modes.CBCBlockCipher;
+import org.bouncycastle.crypto.modes.CFBBlockCipher;
+import org.bouncycastle.crypto.modes.OFBBlockCipher;
+import org.bouncycastle.crypto.paddings.BlockCipherPadding;
+import org.bouncycastle.crypto.paddings.ISO10126d2Padding;
+import org.bouncycastle.crypto.paddings.ISO7816d4Padding;
+import org.bouncycastle.crypto.paddings.PKCS7Padding;
+import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import org.bouncycastle.crypto.params.DESParameters;
+import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
@@ -179,6 +194,104 @@ public class Cipher extends RubyObject {
         }
         return recv.getRuntime().newArray(ciphers);
     }
+    
+    public static BlockCipherPadding getBlockCipherPadding(String pad) {
+        // get appropriate padding
+        if (pad.equals("PKCS5Padding")) {
+            return new PKCS7Padding();
+        } else if (pad.equals("PKCS7Padding")) {
+            return new PKCS7Padding();
+        } else if (pad.equals("ISO10126Padding")) {
+            return new ISO10126d2Padding();
+        } else if (pad.equals("ISO7816Padding")) {
+            return new ISO7816d4Padding();
+        } else if (pad.equals("NoPadding")) {
+            return null;
+        } else {
+            // FIXME should be a ruby exception
+            throw new RuntimeException("Unknown padding: " + pad);
+        }
+    }
+    
+    public static BlockCipher getBlockCipher(String cipherBase, String cipherVersion, String cipherMode) {
+        BlockCipher cipher;
+        
+        // get base cipher
+        if (cipherBase.equals("AES")) {
+            cipher = new AESEngine();
+        } else if (cipherBase.equals("aes")) {
+            cipher = new AESEngine();
+        } else if (cipherBase.equals("DES") || cipherBase.equals("des")) {
+            if (cipherVersion != null && cipherVersion.equals("EDE3")) {
+                cipher = new DESedeEngine();
+            } else {
+                cipher = new DESEngine();
+            }
+        } else if (cipherBase.equals("Blowfish")) {
+            cipher = new BlowfishEngine();
+        } else if (cipherBase.equals("BLOWFISH")) {
+            cipher = new BlowfishEngine();
+        } else if (cipherBase.equals("blowfish")) {
+            cipher = new BlowfishEngine();
+        } else if (cipherBase.equals("RC2")) {
+            cipher = new RC2Engine();
+        } else if (cipherBase.equals("rc2")) {
+            cipher = new RC2Engine();
+        } else if (cipherBase.equals("CAST5")) {
+            cipher = new CAST5Engine();
+        } else if (cipherBase.equals("cast5")) {
+            cipher = new CAST5Engine();
+        } else if (cipherBase.equals("CAST6")) {
+            cipher = new CAST6Engine();
+        } else if (cipherBase.equals("cast6")) {
+            cipher = new CAST6Engine();
+        } else {
+            // FIXME should be a ruby exception
+            return null;
+        }
+        
+        // Wrap with mode-specific cipher
+        if (cipherMode.equalsIgnoreCase("CBC")) {
+            cipher = new CBCBlockCipher(cipher);
+        } else if (cipherMode.equalsIgnoreCase("CFB")) {
+            // FIXME: I have no number to put here! I'm using 8.
+            cipher = new CFBBlockCipher(cipher, 8);
+        } else if (cipherMode.equalsIgnoreCase("CFB1")) {
+            // FIXME: Does 1 mean 1 * 8?
+            cipher = new CFBBlockCipher(cipher, 8);
+        } else if (cipherMode.equalsIgnoreCase("CFB8")) {
+            // FIXME: Does 8 mean 8 * 8?
+            cipher = new CFBBlockCipher(cipher, 8 * 8);
+        } else if (cipherMode.equalsIgnoreCase("OFB")) {
+            // FIXME: I have no number to put here! I'm using 8.
+            cipher = new OFBBlockCipher(cipher, 8);
+        }
+        
+        return cipher;
+    }
+    
+    public static BufferedBlockCipher getCipher(Ruby runtime, String cipherBase, String cipherVersion, String cipherMode, String cipherPad) {
+        BlockCipherPadding padding = getBlockCipherPadding(cipherPad);
+        BlockCipher cipher = getBlockCipher(cipherBase, cipherVersion, cipherMode);
+        
+        if (cipher != null) {
+            if (!"ECB".equalsIgnoreCase(cipherMode) && padding != null) {
+                return new PaddedBufferedBlockCipher(cipher, padding);
+            } else {
+                return new BufferedBlockCipher(cipher);
+            }
+        } else {
+            throw runtime.newLoadError("unsupported cipher algorithm (" + cipherBase + "-" + cipherMode + "-" + cipherPad + ")");
+        }
+    }
+    
+    public static KeyParameter getKeyParameter(String cipherBase, byte[] key) {
+        if (cipherBase.equals("DES")) {
+            return new DESParameters(key);
+        } else {
+            return new KeyParameter(key);
+        }
+    }
 
     private RubyClass ciphErr;
     public Cipher(Ruby runtime, RubyClass type) {
@@ -186,7 +299,7 @@ public class Cipher extends RubyObject {
         ciphErr = (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("Cipher"))).getConstant("CipherError"));
     }
 
-    private javax.crypto.Cipher ciph;
+    private BufferedBlockCipher ciph;
     private String name;
     private String cryptoBase;
     private String cryptoVersion;
@@ -211,15 +324,7 @@ public class Cipher extends RubyObject {
         realName = values[3];
         padding_type = values[4];
 
-        try {
-            ciph = javax.crypto.Cipher.getInstance(realName,"BC");
-        } catch(NoSuchAlgorithmException e) {
-            throw getRuntime().newLoadError("unsupported cipher algorithm (" + realName + ")");
-        } catch(NoSuchProviderException e) {
-            throw getRuntime().newLoadError("unsupported cipher algorithm (" + realName + ")");
-        } catch(javax.crypto.NoSuchPaddingException e) {
-            throw getRuntime().newLoadError("unsupported cipher padding (" + realName + ")");
-        }
+        ciph = getCipher(getRuntime(), cryptoBase, cryptoVersion, cryptoMode, padding_type);
 
         if(hasLen() && null != cryptoVersion) {
             try {
@@ -228,6 +333,7 @@ public class Cipher extends RubyObject {
                 keyLen = -1;
             }
         }
+        
         if(keyLen == -1) {
             if("DES".equalsIgnoreCase(cryptoBase)) {
                 if("EDE3".equalsIgnoreCase(cryptoVersion)) {
@@ -281,15 +387,7 @@ public class Cipher extends RubyObject {
         }
         padding = ((Cipher)obj).padding;
 
-        try {
-            ciph = javax.crypto.Cipher.getInstance(realName,"BC");
-        } catch(NoSuchAlgorithmException e) {
-            throw getRuntime().newLoadError("unsupported cipher algorithm (" + realName + ")");
-        } catch(NoSuchProviderException e) {
-            throw getRuntime().newLoadError("unsupported cipher algorithm (" + realName + ")");
-        } catch(javax.crypto.NoSuchPaddingException e) {
-            throw getRuntime().newLoadError("unsupported cipher padding (" + realName + ")");
-        }
+        ciph = getCipher(getRuntime(), cryptoBase, cryptoVersion, cryptoMode, padding_type);
 
         return this;
     }
@@ -378,7 +476,7 @@ public class Cipher extends RubyObject {
         byte[] salt = null;
         int iter = 2048;
         IRubyObject vdigest = getRuntime().getNil();
-        MessageDigest digest = null;
+        org.bouncycastle.crypto.Digest digest = null;
         if(args.length>1) {
             if(!args[1].isNil()) {
                 salt = args[1].convertToString().getBytes();;
@@ -399,9 +497,9 @@ public class Cipher extends RubyObject {
                 }
             }
             if(vdigest.isNil()) {
-                digest = MessageDigest.getInstance("MD5","BC");
+                digest = Digest.getDigest(getRuntime(), "MD5");
             } else {
-                digest = MessageDigest.getInstance(((Digest)vdigest).getAlgorithm(),"BC");
+                digest = Digest.getDigest(getRuntime(), ((Digest)vdigest).getAlgorithm());
             }
 
             OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen/8,ivLen/8,digest,salt,pass,iter);
@@ -420,12 +518,12 @@ public class Cipher extends RubyObject {
     private void doInitialize() {
         ciphInited = true;
         try {
-            assert key.length * 8 == keyLen : "Key wrong length";
-            assert iv.length * 8 == ivLen : "IV wrong length";
+            assert key.length * 8 >= keyLen : "Key wrong length";
+            assert iv.length * 8 >= ivLen : "IV wrong length";
             if(!"ECB".equalsIgnoreCase(cryptoMode) && this.iv != null) {
-                this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.iv));
+                this.ciph.init(encryptMode, new ParametersWithIV(getKeyParameter(cryptoBase, key), iv));
             } else {
-                this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
+                this.ciph.init(encryptMode, getKeyParameter(cryptoBase, key));
             }
         } catch(Exception e) {
             e.printStackTrace();
@@ -445,9 +543,11 @@ public class Cipher extends RubyObject {
         }
 
         byte[] str = new byte[0];
+        int count;
         try {
-            byte[] out = ciph.update(val);
-            if(out != null) {
+            byte[] out = new byte[ciph.getUpdateOutputSize(val.length)];
+            count = ciph.processBytes(val, 0, val.length, out, 0);
+            if(count != 0) {
                 str = out;
             }
         } catch(Exception e) {
@@ -455,7 +555,7 @@ public class Cipher extends RubyObject {
             throw new RaiseException(getRuntime(), ciphErr, null, true);
         }
 
-        return RubyString.newString(getRuntime(), new ByteList(str,false));
+        return RubyString.newString(getRuntime(), new ByteList(str, 0, count, false));
     }
 
     public IRubyObject update_deprecated(IRubyObject data) {
@@ -470,8 +570,10 @@ public class Cipher extends RubyObject {
 
         //TODO: implement correctly
         ByteList str = new ByteList(ByteList.NULL_ARRAY);
+        int count;
         try {
-            byte[] out = ciph.doFinal();
+            byte[] out = new byte[ciph.getOutputSize(0)];
+            count = ciph.doFinal(out, 0);
             if(out != null) {
                 str = new ByteList(out,false);
             }
@@ -480,7 +582,7 @@ public class Cipher extends RubyObject {
             throw new RaiseException(getRuntime(), ciphErr, null, true);
         }
 
-        return getRuntime().newString(str);
+        return getRuntime().newString(new ByteList(str, 0, count));
     }
 
     public IRubyObject set_padding(IRubyObject padding) {
@@ -490,7 +592,7 @@ public class Cipher extends RubyObject {
     }
 
     String getAlgorithm() {
-        return this.ciph.getAlgorithm();
+        return this.ciph.getUnderlyingCipher().getAlgorithmName();
     }
 }
 

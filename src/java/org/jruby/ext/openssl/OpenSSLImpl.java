@@ -27,8 +27,6 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
-import java.security.MessageDigest;
-
 import org.jruby.Ruby;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -270,7 +268,7 @@ ASN1.addObject(runtime, 174, "OCSPSigning", "OCSP Signing","1.3.6.1.5.5.7.3.9");
         return null;
     }
 
-    public static KeyAndIv EVP_BytesToKey(int key_len, int iv_len, MessageDigest md, byte[] salt, byte[] data, int count) {
+    public static KeyAndIv EVP_BytesToKey(int key_len, int iv_len, org.bouncycastle.crypto.Digest md, byte[] salt, byte[] data, int count) {
         byte[] key = new byte[key_len];
         byte[]  iv = new byte[iv_len];
         int key_ix = 0;
@@ -286,17 +284,19 @@ ASN1.addObject(runtime, 174, "OCSPSigning", "OCSP Signing","1.3.6.1.5.5.7.3.9");
         for(;;) {
             md.reset();
             if(addmd++ > 0) {
-                md.update(md_buf);
+                md.update(md_buf, 0, md_buf.length);
             }
-            md.update(data);
+            md.update(data, 0, data.length);
             if(null != salt) {
                 md.update(salt,0,8);
             }
-            md_buf = md.digest();
+            md_buf = new byte[md.getDigestSize()];
+            md.doFinal(md_buf, 0);
             for(i=1;i<count;i++) {
                 md.reset();
-                md.update(md_buf);
-                md_buf = md.digest();
+                md.update(md_buf, 0, md_buf.length);
+                md_buf = new byte[md.getDigestSize()];
+                md.doFinal(md_buf, 0);
             }
             i=0;
             if(nkey > 0) {
