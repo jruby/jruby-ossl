@@ -518,6 +518,7 @@ public class Cipher extends RubyObject {
     private void doInitialize() {
         ciphInited = true;
         try {
+            // FIXME: I had to make these >= where they were == before; why?
             assert key.length * 8 >= keyLen : "Key wrong length";
             assert iv.length * 8 >= ivLen : "IV wrong length";
             if(!"ECB".equalsIgnoreCase(cryptoMode) && this.iv != null) {
