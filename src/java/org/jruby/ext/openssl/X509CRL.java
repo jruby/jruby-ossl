@@ -30,6 +30,7 @@ package org.jruby.ext.openssl;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.cert.CertificateFactory;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -146,7 +147,7 @@ public class X509CRL extends RubyObject {
         }
         
         ByteArrayInputStream bis = new ByteArrayInputStream(args[0].convertToString().getBytes());
-        CertificateFactory cf = CertificateFactory.getInstance("X.509","BC");
+        CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
         crl = (java.security.cert.X509CRL)cf.generateCRL(bis);
         crl_v = new ASN1InputStream(new ByteArrayInputStream(args[0].convertToString().getBytes())).readObject();
         DEREncodable v0 = ((DERSequence)(((DERSequence)crl_v).getObjectAt(0))).getObjectAt(0);
@@ -351,7 +352,7 @@ public class X509CRL extends RubyObject {
         return val;
     }
 
-    public IRubyObject sign(IRubyObject key, IRubyObject digest) throws Exception {
+    public IRubyObject sign(final IRubyObject key, IRubyObject digest) throws Exception {
         //System.err.println("WARNING: unimplemented method called: CRL#sign");
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();
@@ -380,7 +381,15 @@ public class X509CRL extends RubyObject {
             generator.addExtension(((X509Extensions.Extension)arg).getRealOid(),((X509Extensions.Extension)arg).getRealCritical(),((X509Extensions.Extension)arg).getRealValueBytes());
         }
 
-        crl = generator.generate(((PKey)key).getPrivateKey(),"BC");
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        crl = generator.generate(((PKey)key).getPrivateKey(),"BC");
+                    } catch(GeneralSecurityException e) {
+                    }
+                }
+            });
+
         crl_v = new ASN1InputStream(new ByteArrayInputStream(crl.getEncoded())).readObject();
         DERSequence v1 = (DERSequence)(((DERSequence)crl_v).getObjectAt(0));
         ASN1EncodableVector build1 = new ASN1EncodableVector();
@@ -401,15 +410,23 @@ public class X509CRL extends RubyObject {
         return this;
     }
 
-    public IRubyObject verify(IRubyObject key) {
+    public IRubyObject verify(final IRubyObject key) {
         if(changed) {
             return getRuntime().getFalse();
         }
-        try {
-            crl.verify(((PKey)key).getPublicKey());
-            return getRuntime().getTrue();
-        } catch(Exception e) {
-            return getRuntime().getFalse();
-        }
+
+        final boolean[] result = new boolean[1];
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        crl.verify(((PKey)key).getPublicKey());
+                        result[0] = true;
+                    } catch(java.security.GeneralSecurityException e) {
+                        result[0] = false;
+                    }
+                }
+            });
+            
+        return result[0] ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 }// X509CRL

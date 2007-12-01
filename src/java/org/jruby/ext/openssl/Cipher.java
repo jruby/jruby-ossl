@@ -165,7 +165,7 @@ public class Cipher extends RubyObject {
 
     private static boolean tryCipher(String rubyName) {
         try {
-            javax.crypto.Cipher.getInstance(rubyToJavaCipher(rubyName, null)[3],"BC");
+            javax.crypto.Cipher.getInstance(rubyToJavaCipher(rubyName, null)[3],OpenSSLReal.PROVIDER);
             return true;
         } catch(Exception e) {
             return false;

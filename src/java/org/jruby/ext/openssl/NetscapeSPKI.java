@@ -92,10 +92,26 @@ public class NetscapeSPKI extends RubyObject {
                 b = Base64Coder.decode(b);
             } catch(Exception e) {
             }
-            cert = new NetscapeCertRequest(b);
-            this.challenge = getRuntime().newString(cert.getChallenge());
-            String algo = cert.getPublicKey().getAlgorithm();;
-            byte[] enc = cert.getPublicKey().getEncoded();
+            final byte[] b2 = b;
+
+            final String[] result1 = new String[1];
+            final byte[][] result2 = new byte[1][];
+
+            OpenSSLReal.doWithBCProvider(new Runnable() {
+                    public void run() {
+                        try {
+                            cert = new NetscapeCertRequest(b2); //Uses "BC" as provider
+                            challenge = getRuntime().newString(cert.getChallenge()); //Uses "BC" as provider
+                            result1[0] = cert.getPublicKey().getAlgorithm(); //Uses "BC" as provider
+                            result2[0] = cert.getPublicKey().getEncoded(); //Uses "BC" as provider
+                        } catch(java.io.IOException e) {
+                        }
+                    }
+                });
+
+            String algo = result1[0];
+            byte[] enc = result2[0];
+
             if("RSA".equalsIgnoreCase(algo)) {
                 this.public_key = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("RSA").callMethod(getRuntime().getCurrentContext(),"new",RubyString.newString(getRuntime(), enc));
             } else if("DSA".equalsIgnoreCase(algo)) {
@@ -155,18 +171,35 @@ public class NetscapeSPKI extends RubyObject {
         return arg;
     }
 
-    public IRubyObject sign(IRubyObject key, IRubyObject digest) throws Exception {
+    public IRubyObject sign(final IRubyObject key, IRubyObject digest) throws Exception {
         String keyAlg = ((PKey)key).getAlgorithm();
         String digAlg = ((Digest)digest).getAlgorithm();
         DERObjectIdentifier alg = (DERObjectIdentifier)(ASN1.getOIDLookup(getRuntime()).get(keyAlg.toLowerCase() + "-" + digAlg.toLowerCase()));
         cert = new NetscapeCertRequest(challenge.toString(),new AlgorithmIdentifier(alg),((PKey)public_key).getPublicKey());
-        cert.sign(((PKey)key).getPrivateKey());
+
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        cert.sign(((PKey)key).getPrivateKey());
+                    } catch(java.security.GeneralSecurityException e) {}
+                }
+            });
         return this;
     }
 
-    public IRubyObject verify(IRubyObject pkey) throws Exception {
+    public IRubyObject verify(final IRubyObject pkey) throws Exception {
         cert.setPublicKey(((PKey)pkey).getPublicKey());
-        return cert.verify(challenge.toString()) ? getRuntime().getTrue() : getRuntime().getFalse();
+
+        final boolean[] result = new boolean[1];
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        result[0] = cert.verify(challenge.toString());
+                    } catch(java.security.GeneralSecurityException e) {}
+                }
+            });
+
+        return result[0] ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
     public IRubyObject challenge() {

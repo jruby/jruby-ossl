@@ -74,7 +74,7 @@ public class HMAC extends RubyObject {
     public static IRubyObject s_digest(IRubyObject recv, IRubyObject digest, IRubyObject kay, IRubyObject data) {
         String name = "HMAC" + ((Digest)digest).getAlgorithm();
         try {
-            Mac mac = Mac.getInstance(name);
+            Mac mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
             byte[] key = kay.convertToString().getBytes();
             SecretKey keysp = new SecretKeySpec(key,name);
             mac.init(keysp);
@@ -87,7 +87,7 @@ public class HMAC extends RubyObject {
     public static IRubyObject s_hexdigest(IRubyObject recv, IRubyObject digest, IRubyObject kay, IRubyObject data) {
         String name = "HMAC" + ((Digest)digest).getAlgorithm();
         try {
-            Mac mac = Mac.getInstance(name);
+            Mac mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
             byte[] key = kay.convertToString().getBytes();
             SecretKey keysp = new SecretKeySpec(key,name);
             mac.init(keysp);
@@ -108,7 +108,7 @@ public class HMAC extends RubyObject {
     public IRubyObject initialize(IRubyObject kay, IRubyObject digest, Block unusedBlock) {
         String name = "HMAC" + ((Digest)digest).getAlgorithm();
         try {
-            mac = Mac.getInstance(name);
+            mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
             key = kay.convertToString().getBytes();
             SecretKey keysp = new SecretKeySpec(key,name);
             mac.init(keysp);
@@ -125,7 +125,7 @@ public class HMAC extends RubyObject {
         checkFrozen();
         String name = ((HMAC)obj).mac.getAlgorithm();
         try {
-            mac = Mac.getInstance(name);
+            mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
             key = ((HMAC)obj).key;
             SecretKey keysp = new SecretKeySpec(key,name);
             mac.init(keysp);

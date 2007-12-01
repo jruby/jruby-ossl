@@ -31,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.security.PrivateKey;
+import java.security.GeneralSecurityException;
 import java.security.cert.CertStore;
 import java.security.cert.CollectionCertStoreParameters;
 import java.security.cert.X509Certificate;
@@ -44,6 +45,7 @@ import org.bouncycastle.asn1.cms.ContentInfo;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
+import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.SignerInformation;
 import org.bouncycastle.cms.SignerInformationStore;
 import org.jruby.Ruby;
@@ -163,14 +165,27 @@ public class PKCS7 extends RubyObject {
             x509s.add(x509);
         }
 
-        CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
+        final CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
 
         gen.addSigner(pkey,x509,"1.3.14.3.2.26"); //SHA1 OID
         if(x509s != null) {
-            CertStore store = CertStore.getInstance("Collection", new CollectionCertStoreParameters(x509s));
+            CertStore store = CertStore.getInstance("Collection", new CollectionCertStoreParameters(x509s), OpenSSLReal.PROVIDER);
             gen.addCertificatesAndCRLs(store);
         }
-        CMSSignedData sdata = gen.generate(new CMSProcessableByteArray(data.convertToString().getBytes()),"BC");
+
+        final CMSSignedData[] result = new CMSSignedData[1];
+        final byte[] bdata = data.convertToString().getBytes();
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        result[0] = gen.generate(new CMSProcessableByteArray(bdata), "BC");
+                    } catch(GeneralSecurityException e) {
+                    } catch(CMSException e) {
+                    }
+                }
+            });
+
+        CMSSignedData sdata = result[0];
         
         PKCS7 ret = new PKCS7(recv.getRuntime(),((RubyClass)((RubyModule)(recv.getRuntime().getModule("OpenSSL").getConstant("PKCS7"))).getConstant("PKCS7")));
         ret.setInstanceVariable("@data",recv.getRuntime().getNil());
@@ -276,7 +291,17 @@ public class PKCS7 extends RubyObject {
     }
 
     public IRubyObject certificates() throws Exception {
-        CertStore cc = signedData.getCertificatesAndCRLs("Collection","BC");
+        final CertStore[] result = new CertStore[1];
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        result[0] = signedData.getCertificatesAndCRLs("Collection","BC");
+                    } catch(GeneralSecurityException e) {
+                    } catch(CMSException e) {
+                    }
+                }
+            });
+        CertStore cc = result[0];
         List l = X509_STORE_CTX.transform(cc.getCertificates(null));
         return getRuntime().newArray(l);
     }
@@ -327,17 +352,28 @@ public class PKCS7 extends RubyObject {
             }
         }
 
-        CertStore _x509s = CertStore.getInstance("Collection", new CollectionCertStoreParameters(x509s));
+        CertStore _x509s = CertStore.getInstance("Collection", new CollectionCertStoreParameters(x509s),OpenSSLReal.PROVIDER);
 
         int verified = 0;
 
         SignerInformationStore  signers =  signedData.getSignerInfos();
-        CertStore  cs =                    signedData.getCertificatesAndCRLs("Collection","BC");
+
+        final CertStore[] result2 = new CertStore[1];
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        result2[0] = signedData.getCertificatesAndCRLs("Collection","BC");
+                    } catch(GeneralSecurityException e) {
+                    } catch(CMSException e) {
+                    }
+                }
+            });
+        CertStore  cs = result2[0];
         Collection              c = signers.getSigners();
         Iterator                it = c.iterator();
   
         while(it.hasNext()) {
-            SignerInformation   signer = (SignerInformation)it.next();
+            final SignerInformation   signer = (SignerInformation)it.next();
             System.err.println(signer.getSignedAttributes().toHashtable());
 
             Collection          certCollection = _x509s.getCertificates(signer.getSID());
@@ -354,9 +390,23 @@ public class PKCS7 extends RubyObject {
                     cert = (X509Certificate)certIt2.next();
                 }                
             }
-            if(null != cert && signer.verify(cert,"BC")) {
-                verified++;
-            }   
+
+            final boolean[] result = new boolean[]{false};
+            final X509Certificate cert2 = cert;
+            if(null != cert) {
+                OpenSSLReal.doWithBCProvider(new Runnable() {
+                        public void run() {
+                            try {
+                                result[0] = signer.verify(cert2, "BC");
+                            } catch(GeneralSecurityException e) {
+                            } catch(CMSException e) {
+                            }
+                        }
+                    });
+                if(result[0]) {
+                    verified++;
+                }
+            }
         }
 
         return (verified != 0) ? getRuntime().getTrue() : getRuntime().getFalse();

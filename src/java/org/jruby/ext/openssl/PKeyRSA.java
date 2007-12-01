@@ -135,7 +135,7 @@ public class PKeyRSA extends PKey {
                     pubExp = BigInteger.valueOf(RubyNumeric.num2long(pass));
                 }
                 try {
-                    KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+                    KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA",OpenSSLReal.PROVIDER);
                     gen.initialize(new RSAKeyGenParameterSpec(keyLen,pubExp));
                     KeyPair pair = gen.generateKeyPair();
                     privKey = (RSAPrivateCrtKey)(pair.getPrivate());
@@ -152,7 +152,7 @@ public class PKeyRSA extends PKey {
                 Object val = null;
                 KeyFactory fact = null;
                 try {
-                    fact = KeyFactory.getInstance("RSA");
+                    fact = KeyFactory.getInstance("RSA", OpenSSLReal.PROVIDER);
                 } catch(Exception e) {
                     throw getRuntime().newLoadError("unsupported key algorithm (RSA)");
                 }
@@ -336,7 +336,7 @@ public class PKeyRSA extends PKey {
             throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), "private key needed.", true);
         }
 
-        Cipher engine = Cipher.getInstance("RSA"+p);
+        Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
         engine.init(Cipher.ENCRYPT_MODE,privKey);
         byte[] outp = engine.doFinal(buffer.getBytes());
         return RubyString.newString(getRuntime(), outp);
@@ -354,7 +354,7 @@ public class PKeyRSA extends PKey {
             throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), "private key needed.", true);
         }
 
-        Cipher engine = Cipher.getInstance("RSA"+p);
+        Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
         engine.init(Cipher.DECRYPT_MODE,privKey);
         byte[] outp = engine.doFinal(buffer.getBytes());
         return RubyString.newString(getRuntime(), outp);
@@ -368,7 +368,7 @@ public class PKeyRSA extends PKey {
         String p = getPadding(padding);
 
         RubyString buffer = args[0].convertToString();
-        Cipher engine = Cipher.getInstance("RSA"+p);
+        Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
         engine.init(Cipher.ENCRYPT_MODE,pubKey);
         byte[] outp = engine.doFinal(buffer.getBytes());
         return RubyString.newString(getRuntime(), outp);
@@ -382,7 +382,7 @@ public class PKeyRSA extends PKey {
         String p = getPadding(padding);
 
         RubyString buffer = args[0].convertToString();
-        Cipher engine = Cipher.getInstance("RSA"+p);
+        Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
         engine.init(Cipher.DECRYPT_MODE,pubKey);
         byte[] outp = engine.doFinal(buffer.getBytes());
         return RubyString.newString(getRuntime(), outp);

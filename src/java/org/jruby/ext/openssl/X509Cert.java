@@ -30,6 +30,7 @@ package org.jruby.ext.openssl;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
@@ -154,7 +155,7 @@ public class X509Cert extends RubyObject {
         ThreadContext tc = getRuntime().getCurrentContext();
         IRubyObject arg = OpenSSLImpl.to_der_if_possible(args[0]);
         ByteArrayInputStream bis = new ByteArrayInputStream(arg.convertToString().getBytes());
-        CertificateFactory cf = CertificateFactory.getInstance("X.509","BC");
+        CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
         cert = (X509Certificate)cf.generateCertificate(bis);
 
         set_serial(RubyNumeric.str2inum(getRuntime(),getRuntime().newString(cert.getSerialNumber().toString()),10));
@@ -327,7 +328,7 @@ public class X509Cert extends RubyObject {
         return arg;
     }
 
-    public IRubyObject sign(IRubyObject key, IRubyObject digest) throws Exception {
+    public IRubyObject sign(final IRubyObject key, IRubyObject digest) throws Exception {
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();
         String digAlg = ((Digest)digest).getAlgorithm();
@@ -345,7 +346,16 @@ public class X509Cert extends RubyObject {
 
         sig_alg = getRuntime().newString(digAlg);
         generator.setSignatureAlgorithm(digAlg + "WITH" + keyAlg);
-        cert = generator.generate(((PKey)key).getPrivateKey(),"BC");
+
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        cert = generator.generate(((PKey)key).getPrivateKey(),"BC");
+                    } catch(GeneralSecurityException e) {
+                    }
+                }
+            });
+
         changed = false;
         return this;
     }

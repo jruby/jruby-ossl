@@ -198,7 +198,7 @@ public class X509Extensions {
                     } else {
                         val = ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),pkey.callMethod(tc,"to_der")).callMethod(tc,"value").callMethod(tc,"[]",getRuntime().newFixnum(1)).callMethod(tc,"value");
                     }
-                    byte[] b = MessageDigest.getInstance("SHA-1").digest(val.convertToString().getBytes());
+                    byte[] b = MessageDigest.getInstance("SHA-1",OpenSSLReal.PROVIDER).digest(val.convertToString().getBytes());
                     value = new String(ByteList.plain(new DEROctetString(b).getDEREncoded()));
                 } else if(valuex.length() == 20) {
                     value = new String(ByteList.plain(new DEROctetString(ByteList.plain(valuex)).getDEREncoded()));
@@ -240,7 +240,7 @@ public class X509Extensions {
                     } else {
                         val = ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),pkey.callMethod(tc,"to_der")).callMethod(tc,"value").callMethod(tc,"[]",getRuntime().newFixnum(1)).callMethod(tc,"value");
                     }
-                    byte[] b = MessageDigest.getInstance("SHA-1").digest(val.convertToString().getBytes());
+                    byte[] b = MessageDigest.getInstance("SHA-1",OpenSSLReal.PROVIDER).digest(val.convertToString().getBytes());
                     asnv.add(new DEROctetString(b));
                 } else if(ourV.startsWith("keyid")) {
                     ourV = ourV.substring("keyid".length());
@@ -251,7 +251,7 @@ public class X509Extensions {
                     } else {
                         val = ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),pkey.callMethod(tc,"to_der")).callMethod(tc,"value").callMethod(tc,"[]",getRuntime().newFixnum(1)).callMethod(tc,"value");
                     }
-                    byte[] b = MessageDigest.getInstance("SHA-1").digest(val.convertToString().getBytes());
+                    byte[] b = MessageDigest.getInstance("SHA-1",OpenSSLReal.PROVIDER).digest(val.convertToString().getBytes());
                     asnv.add(new DEROctetString(b));
                 }
                 value = new String(ByteList.plain(new DERSequence(asnv).getDEREncoded()));

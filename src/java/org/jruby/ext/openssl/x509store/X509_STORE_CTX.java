@@ -46,6 +46,8 @@ import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERInteger;
 
+import org.jruby.ext.openssl.OpenSSLReal;
+
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
@@ -1003,7 +1005,7 @@ public class X509_STORE_CTX {
     public final static Function2 default_check_crl = new Function2() { 
             public int call(Object a1, Object a2) throws Exception {
                 X509_STORE_CTX ctx = (X509_STORE_CTX)a1;
-                X509CRL crl = (X509CRL)a2;
+                final X509CRL crl = (X509CRL)a2;
                 X509AuxCertificate issuer = null;
                 int ok = 0,chnum,cnum;
                 cnum = ctx.error_depth;
@@ -1029,7 +1031,7 @@ public class X509_STORE_CTX {
                             return ok;
                         }
                     }
-                    PublicKey ikey = issuer.getPublicKey();
+                    final PublicKey ikey = issuer.getPublicKey();
                     if(ikey == null) {
                         ctx.error = X509.V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY;
                         ok = ctx.verify_cb.call(new Integer(0),ctx);
@@ -1037,9 +1039,19 @@ public class X509_STORE_CTX {
                             return ok;
                         }
                     } else {
-                        try {
-                            crl.verify(ikey);
-                        } catch(Exception e) {
+                        final boolean[] result = new boolean[1];
+                        OpenSSLReal.doWithBCProvider(new Runnable() {
+                                public void run() {
+                                    try {
+                                        crl.verify(ikey);
+                                        result[0] = true;
+                                    } catch(java.security.GeneralSecurityException e) {
+                                        result[0] = false;
+                                    }
+                                }
+                            });
+
+                        if(!result[0]) {
                             ctx.error= X509.V_ERR_CRL_SIGNATURE_FAILURE;
                             ok = ctx.verify_cb.call(new Integer(0),ctx);
                             if(ok == 0) {

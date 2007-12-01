@@ -48,6 +48,7 @@ import java.security.interfaces.DSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.interfaces.RSAPrivateCrtKey;
 
+import org.jruby.ext.openssl.OpenSSLReal;
 import org.jruby.ext.openssl.PKCS10CertificationRequestExt;
 
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -565,7 +566,7 @@ public class PEM {
 
             // cipher  
             try {
-                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", "BC");
+                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
                 c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(salt));
                 encData = c.doFinal(encoding);
             } catch (Exception e) {
@@ -632,7 +633,7 @@ public class PEM {
 
             // cipher  
             try {
-                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", "BC");
+                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
                 c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(salt));
                 encData = c.doFinal(encoding);
             } catch (Exception e) {
@@ -707,14 +708,12 @@ public class PEM {
                     rsaPubStructure.getPublicExponent());
 
         try {
-            KeyFactory keyFact = KeyFactory.getInstance("RSA","BC");      
+            KeyFactory keyFact = KeyFactory.getInstance("RSA",OpenSSLReal.PROVIDER);      
             return (RSAPublicKey) keyFact.generatePublic(keySpec);
         } catch (NoSuchAlgorithmException e) { 
                 // ignore
         } catch (InvalidKeySpecException e) { 
                 // ignore
-        } catch (NoSuchProviderException e) {
-                throw new RuntimeException("can't find provider BC");
         }
 
         return  null;
@@ -723,15 +722,13 @@ public class PEM {
     private static PublicKey readPublicKey(BufferedReader in, String alg, String endMarker) throws IOException {
         KeySpec keySpec = new X509EncodedKeySpec(readBytes(in,endMarker));
         try {
-            KeyFactory keyFact = KeyFactory.getInstance(alg,"BC");
+            KeyFactory keyFact = KeyFactory.getInstance(alg,OpenSSLReal.PROVIDER);
             PublicKey pubKey = keyFact.generatePublic(keySpec);
             return pubKey;
         } catch (NoSuchAlgorithmException e) { 
             // ignore
         } catch (InvalidKeySpecException e) { 
             // ignore
-        } catch (NoSuchProviderException e) {
-            throw new RuntimeException("can't find provider BC");
         }
         return null;
     }
@@ -741,15 +738,13 @@ public class PEM {
         String[] algs = {"RSA","DSA"};
         for(int i=0;i<algs.length;i++) {
             try {
-                KeyFactory keyFact = KeyFactory.getInstance(algs[i],"BC");
+                KeyFactory keyFact = KeyFactory.getInstance(algs[i],OpenSSLReal.PROVIDER);
                 PublicKey pubKey = keyFact.generatePublic(keySpec);
                 return pubKey;
             } catch (NoSuchAlgorithmException e) { 
                 // ignore
             } catch (InvalidKeySpecException e) { 
                 // ignore
-            } catch (NoSuchProviderException e) {
-                throw new RuntimeException("can't find provider BC");
             }
         }
         return null;
@@ -785,7 +780,7 @@ public class PEM {
                 String  alg = "DESede";
                 byte[]  iv = Hex.decode(tknz.nextToken());
                 Key     sKey = getKey(passwd,alg, 24, iv);
-                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", "BC");
+                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
                 c.init(Cipher.DECRYPT_MODE, sKey, new IvParameterSpec(iv));
                 keyBytes = c.doFinal(Base64.decode(buf.toString()));
             } else if (encoding.equals("DES-CBC")) {
@@ -793,7 +788,7 @@ public class PEM {
                 byte[]  iv = Hex.decode(tknz.nextToken());
                 Key     sKey = getKey(passwd,alg, 8, iv);
                 Cipher  c = Cipher.getInstance(
-                                               "DES/CBC/PKCS5Padding", "BC");
+                                               "DES/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
 
                 c.init(Cipher.DECRYPT_MODE, sKey, new IvParameterSpec(iv));
                 keyBytes = c.doFinal(Base64.decode(buf.toString()));
@@ -846,7 +841,7 @@ public class PEM {
                             q.getValue(), g.getValue());
         }
 
-        KeyFactory          fact = KeyFactory.getInstance(type, "BC");
+        KeyFactory          fact = KeyFactory.getInstance(type, OpenSSLReal.PROVIDER);
 
         return new KeyPair(
                     fact.generatePublic(pubSpec),
@@ -883,7 +878,7 @@ public class PEM {
         try
         {
             CertificateFactory certFact
-                    = CertificateFactory.getInstance("X.509", "BC");
+                    = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
 
             return (X509Certificate)certFact.generateCertificate(bIn);
         }
@@ -912,7 +907,7 @@ public class PEM {
         ByteArrayInputStream bIn = new ByteArrayInputStream(((DERObject)try1.readObject()).getEncoded());
 
         try {
-            CertificateFactory certFact = CertificateFactory.getInstance("X.509", "BC");
+            CertificateFactory certFact = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
             X509Certificate bCert = (X509Certificate)certFact.generateCertificate(bIn);
             DERSequence aux = (DERSequence)try1.readObject();
             X509_AUX ax = null;
@@ -980,7 +975,7 @@ public class PEM {
         try
         {
             CertificateFactory certFact
-                    = CertificateFactory.getInstance("X.509", "BC");
+                    = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
 
             return (X509CRL)certFact.generateCRL(bIn);
         }

@@ -125,7 +125,7 @@ public class PKeyDSA extends PKey {
                 Object val = null;
                 KeyFactory fact = null;
                 try {
-                    fact = KeyFactory.getInstance("DSA");
+                    fact = KeyFactory.getInstance("DSA",OpenSSLReal.PROVIDER);
                 } catch(Exception e) {
                     throw getRuntime().newLoadError("unsupported key algorithm (DSA)");
                 }

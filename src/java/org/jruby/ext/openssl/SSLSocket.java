@@ -133,7 +133,7 @@ public class SSLSocket extends RubyObject {
     private void ossl_ssl_setup() throws Exception {
         if(null == engine) {
             ThreadContext tc = getRuntime().getCurrentContext();
-            SSLContext ctx = SSLContext.getInstance("SSL");
+            SSLContext ctx = SSLContext.getInstance("SSL",OpenSSLReal.PROVIDER);
             IRubyObject store = callMethod(tc,"context").callMethod(tc,"cert_store");
             callMethod(tc,"context").callMethod(tc,"verify_mode");
 

@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
+import java.security.GeneralSecurityException;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Set;
@@ -110,8 +111,23 @@ public class Request extends RubyObject {
         }
         req = new PKCS10CertificationRequestExt(args[0].convertToString().getBytes());
         version = getRuntime().newFixnum(req.getVersion());
-        String algo = req.getPublicKey().getAlgorithm();;
-        byte[] enc = req.getPublicKey().getEncoded();
+
+        final String[] result1 = new String[1];
+        final byte[][] result2 = new byte[1][];
+
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        result1[0] = req.getPublicKey("BC").getAlgorithm();;
+                        result2[0] = req.getPublicKey("BC").getEncoded();
+                    } catch(GeneralSecurityException e) {
+                    }
+                }
+            });
+
+        String algo = result1[0];
+        byte[] enc = result2[0];
+
         ThreadContext tc = getRuntime().getCurrentContext();
         if("RSA".equalsIgnoreCase(algo)) {
             this.public_key = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("RSA").callMethod(tc,"new",RubyString.newString(getRuntime(), enc));
@@ -219,9 +235,9 @@ public class Request extends RubyObject {
         return val;
     }
 
-    public IRubyObject sign(IRubyObject key, IRubyObject digest) throws Exception {
-        String keyAlg = ((PKey)public_key).getAlgorithm();
-        String digAlg = ((Digest)digest).getAlgorithm();
+    public IRubyObject sign(final IRubyObject key, final IRubyObject digest) throws Exception {
+        final String keyAlg = ((PKey)public_key).getAlgorithm();
+        final String digAlg = ((Digest)digest).getAlgorithm();
         
         if(("DSA".equalsIgnoreCase(keyAlg) && "MD5".equalsIgnoreCase(digAlg)) || 
            ("RSA".equalsIgnoreCase(keyAlg) && "DSS1".equals(((Digest)digest).name().toString())) ||
@@ -229,11 +245,27 @@ public class Request extends RubyObject {
             throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("RequestError")), null, true);
         }
 
-        ASN1EncodableVector v1 = new ASN1EncodableVector();
+        final ASN1EncodableVector v1 = new ASN1EncodableVector();
         for(Iterator iter = attrs.iterator();iter.hasNext();) {
             v1.add(((Attribute)iter.next()).toASN1());
         }
-        req = new PKCS10CertificationRequestExt(digAlg + "WITH" + keyAlg,((X509Name)this.subject).getRealName(),((PKey)public_key).getPublicKey(),new DERSet(v1),((PKey)key).getPrivateKey());
+
+        
+        OpenSSLReal.doWithBCProvider(new Runnable() {
+                public void run() {
+                    try {
+                        req = new PKCS10CertificationRequestExt(digAlg + "WITH" + keyAlg,
+                                                                ((X509Name)subject).getRealName(),
+                                                                ((PKey)public_key).getPublicKey(),
+                                                                new DERSet(v1),
+                                                                ((PKey)key).getPrivateKey(),
+                                                                "BC");
+
+                    } catch(GeneralSecurityException e) {
+                    }
+                }
+            });
+
         req.setVersion(RubyNumeric.fix2int(version));
         valid = true;
         return this;

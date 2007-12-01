@@ -35,8 +35,21 @@ import org.jruby.RubyModule;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class OpenSSLReal {
+    public static java.security.Provider PROVIDER;
+    
+    public static void doWithBCProvider(Runnable toRun) {
+        try {
+            java.security.Security.insertProviderAt(PROVIDER,1);
+            toRun.run();
+        } finally {
+            java.security.Security.removeProvider("BC");
+        }
+    }
+
     public static void createOpenSSL(Ruby runtime) {
-        java.security.Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(),2);
+        if(PROVIDER == null) {
+            PROVIDER = new org.bouncycastle.jce.provider.BouncyCastleProvider();
+        }
 
         RubyModule ossl = runtime.getOrCreateModule("OpenSSL");
         RubyClass standardError = runtime.getClass("StandardError");
@@ -58,7 +71,7 @@ public class OpenSSLReal {
         ossl.setConstant("OPENSSL_VERSION",runtime.newString("OpenSSL 0.9.8b 04 May 2006 (Java fake)"));
         
         try {
-            java.security.MessageDigest.getInstance("SHA224");
+            java.security.MessageDigest.getInstance("SHA224", PROVIDER);
             ossl.setConstant("OPENSSL_VERSION_NUMBER",runtime.newFixnum(9469999));
         } catch(java.security.NoSuchAlgorithmException e) {
             ossl.setConstant("OPENSSL_VERSION_NUMBER",runtime.newFixnum(9469952));

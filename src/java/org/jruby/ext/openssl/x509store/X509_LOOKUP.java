@@ -45,6 +45,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.jruby.ext.openssl.OpenSSLReal;
+
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
@@ -121,7 +123,7 @@ public class X509_LOOKUP {
             }
             ret = count;
         } else if(type == X509.X509_FILETYPE_ASN1) {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509","BC");
+            CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
             x = X509_STORE_CTX.transform((X509Certificate)cf.generateCertificate(in));
             if(x == null) {
                 Err.PUT_err(13);
@@ -164,7 +166,7 @@ public class X509_LOOKUP {
             }
             ret = count;
         } else if(type == X509.X509_FILETYPE_ASN1) {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509","BC");
+            CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
             x = cf.generateCRL(in);
             if(x == null) {
                 Err.PUT_err(13);

@@ -89,7 +89,7 @@ public abstract class PKey extends RubyObject {
         if(!this.callMethod(getRuntime().getCurrentContext(),"private?").isTrue()) {
             throw getRuntime().newArgumentError("Private key is needed.");
         }
-        Signature sig = Signature.getInstance(((Digest)digest).getAlgorithm() + "WITH" + getAlgorithm(),"BC");
+        Signature sig = Signature.getInstance(((Digest)digest).getAlgorithm() + "WITH" + getAlgorithm(),OpenSSLReal.PROVIDER);
         sig.initSign(getPrivateKey());
         byte[] inp = data.convertToString().getBytes();
         sig.update(inp);

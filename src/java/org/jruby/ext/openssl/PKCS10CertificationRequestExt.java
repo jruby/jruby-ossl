@@ -137,7 +137,7 @@ public class PKCS10CertificationRequestExt extends PKCS10CertificationRequest {
     }
 
     public boolean verify(PublicKey pubkey) throws Exception {
-        Signature   sig = Signature.getInstance(sigAlgId.getObjectId().getId(),"BC");
+        Signature   sig = Signature.getInstance(sigAlgId.getObjectId().getId(),OpenSSLReal.PROVIDER);
         sig.initVerify(pubkey);
 
         try
