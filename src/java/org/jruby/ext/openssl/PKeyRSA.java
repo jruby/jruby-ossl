@@ -37,6 +37,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAKeyGenParameterSpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
@@ -93,18 +94,35 @@ public class PKeyRSA extends PKey {
         cRSA.defineFastMethod("public_encrypt",rsacb.getFastOptMethod("public_encrypt"));
         cRSA.defineMethod("public_decrypt",rsacb.getFastOptMethod("public_decrypt"));
 
+        cRSA.defineFastMethod("e", rsacb.getFastMethod("get_e"));
+        cRSA.defineFastMethod("e=", rsacb.getFastMethod("set_e", IRubyObject.class));
+        cRSA.defineFastMethod("n", rsacb.getFastMethod("get_n"));
+        cRSA.defineFastMethod("n=", rsacb.getFastMethod("set_n", IRubyObject.class));
+
         cRSA.setConstant("PKCS1_PADDING",runtime.newFixnum(1));
         cRSA.setConstant("SSLV23_PADDING",runtime.newFixnum(2));
         cRSA.setConstant("NO_PADDING",runtime.newFixnum(3));
         cRSA.setConstant("PKCS1_OAEP_PADDING",runtime.newFixnum(4));
    }
 
+    public static RaiseException newRSAError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstantAt("PKey")).getClass("RSAError"), message, true);
+    }
+   
     public PKeyRSA(Ruby runtime, RubyClass type) {
         super(runtime,type);
     }
 
-    private RSAPrivateCrtKey privKey;
-    private RSAPublicKey pubKey;
+    private transient volatile RSAPrivateCrtKey privKey;
+    private transient volatile RSAPublicKey pubKey;
+    
+    // fields to hold individual RSAPublicKeySpec components. this allows
+    // a public key to be constructed incrementally, as required by the
+    // current implementation of Net::SSH.
+    // (see net-ssh-1.1.2/lib/net/ssh/transport/ossl/buffer.rb #read_keyblob)
+    private transient volatile BigInteger rsa_e;
+    private transient volatile BigInteger rsa_n;
+    
 
     PublicKey getPublicKey() {
         return pubKey;
@@ -141,7 +159,7 @@ public class PKeyRSA extends PKey {
                     privKey = (RSAPrivateCrtKey)(pair.getPrivate());
                     pubKey = (RSAPublicKey)(pair.getPublic());
                 } catch(Exception e) {
-                    throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), null, true);
+                    throw newRSAError(getRuntime(), null);
                 }
             } else {
                 if(pass != null && !pass.isNil()) {
@@ -227,7 +245,7 @@ public class PKeyRSA extends PKey {
                     }
                 }
                 if(null == val) {
-                    throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), "Neither PUB key nor PRIV key:", true);
+                    throw newRSAError(getRuntime(), "Neither PUB key nor PRIV key:");
                 }
 
                 if(val instanceof KeyPair) {
@@ -238,13 +256,13 @@ public class PKeyRSA extends PKey {
                     try {
                         pubKey = (RSAPublicKey)(fact.generatePublic(new RSAPublicKeySpec(privKey.getModulus(),privKey.getPublicExponent())));
                     } catch(Exception e) {
-                        throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), "Something rotten with private key", true);
+                        throw newRSAError(getRuntime(), "Something rotten with private key");
                     }
                 } else if(val instanceof RSAPublicKey) {
                     pubKey = (RSAPublicKey)val;
                     privKey = null;
                 } else {
-                    throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), "Neither PUB key nor PRIV key:", true);
+                    throw newRSAError(getRuntime(), "Neither PUB key nor PRIV key:");
                 }
             }
         }
@@ -310,7 +328,7 @@ public class PKeyRSA extends PKey {
 
     private String getPadding(int padding) {
         if(padding < 1 || padding > 4) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), null, true);
+            throw newRSAError(getRuntime(), null);
         }
 
         String p = "/NONE/PKCS1Padding";
@@ -333,7 +351,7 @@ public class PKeyRSA extends PKey {
 
         RubyString buffer = args[0].convertToString();
         if(privKey == null) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), "private key needed.", true);
+            throw newRSAError(getRuntime(), "private key needed.");
         }
 
         Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
@@ -351,7 +369,7 @@ public class PKeyRSA extends PKey {
 
         RubyString buffer = args[0].convertToString();
         if(privKey == null) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("RSAError")), "private key needed.", true);
+            throw newRSAError(getRuntime(), "private key needed.");
         }
 
         Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
@@ -387,4 +405,75 @@ public class PKeyRSA extends PKey {
         byte[] outp = engine.doFinal(buffer.getBytes());
         return RubyString.newString(getRuntime(), outp);
     }
+
+    public synchronized IRubyObject get_e() {
+        RSAPublicKey key;
+        BigInteger e;
+        if ((key = pubKey) != null) {
+            e = key.getPublicExponent();
+        } else {
+            e = rsa_e;
+        }
+        if (e != null) {
+            return BN.newBN(getRuntime(), e);
+        }
+        return getRuntime().getNil();
+    }
+    
+    public synchronized IRubyObject set_e(IRubyObject value) {
+        if (pubKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        rsa_e = BN.getBigInteger(value);
+        generatePublicKeyIfParams();
+        return value;
+    }
+    
+    public synchronized IRubyObject get_n() {
+        RSAPublicKey key;
+        BigInteger n;
+        if ((key = pubKey) != null) {
+            n = key.getModulus();
+        } else {
+            n = rsa_n;
+        }
+        if (n != null) {
+            return BN.newBN(getRuntime(), n);
+        }
+        return getRuntime().getNil();
+    }
+    
+    public synchronized IRubyObject set_n(IRubyObject value) {
+        if (pubKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        rsa_n = BN.getBigInteger(value);
+        generatePublicKeyIfParams();
+        return value;
+    }
+    
+    private void generatePublicKeyIfParams() {
+        if (pubKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        BigInteger e, n;
+        if ((e = rsa_e) != null && (n = rsa_n) != null) {
+            KeyFactory fact;
+            try {
+                fact = KeyFactory.getInstance("RSA", OpenSSLReal.PROVIDER);
+            } catch(Exception ex) {
+                throw getRuntime().newLoadError("unsupported key algorithm (RSA)");
+            }
+            try {
+                pubKey = (RSAPublicKey)fact.generatePublic(new RSAPublicKeySpec(n, e));
+            } catch (InvalidKeySpecException ex) {
+                throw newRSAError(getRuntime(), "invalid parameters");
+            }
+            rsa_e = null;
+            rsa_n = null;
+        }
+    }
+    
+
+
 }// PKeyRSA

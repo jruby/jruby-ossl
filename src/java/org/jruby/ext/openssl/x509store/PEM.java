@@ -12,6 +12,7 @@
  * rights and limitations under the License.
  *
  * Copyright (C) 2006 Ola Bini <ola@ologix.com>
+ * Copyright (C) 2007 William N Dortch <bill.dortch@gmail.com>
  * 
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -47,6 +48,12 @@ import java.security.interfaces.DSAPublicKey;
 import java.security.interfaces.DSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.spec.InvalidParameterSpecException;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.crypto.spec.DHParameterSpec;
 
 import org.jruby.ext.openssl.OpenSSLReal;
 import org.jruby.ext.openssl.PKCS10CertificationRequestExt;
@@ -126,6 +133,11 @@ public class PEM {
     public static final String PEM_STRING_ECDSA_PUBLIC="ECDSA PUBLIC KEY";
     public static final String PEM_STRING_ECPARAMETERS="EC PARAMETERS";
     public static final String PEM_STRING_ECPRIVATEKEY="EC PRIVATE KEY";
+    
+    private static final Pattern DH_PARAM_PATTERN = Pattern.compile(
+            "(-----BEGIN DH PARAMETERS-----)(.*)(-----END DH PARAMETERS-----)",
+            Pattern.MULTILINE);
+    private static final int DH_PARAM_GROUP = 2; // the group above containing encoded params
 
     private static BufferedReader into(Reader in) {
         if(in instanceof BufferedReader) {
@@ -379,6 +391,36 @@ public class PEM {
             }
         }
         return null;
+    }
+
+    public static DHParameterSpec read_DHParameters(Reader _in)
+    throws IOException, InvalidParameterSpecException {
+        BufferedReader in = into(_in);
+        String line;
+        StringBuilder buf = new StringBuilder();
+        while ((line = in.readLine()) != null) {
+            if (line.indexOf(BEF_G + PEM_STRING_DHPARAMS) >= 0) {
+                do {
+                    buf.append(line.trim());
+                } while (line.indexOf(BEF_E + PEM_STRING_DHPARAMS) < 0 &&
+                        (line = in.readLine()) != null);
+                break;
+            }
+        }
+        Matcher m = DH_PARAM_PATTERN.matcher(buf.toString());
+        if (m.find()) {
+            try {
+                byte[] decoded = Base64.decode(m.group(DH_PARAM_GROUP));
+                ASN1InputStream aIn = new ASN1InputStream(new ByteArrayInputStream(decoded));
+                ASN1Sequence seq = (ASN1Sequence)aIn.readObject();
+                BigInteger p = ((DERInteger)seq.getObjectAt(0)).getValue();
+                BigInteger g = ((DERInteger)seq.getObjectAt(1)).getValue();
+                return new DHParameterSpec(p, g);
+            } catch (Exception e) {}
+        }
+        // probably not exactly the intended use of this exception, but
+        // close enough for internal throw/catch
+        throw new InvalidParameterSpecException("invalid " + PEM_STRING_DHPARAMS);
     }
 
     public static void write_DSAPublicKey(Writer _out, DSAPublicKey obj) throws IOException {
@@ -661,7 +703,33 @@ public class PEM {
             out.flush();
         }
     }
+    
+    public static void write_DHParameters(Writer _out, DHParameterSpec params) throws IOException {
+        BufferedWriter out = outo(_out);
+        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+        ASN1OutputStream aOut = new ASN1OutputStream(bOut);
 
+        ASN1EncodableVector v = new ASN1EncodableVector();
+
+        BigInteger value;
+        if ((value = params.getP()) != null) {
+            v.add(new DERInteger(value));
+        }
+        if ((value = params.getG()) != null) {
+            v.add(new DERInteger(value));
+        }
+
+        aOut.writeObject(new DERSequence(v));
+        byte[] encoding = bOut.toByteArray();
+
+        out.write(BEF_G + PEM_STRING_DHPARAMS + AFT);
+        out.newLine();
+        writeEncoded(out,encoding);
+        out.write(BEF_E + PEM_STRING_DHPARAMS + AFT);
+        out.newLine();
+        out.flush();
+    }
+    
     private static byte[] readBytes(BufferedReader in, String endMarker) throws IOException {
         String          line;
         StringBuffer    buf = new StringBuffer();

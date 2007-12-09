@@ -56,6 +56,7 @@ public class OpenSSLReal {
         ossl.defineClassUnder("OpenSSLError",standardError,standardError.getAllocator());
 
         ASN1.createASN1(runtime, ossl);
+        BN.createBN(runtime, ossl);
         Digest.createDigest(runtime, ossl);
         Cipher.createCipher(runtime, ossl);
         Random.createRandom(runtime, ossl);

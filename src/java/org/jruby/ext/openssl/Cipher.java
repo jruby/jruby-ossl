@@ -69,7 +69,11 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Cipher extends RubyObject {
-    private static ObjectAllocator CIPHER_ALLOCATOR = new ObjectAllocator() {
+
+	// set to enable debug output
+	private static final boolean DEBUG = false;
+	
+	private static ObjectAllocator CIPHER_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new Cipher(runtime, klass);
         }
@@ -215,14 +219,14 @@ public class Cipher extends RubyObject {
     
     public static BlockCipher getBlockCipher(String cipherBase, String cipherVersion, String cipherMode) {
         BlockCipher cipher;
-        
+
         // get base cipher
         if (cipherBase.equals("AES")) {
             cipher = new AESEngine();
         } else if (cipherBase.equals("aes")) {
             cipher = new AESEngine();
         } else if (cipherBase.equals("DES") || cipherBase.equals("des")) {
-            if (cipherVersion != null && cipherVersion.equals("EDE3")) {
+            if ("EDE3".equals(cipherVersion) || "ede3".equals(cipherVersion)) { 
                 cipher = new DESedeEngine();
             } else {
                 cipher = new DESEngine();
@@ -249,7 +253,12 @@ public class Cipher extends RubyObject {
             // FIXME should be a ruby exception
             return null;
         }
-        
+
+        // see http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+        // for a good, widely-cited (if not necessarily definitive) description
+        // of block cipher modes, with test inputs/outputs.
+        // (however, it doesn't answer questions about the BC implementation)
+
         // Wrap with mode-specific cipher
         if (cipherMode.equalsIgnoreCase("CBC")) {
             cipher = new CBCBlockCipher(cipher);
@@ -258,15 +267,19 @@ public class Cipher extends RubyObject {
             cipher = new CFBBlockCipher(cipher, 8);
         } else if (cipherMode.equalsIgnoreCase("CFB1")) {
             // FIXME: Does 1 mean 1 * 8?
-            cipher = new CFBBlockCipher(cipher, 8);
+            // BD: '1' means '1' (bit), but reportedly (and apparently,
+            // from a look at the code) this is not supported by BC,
+            // which only supports multiples of 8.
+            cipher = new CFBBlockCipher(cipher, 1); // this will fail
         } else if (cipherMode.equalsIgnoreCase("CFB8")) {
             // FIXME: Does 8 mean 8 * 8?
-            cipher = new CFBBlockCipher(cipher, 8 * 8);
+            // BD: '8' means '8' (bits).  other common CFB modes are 64 and 128
+            cipher = new CFBBlockCipher(cipher, 8);
         } else if (cipherMode.equalsIgnoreCase("OFB")) {
             // FIXME: I have no number to put here! I'm using 8.
             cipher = new OFBBlockCipher(cipher, 8);
         }
-        
+
         return cipher;
     }
     
@@ -286,7 +299,7 @@ public class Cipher extends RubyObject {
     }
     
     public static KeyParameter getKeyParameter(String cipherBase, byte[] key) {
-        if (cipherBase.equals("DES")) {
+        if (cipherBase.equals("DES") || cipherBase.equals("des")) {
             return new DESParameters(key);
         } else {
             return new KeyParameter(key);
@@ -314,6 +327,25 @@ public class Cipher extends RubyObject {
     private byte[] key;
     private byte[] iv;
     private String padding;
+    
+    private void dumpVars() {
+        System.out.println("***** Cipher instance vars ****");
+        System.out.println("name = " + name);
+        System.out.println("cryptoBase = " + cryptoBase);
+        System.out.println("cryptoVersion = " + cryptoVersion);
+        System.out.println("cryptoMode = " + cryptoMode);
+        System.out.println("padding_type = " + padding_type);
+        System.out.println("realName = " + realName);
+        System.out.println("keyLen = " + keyLen);
+        System.out.println("ivLen = " + ivLen);
+        System.out.println("ciph block size = " + ciph.getBlockSize());
+        System.out.println("encryptMode = " + encryptMode);
+        System.out.println("ciphInited = " + ciphInited);
+        System.out.println("key.length = " + (key == null ? 0 : key.length));
+        System.out.println("iv.length = " + (iv == null ? 0 : iv.length));
+        System.out.println("padding = " + padding);
+        System.out.println("*******************************");
+    }
 
     public IRubyObject initialize(IRubyObject str, Block unusedBlock) {
         name = str.toString();
@@ -328,31 +360,33 @@ public class Cipher extends RubyObject {
 
         if(hasLen() && null != cryptoVersion) {
             try {
-                keyLen = Integer.parseInt(cryptoVersion);
+                keyLen = Integer.parseInt(cryptoVersion) / 8;
             } catch(NumberFormatException e) {
                 keyLen = -1;
             }
         }
-        
+
         if(keyLen == -1) {
             if("DES".equalsIgnoreCase(cryptoBase)) {
+                ivLen = 8;
                 if("EDE3".equalsIgnoreCase(cryptoVersion)) {
-                    keyLen = 168;
+                    keyLen = 24;
                 } else {
-                    keyLen = 56;
+                    keyLen = 8;
                 }
             } else {
-                keyLen = 128;
+                keyLen = 16;
             }
         }
 
         if(ivLen == -1) {
             if("AES".equalsIgnoreCase(cryptoBase)) {
-                ivLen = 16*8;
+                ivLen = 16;
             } else {
-                ivLen = 8*8;
+                ivLen = 8;
             }
         }
+
         return this;
     }
 
@@ -410,28 +444,32 @@ public class Cipher extends RubyObject {
     }
 
     public IRubyObject set_key(IRubyObject key) {
-        if(key.toString().length()*8 < keyLen) {
-            throw new RaiseException(getRuntime(), ciphErr, "key length to short", true);
-        }
+        byte[] keyBytes;
         try {
-            this.key = key.convertToString().getBytes();
+            keyBytes = key.convertToString().getBytes();
         } catch(Exception e) {
             e.printStackTrace();
             throw new RaiseException(getRuntime(), ciphErr, null, true);
         }
+        if(keyBytes.length < keyLen) {
+            throw new RaiseException(getRuntime(), ciphErr, "key length to short", true);
+        }
+        this.key = keyBytes;
         return key;
     }
 
     public IRubyObject set_iv(IRubyObject iv) {
-        if(iv.toString().length()*8 < ivLen) {
-            throw new RaiseException(getRuntime(), ciphErr, "iv length to short", true);
-        }
+        byte[] ivBytes;
         try {
-            this.iv = iv.convertToString().getBytes();
+            ivBytes = iv.convertToString().getBytes();
         } catch(Exception e) {
             e.printStackTrace();
             throw new RaiseException(getRuntime(), ciphErr, null, true);
         }
+        if(ivBytes.length < ivLen) {
+            throw new RaiseException(getRuntime(), ciphErr, "iv length to short", true);
+        }
+        this.iv = ivBytes;
         return iv;
     }
 
@@ -502,7 +540,7 @@ public class Cipher extends RubyObject {
                 digest = Digest.getDigest(getRuntime(), ((Digest)vdigest).getAlgorithm());
             }
 
-            OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen/8,ivLen/8,digest,salt,pass,iter);
+            OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen,ivLen,digest,salt,pass,iter);
             this.key = result.getKey();
             this.iv = result.getIv();
         } catch(Exception e) {
@@ -516,11 +554,16 @@ public class Cipher extends RubyObject {
     }
 
     private void doInitialize() {
+
+        if (DEBUG) System.out.println("*** doInitialize");
+        if (DEBUG) dumpVars();
+
         ciphInited = true;
         try {
             // FIXME: I had to make these >= where they were == before; why?
-            assert key.length * 8 >= keyLen : "Key wrong length";
-            assert iv.length * 8 >= ivLen : "IV wrong length";
+
+            assert key.length >= keyLen : "Key wrong length";
+            assert iv.length >= ivLen : "IV wrong length";
             if(!"ECB".equalsIgnoreCase(cryptoMode) && this.iv != null) {
                 this.ciph.init(encryptMode, new ParametersWithIV(getKeyParameter(cryptoBase, key), iv));
             } else {
@@ -533,6 +576,8 @@ public class Cipher extends RubyObject {
     }
 
     public IRubyObject update(IRubyObject data) {
+        if (DEBUG) System.out.println("*** update ["+data+"]");
+
         //TODO: implement correctly
         byte[] val = data.convertToString().getBytes();
         if(val.length == 0) {

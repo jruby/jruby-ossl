@@ -12,7 +12,7 @@
  * rights and limitations under the License.
  *
  * Copyright (C) 2006, 2007 Ola Bini <ola@ologix.com>
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
  * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -54,7 +54,7 @@ public class Digest extends RubyObject {
             return new Digest(runtime, klass);
         }
     };
-    
+
     public static void createDigest(Ruby runtime, RubyModule ossl) {
         RubyModule mDigest = ossl.defineModuleUnder("Digest");
         RubyClass cDigest = mDigest.defineClassUnder("Digest",runtime.getObject(),DIGEST_ALLOCATOR);
@@ -92,7 +92,7 @@ public class Digest extends RubyObject {
         }
         return inp;
     }
-    
+
     public static org.bouncycastle.crypto.Digest getDigest(Ruby runtime, String name) {
         if (name.equals("MD5")) {
             return new MD5Digest();
@@ -118,7 +118,7 @@ public class Digest extends RubyObject {
 
         org.bouncycastle.crypto.Digest md = getDigest(recv.getRuntime(), name);
         byte[] bytes = data.convertToString().getBytes();
-        
+
         md.update(bytes, 0, bytes.length);
         byte[] digest = new byte[md.getDigestSize()];
         md.doFinal(digest, 0);
@@ -130,7 +130,7 @@ public class Digest extends RubyObject {
 
         org.bouncycastle.crypto.Digest md = getDigest(recv.getRuntime(), transformDigest(name));
         byte[] bytes = data.convertToString().getBytes();
-        
+
         md.update(bytes, 0, bytes.length);
         byte[] digest = new byte[md.getDigestSize()];
         md.doFinal(digest, 0);
@@ -151,6 +151,11 @@ public class Digest extends RubyObject {
     private StringBuffer data;
     private String name;
 
+
+    public String getName() {
+        return name;
+    }
+
     public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
         IRubyObject type;
         IRubyObject data = getRuntime().getNil();
@@ -161,7 +166,7 @@ public class Digest extends RubyObject {
 
         name = type.toString();
         md = getDigest(getRuntime(), transformDigest(name));
-            
+
         if(!data.isNil()) {
             update(data);
         }

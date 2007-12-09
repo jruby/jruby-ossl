@@ -12,6 +12,7 @@
  * rights and limitations under the License.
  *
  * Copyright (C) 2006, 2007 Ola Bini <ola@ologix.com>
+ * Copyright (C) 2007 Wiliam N Dortch <bill.dortch@gmail.com>
  * 
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -29,13 +30,18 @@ package org.jruby.ext.openssl;
 
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.interfaces.DSAKey;
 import java.security.interfaces.DSAParams;
 import java.security.interfaces.DSAPrivateKey;
 import java.security.interfaces.DSAPublicKey;
+import java.security.spec.DSAPublicKeySpec;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
@@ -59,6 +65,8 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class PKeyDSA extends PKey {
+    private static final long serialVersionUID = 2359742219218350277L;
+
     private static ObjectAllocator PKEYDSA_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new PKeyDSA(runtime, klass);
@@ -84,14 +92,38 @@ public class PKeyDSA extends PKey {
         cDSA.defineFastMethod("to_s",dsacb.getFastOptMethod("export"));
         cDSA.defineFastMethod("syssign",dsacb.getFastMethod("syssign",IRubyObject.class));
         cDSA.defineFastMethod("sysverify",dsacb.getFastMethod("sysverify",IRubyObject.class,IRubyObject.class));
+        cDSA.defineFastMethod("p", dsacb.getFastMethod("get_p"));
+        cDSA.defineFastMethod("p=", dsacb.getFastMethod("set_p", IRubyObject.class));
+        cDSA.defineFastMethod("q", dsacb.getFastMethod("get_q"));
+        cDSA.defineFastMethod("q=", dsacb.getFastMethod("set_q", IRubyObject.class));
+        cDSA.defineFastMethod("g", dsacb.getFastMethod("get_g"));
+        cDSA.defineFastMethod("g=", dsacb.getFastMethod("set_g", IRubyObject.class));
+        cDSA.defineFastMethod("pub_key", dsacb.getFastMethod("get_pub_key"));
+        cDSA.defineFastMethod("pub_key=", dsacb.getFastMethod("set_pub_key", IRubyObject.class));
     }
 
+    public static RaiseException newDSAError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstantAt("PKey")).getClass("DSAError"), message, true);
+    }
+    
     public PKeyDSA(Ruby runtime, RubyClass type) {
         super(runtime,type);
     }
 
     private DSAPrivateKey privKey;
     private DSAPublicKey pubKey;
+    
+    // specValues holds individual DSAPublicKeySpec components. this allows
+    // a public key to be constructed incrementally, as required by the
+    // current implementation of Net::SSH.
+    // (see net-ssh-1.1.2/lib/net/ssh/transport/ossl/buffer.rb #read_keyblob)
+    private BigInteger[] specValues;
+    
+    private static final int SPEC_Y = 0;
+    private static final int SPEC_P = 1;
+    private static final int SPEC_Q = 2;
+    private static final int SPEC_G = 3;
+    
 
     PublicKey getPublicKey() {
         return pubKey;
@@ -126,7 +158,7 @@ public class PKeyDSA extends PKey {
                 KeyFactory fact = null;
                 try {
                     fact = KeyFactory.getInstance("DSA",OpenSSLReal.PROVIDER);
-                } catch(Exception e) {
+                } catch(NoSuchAlgorithmException e) {
                     throw getRuntime().newLoadError("unsupported key algorithm (DSA)");
                 }
                 if(null == val) {
@@ -165,7 +197,7 @@ public class PKeyDSA extends PKey {
                     }
                 }
                 if(null == val) {
-                    throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("DSAError")), "Neither PUB key nor PRIV key:", true);
+                    throw newDSAError(getRuntime(), "Neither PUB key nor PRIV key:");
                 }
 
                 if(val instanceof KeyPair) {
@@ -177,7 +209,7 @@ public class PKeyDSA extends PKey {
                     pubKey = (DSAPublicKey)val;
                     privKey = null;
                 } else {
-                    throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("DSAError")), "Neither PUB key nor PRIV key:", true);
+                    throw newDSAError(getRuntime(), "Neither PUB key nor PRIV key:");
                 }
             }
         }
@@ -267,4 +299,124 @@ public class PKeyDSA extends PKey {
     public IRubyObject sysverify(IRubyObject arg, IRubyObject arg2) {
         return getRuntime().getNil();
     }
+    
+    public synchronized IRubyObject get_p() {
+        // FIXME: return only for public?
+        DSAKey key;
+        BigInteger param;
+        if ((key = this.pubKey) != null || (key = this.privKey) != null) {
+            if ((param = key.getParams().getP()) != null) {
+                return BN.newBN(getRuntime(), param);
+            }
+        } else if (specValues != null) {
+            if ((param = specValues[SPEC_P]) != null) {
+                return BN.newBN(getRuntime(), param);
+            }
+        }
+        return getRuntime().getNil();
+    }
+    
+    public synchronized IRubyObject set_p(IRubyObject p) {
+        return setKeySpecComponent(SPEC_P, p);
+    }
+
+    public synchronized IRubyObject get_q() {
+        // FIXME: return only for public?
+        DSAKey key;
+        BigInteger param;
+        if ((key = this.pubKey) != null || (key = this.privKey) != null) {
+            if ((param = key.getParams().getQ()) != null) {
+                return BN.newBN(getRuntime(), param);
+            }
+        } else if (specValues != null) {
+            if ((param = specValues[SPEC_Q]) != null) {
+                return BN.newBN(getRuntime(), param);
+            }
+        }
+        return getRuntime().getNil();
+    }
+
+    public synchronized IRubyObject set_q(IRubyObject q) {
+        return setKeySpecComponent(SPEC_Q, q);
+    }
+
+    public synchronized IRubyObject get_g() {
+        // FIXME: return only for public?
+        DSAKey key;
+        BigInteger param;
+        if ((key = this.pubKey) != null || (key = this.privKey) != null) {
+            if ((param = key.getParams().getG()) != null) {
+                return BN.newBN(getRuntime(), param);
+            }
+        } else if (specValues != null) {
+            if ((param = specValues[SPEC_G]) != null) {
+                return BN.newBN(getRuntime(), param);
+            }
+        }
+        return getRuntime().getNil();
+    }
+    
+    public synchronized IRubyObject set_g(IRubyObject g) {
+        return setKeySpecComponent(SPEC_G, g);
+    }
+
+    public synchronized IRubyObject get_pub_key() {
+        DSAPublicKey key;
+        BigInteger param;
+        if ((key = this.pubKey) != null) {
+            return BN.newBN(getRuntime(), key.getY());
+        } else if (specValues != null) {
+            if ((param = specValues[SPEC_Y]) != null) {
+                return BN.newBN(getRuntime(), param);
+            }
+        }
+        return getRuntime().getNil();
+    }
+    
+    public synchronized IRubyObject set_pub_key(IRubyObject pub_key) {
+        return setKeySpecComponent(SPEC_Y, pub_key);
+    }
+
+    private IRubyObject setKeySpecComponent(int index, IRubyObject value) {
+        BigInteger[] vals;
+        // illegal to set if we already have a key for this component
+        // FIXME: allow changes after keys are created? MRI doesn't prevent it...
+        if (this.pubKey != null || this.privKey != null ||
+                (vals = this.specValues) != null && vals[index] != null) {
+            throw newDSAError(getRuntime(), "illegal modification");
+        }
+        // get the BigInteger value
+        BigInteger bival = BN.getBigInteger(value);
+        
+        if (vals != null) {
+            // we already have some vals stored, store this one, too
+            vals[index] = bival;
+            // check to see if we have all values yet
+            for (int i = vals.length; --i >= 0; ) {
+                if (vals[i] == null) {
+                    // still missing components, return
+                    return value;
+                }
+            }
+            // we now have all components. create the key.
+            DSAPublicKeySpec spec = new DSAPublicKeySpec(vals[SPEC_Y], vals[SPEC_P], vals[SPEC_Q], vals[SPEC_G]);
+            try {
+                this.pubKey = (DSAPublicKey)KeyFactory.getInstance("DSA").generatePublic(spec);
+            } catch (InvalidKeySpecException e) {
+                throw newDSAError(getRuntime(), "invalid keyspec");
+            } catch (NoSuchAlgorithmException e) {
+                throw newDSAError(getRuntime(), "unsupported key algorithm (DSA)");
+            }
+            // clear out the specValues
+            this.specValues = null;
+
+        } else {
+
+            // first value received, save
+            this.specValues = new BigInteger[4];
+            this.specValues[index] = bival;
+        }
+        return value;
+    }
+
 }// PKeyDSA

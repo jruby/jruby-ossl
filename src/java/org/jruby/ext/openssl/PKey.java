@@ -12,7 +12,7 @@
  * rights and limitations under the License.
  *
  * Copyright (C) 2006, 2007 Ola Bini <ola@ologix.com>
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
  * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -27,15 +27,20 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.SignatureException;
 
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -51,7 +56,7 @@ public abstract class PKey extends RubyObject {
         RubyClass cPKey = mPKey.defineClassUnder("PKey",runtime.getObject(),ObjectAllocator.NOT_ALLOCATABLE_ALLOCATOR);
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
         mPKey.defineClassUnder("PKeyError",openSSLError,openSSLError.getAllocator());
-        
+
         CallbackFactory pkeycb = runtime.callbackFactory(PKey.class);
 
         cPKey.defineMethod("initialize",pkeycb.getMethod("initialize"));
@@ -60,7 +65,11 @@ public abstract class PKey extends RubyObject {
 
         PKeyRSA.createPKeyRSA(runtime,mPKey);
         PKeyDSA.createPKeyDSA(runtime,mPKey);
-        //        createPKeyDH(runtime,mPKey);
+        PKeyDH.createPKeyDH(runtime, mPKey, cPKey);
+    }
+
+    public static RaiseException newPKeyError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstantAt("PKey")).getClass("PKeyError"), message, true);
     }
 
     public PKey(Ruby runtime, RubyClass type) {
@@ -83,6 +92,7 @@ public abstract class PKey extends RubyObject {
         return "NONE";
     }
 
+    // FIXME: any compelling reason for abstract method here?
     public abstract IRubyObject to_der() throws Exception;
 
     public IRubyObject sign(IRubyObject digest, IRubyObject data) throws Exception {
@@ -102,7 +112,7 @@ public abstract class PKey extends RubyObject {
     EVP_SignUpdate(&ctx, RSTRING(data)->ptr, RSTRING(data)->len);
     str = rb_str_new(0, EVP_PKEY_size(pkey)+16);
     if (!EVP_SignFinal(&ctx, RSTRING(str)->ptr, &buf_len, pkey))
-	ossl_raise(ePKeyError, NULL);
+    ossl_raise(ePKeyError, NULL);
     assert(buf_len <= RSTRING(str)->len);
     RSTRING(str)->len = buf_len;
     RSTRING(str)->ptr[buf_len] = 0;
@@ -112,22 +122,33 @@ public abstract class PKey extends RubyObject {
     }
 
     public IRubyObject verify(IRubyObject digest, IRubyObject sig, IRubyObject data) {
-        System.err.println("WARNING: unimplemented method PKey#verify called");
-        /*
-    GetPKey(self, pkey);
-    EVP_VerifyInit(&ctx, GetDigestPtr(digest));
-    StringValue(sig);
-    StringValue(data);
-    EVP_VerifyUpdate(&ctx, RSTRING(data)->ptr, RSTRING(data)->len);
-    switch (EVP_VerifyFinal(&ctx, RSTRING(sig)->ptr, RSTRING(sig)->len, pkey)) {
-    case 0:
-	return Qfalse;
-    case 1:
-	return Qtrue;
-    default:
-	ossl_raise(ePKeyError, NULL);
-    }
-        */
-        return getRuntime().getNil();
+        if (!(digest instanceof Digest)) {
+            throw newPKeyError(getRuntime(), "invalid digest");
+        }
+        if (!(sig instanceof RubyString)) {
+            throw newPKeyError(getRuntime(), "invalid signature");
+        }
+        if (!(data instanceof RubyString)) {
+            throw newPKeyError(getRuntime(), "invalid data");
+        }
+        byte[] sigBytes = ((RubyString)sig).getBytes();
+        byte[] dataBytes = ((RubyString)data).getBytes();
+        String algorithm = ((Digest)digest).getName() + "with" + getAlgorithm();
+        boolean valid;
+        try {
+            // note: not specifying "BC" provider here, as that would fail if
+            // BC wasn't plugged in (as it would not be for, say, Net::SSH)
+            Signature signature = Signature.getInstance(algorithm);
+            signature.initVerify(getPublicKey());
+            signature.update(dataBytes);
+            valid = signature.verify(sigBytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw newPKeyError(getRuntime(), "unsupported algorithm: " + algorithm);
+        } catch (SignatureException e) {
+            throw newPKeyError(getRuntime(), "invalid signature");
+        } catch (InvalidKeyException e) {
+            throw newPKeyError(getRuntime(), "invalid key");
+        }
+        return getRuntime().newBoolean(valid);
     }
 }// PKey
