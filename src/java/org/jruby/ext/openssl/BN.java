@@ -623,7 +623,6 @@ public class BN extends RubyObject {
             if (safe) {
                 do {
                     q = new BigInteger(qbits, 2, secureRandom);
-                    //q = BigInteger.probablePrime(qbits, secureRandom);
                     p = q.shiftLeft(1).setBit(0);
                 } while (!(p.isProbablePrime(DEFAULT_CERTAINTY) && q.isProbablePrime(DEFAULT_CERTAINTY)));
             } else {
@@ -692,18 +691,15 @@ public class BN extends RubyObject {
 
         byte[] buf;
         random.nextBytes(buf = new byte[bytes]);
-        // System.out.println("original bits = " + new BigInteger(1, buf).bitLength());
         if (top >= 0) {
             if (top == 0) {
                 buf[0] |= (1 << bit);
             } else {
-                if (bit == 0)
-                {
+                if (bit == 0) {
                     buf[0] = 1;
                     buf[1] |= 0x80;
                 }
-                else
-                {
+                else {
                     buf[0] |= (3 << (bit - 1));
                 }
             }
@@ -712,7 +708,6 @@ public class BN extends RubyObject {
         if (bottom) {
             buf[bytes-1] |= 1;
         }
-        // System.out.println("modified bits = " + new BigInteger(1, buf).bitLength());
         
         // treating result as unsigned
         return new BigInteger(1, buf);

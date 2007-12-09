@@ -33,6 +33,7 @@ import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.security.spec.InvalidParameterSpecException;
+import java.util.HashMap;
 
 import javax.crypto.spec.DHParameterSpec;
 
@@ -338,15 +339,14 @@ public class PKeyDH extends PKey {
             y = this.dh_pub_key;
         }
         Ruby runtime = getRuntime();
-        RubyHash params = RubyHash.newHash(runtime);
-
-        // FIXME: aset deprecated in JRuby 1.1, but no other backward-compatible option (?)
-        params.aset(runtime.newString("p"), BN.newBN(runtime, p));
-        params.aset(runtime.newString("g"), BN.newBN(runtime, g));
-        params.aset(runtime.newString("pub_key"), BN.newBN(runtime, x));
-        params.aset(runtime.newString("priv_key"), BN.newBN(runtime, y));
+        HashMap params = new HashMap();
         
-        return params;
+        params.put(runtime.newString("p"), BN.newBN(runtime, p));
+        params.put(runtime.newString("g"), BN.newBN(runtime, g));
+        params.put(runtime.newString("pub_key"), BN.newBN(runtime, x));
+        params.put(runtime.newString("priv_key"), BN.newBN(runtime, y));
+        
+        return RubyHash.newHash(runtime, params, runtime.getNil());
     }
     
     // don't need synchronized as value is volatile
