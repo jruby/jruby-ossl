@@ -1,4 +1,5 @@
 warn "Warning: OpenSSL SSL implementation unavailable"
+warn "You must run on JDK 1.5 (Java 5) or higher to use SSL"
 module OpenSSL
   module SSL
     class SSLError < OpenSSLError; end
