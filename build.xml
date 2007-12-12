@@ -9,8 +9,8 @@
   <property name="target.classes.test" value="${target}/test-classes"/>
   <property name="lib.dir" value="lib"/>
   <property name="jruby.jar" value="${jruby.home}/lib/jruby.jar"/>
-  <property name="version.source" value="1.5"/>
-  <property name="version.target" value="1.5"/>
+  <property name="version.source" value="1.4"/>
+  <property name="version.target" value="1.4"/>
 
   <path id="build.classpath">
     <fileset dir="${lib.dir}" includes="*.jar" excludes="jopenssl.jar,jruby.jar"/>

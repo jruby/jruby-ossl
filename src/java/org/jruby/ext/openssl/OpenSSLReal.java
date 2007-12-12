@@ -35,17 +35,19 @@ import org.jruby.RubyModule;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class OpenSSLReal {
+
     public static java.security.Provider PROVIDER;
-    
+
     public static void doWithBCProvider(final Runnable toRun) {
         getWithBCProvider(new Callable() {
+
             public Object call() {
                 toRun.run();
                 return null;
             }
         });
     }
- 
+
     public static Object getWithBCProvider(Callable toRun) {
         if (PROVIDER != null) {
             synchronized (java.security.Security.class) {
@@ -64,38 +66,48 @@ public class OpenSSLReal {
     public static void createOpenSSL(Ruby runtime) {
         if (PROVIDER == null) {
             try {
-                PROVIDER = (java.security.Provider)
-                        Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
+                PROVIDER = (java.security.Provider) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
             } catch (Exception exception) {
-                // no bouncy castle available
+            // no bouncy castle available
             }
         }
 
         RubyModule ossl = runtime.getOrCreateModule("OpenSSL");
         RubyClass standardError = runtime.getClass("StandardError");
-        ossl.defineClassUnder("OpenSSLError",standardError,standardError.getAllocator());
+        ossl.defineClassUnder("OpenSSLError", standardError, standardError.getAllocator());
 
-        ASN1.createASN1(runtime, ossl);
+        if (PROVIDER != null) {
+            ASN1.createASN1(runtime, ossl);
+            PKey.createPKey(runtime, ossl);
+            X509.createX509(runtime, ossl);
+            NetscapeSPKI.createNetscapeSPKI(runtime, ossl);
+            PKCS7.createPKCS7(runtime, ossl);
+        } else {
+            runtime.getLoadService().require("openssl/dummy");
+        }
+
         BN.createBN(runtime, ossl);
         Digest.createDigest(runtime, ossl);
         Cipher.createCipher(runtime, ossl);
         Random.createRandom(runtime, ossl);
-        PKey.createPKey(runtime,ossl);
-        HMAC.createHMAC(runtime,ossl);
-        X509.createX509(runtime,ossl);
-        Config.createConfig(runtime,ossl);
-        NetscapeSPKI.createNetscapeSPKI(runtime,ossl);
-        PKCS7.createPKCS7(runtime,ossl);
-        SSL.createSSL(runtime,ossl);
+        HMAC.createHMAC(runtime, ossl);
+        Config.createConfig(runtime, ossl);
 
-        ossl.setConstant("VERSION",runtime.newString("1.0.0"));
-        ossl.setConstant("OPENSSL_VERSION",runtime.newString("OpenSSL 0.9.8b 04 May 2006 (Java fake)"));
-        
+        try {
+            SSL.createSSL(runtime, ossl);
+        } catch (Error err) {
+            runtime.getLoadService().require("openssl/dummyssl");
+        }
+
+        ossl.setConstant("VERSION", runtime.newString("1.0.0"));
+        ossl.setConstant("OPENSSL_VERSION", runtime.newString("OpenSSL 0.9.8b 04 May 2006 (Java fake)"));
+
         try {
             java.security.MessageDigest.getInstance("SHA224", PROVIDER);
-            ossl.setConstant("OPENSSL_VERSION_NUMBER",runtime.newFixnum(9469999));
-        } catch(java.security.NoSuchAlgorithmException e) {
-            ossl.setConstant("OPENSSL_VERSION_NUMBER",runtime.newFixnum(9469952));
+            ossl.setConstant("OPENSSL_VERSION_NUMBER", runtime.newFixnum(9469999));
+        } catch (Exception e) {
+            ossl.setConstant("OPENSSL_VERSION_NUMBER", runtime.newFixnum(9469952));
         }
     }
 }// OpenSSLReal
+

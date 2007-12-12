@@ -176,7 +176,6 @@ public class SSLContext extends RubyObject {
             this.ctt = ctt;
         }
 
-        @Override
         public String chooseEngineClientAlias(String[] keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
             PKey k = null;
             if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {
@@ -195,7 +194,6 @@ public class SSLContext extends RubyObject {
             return null;
         }
 
-        @Override
         public String chooseEngineServerAlias(String keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
             PKey k = null;
             if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {

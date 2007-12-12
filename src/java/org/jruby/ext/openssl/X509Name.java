@@ -29,7 +29,6 @@ package org.jruby.ext.openssl;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -54,8 +53,10 @@ import org.jruby.RubyHash;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -96,13 +97,14 @@ public class X509Name extends RubyObject {
         cX509Name.setConstant("DEFAULT_OBJECT_TYPE",runtime.newFixnum(DERTags.UTF8_STRING));
 
         RubyHash hash = new RubyHash(runtime, runtime.newFixnum(DERTags.UTF8_STRING));
-        hash.op_aset(runtime.newString("C"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        hash.op_aset(runtime.newString("countryName"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        hash.op_aset(runtime.newString("serialNumber"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        hash.op_aset(runtime.newString("dnQualifier"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        hash.op_aset(runtime.newString("DC"),runtime.newFixnum(DERTags.IA5_STRING));
-        hash.op_aset(runtime.newString("domainComponent"),runtime.newFixnum(DERTags.IA5_STRING));
-        hash.op_aset(runtime.newString("emailAddress"),runtime.newFixnum(DERTags.IA5_STRING));
+        RubyObjectAdapter api = JavaEmbedUtils.newObjectAdapter();
+        api.callMethod(hash, "[]=", new IRubyObject[] {runtime.newString("C"), runtime.newFixnum(DERTags.PRINTABLE_STRING)});
+        api.callMethod(hash, "[]=", new IRubyObject[] {runtime.newString("countryName"),runtime.newFixnum(DERTags.PRINTABLE_STRING)});
+        api.callMethod(hash, "[]=", new IRubyObject[] {runtime.newString("serialNumber"),runtime.newFixnum(DERTags.PRINTABLE_STRING)});
+        api.callMethod(hash, "[]=", new IRubyObject[] {runtime.newString("dnQualifier"),runtime.newFixnum(DERTags.PRINTABLE_STRING)});
+        api.callMethod(hash, "[]=", new IRubyObject[] {runtime.newString("DC"),runtime.newFixnum(DERTags.IA5_STRING)});
+        api.callMethod(hash, "[]=", new IRubyObject[] {runtime.newString("domainComponent"),runtime.newFixnum(DERTags.IA5_STRING)});
+        api.callMethod(hash, "[]=", new IRubyObject[] {runtime.newString("emailAddress"),runtime.newFixnum(DERTags.IA5_STRING)});
         cX509Name.setConstant("OBJECT_TYPE_TEMPLATE", hash);
     }
 
