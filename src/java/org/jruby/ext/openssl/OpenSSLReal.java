@@ -52,7 +52,7 @@ public class OpenSSLReal {
         if (PROVIDER != null) {
             synchronized (java.security.Security.class) {
                 try {
-                    java.security.Security.insertProviderAt(PROVIDER, 2);
+                    java.security.Security.addProvider(PROVIDER);
                     return toRun.call();
                 } finally {
                     java.security.Security.removeProvider("BC");
@@ -66,9 +66,10 @@ public class OpenSSLReal {
     public static void createOpenSSL(Ruby runtime) {
         if (PROVIDER == null) {
             try {
-                PROVIDER = (java.security.Provider) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
+                PROVIDER = (java.security.Provider) 
+                        Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
             } catch (Exception exception) {
-            // no bouncy castle available
+                // no bouncy castle available
             }
         }
 
@@ -100,7 +101,7 @@ public class OpenSSLReal {
         }
 
         ossl.setConstant("VERSION", runtime.newString("1.0.0"));
-        ossl.setConstant("OPENSSL_VERSION", runtime.newString("OpenSSL 0.9.8b 04 May 2006 (Java fake)"));
+        ossl.setConstant("OPENSSL_VERSION", runtime.newString("OpenSSL 0.9.8b 04 May 2006 (JRuby-OpenSSL fake)"));
 
         try {
             java.security.MessageDigest.getInstance("SHA224", PROVIDER);
