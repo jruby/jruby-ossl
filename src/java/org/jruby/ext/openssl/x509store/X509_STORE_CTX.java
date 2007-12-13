@@ -625,8 +625,12 @@ public class X509_STORE_CTX {
         cb = verify_cb;
 	must_be_ca = -1;
 
-	if(System.getenv("OPENSSL_ALLOW_PROXY_CERTS") != null && !"false".equalsIgnoreCase((String)System.getenv("OPENSSL_ALLOW_PROXY_CERTS"))) {
-            allow_proxy_certs = 1;
+        try {
+            if (System.getenv("OPENSSL_ALLOW_PROXY_CERTS") != null && !"false".equalsIgnoreCase((String) System.getenv("OPENSSL_ALLOW_PROXY_CERTS"))) {
+                allow_proxy_certs = 1;
+            }
+        } catch (Error e) {
+            // just ignore if we can't use System.getenv
         }
 
         for(int i = 0; i<last_untrusted;i++) {
