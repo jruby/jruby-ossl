@@ -2,7 +2,7 @@ require 'rubygems'
 
 spec = Gem::Specification.new do |s|
   s.name = "jruby-openssl"
-  s.version = "0.0.5"
+  s.version = "0.1"
   s.author = "Ola Bini"
   s.email = "ola.bini@gmail.com"
   s.homepage = "http://jruby-extras.rubyforge.org/"
@@ -12,7 +12,6 @@ spec = Gem::Specification.new do |s|
   s.files = candidates.delete_if do |item| item.include?(".svn") || item.include?("rdoc") end
   s.require_path = "lib"
   s.has_rdoc = false
-  s.requirements << "Java 1.5"
 end
 
 if $0 == __FILE__

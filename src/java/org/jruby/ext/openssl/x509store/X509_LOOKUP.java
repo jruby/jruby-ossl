@@ -289,21 +289,24 @@ public class X509_LOOKUP {
             
             switch(cmd) {
             case X509.X509_L_FILE_LOAD:
-		if(argl == X509.X509_FILETYPE_DEFAULT) {
-			file = System.getenv(X509.get_default_cert_file_env());
-			if(file != null) {
-                            ok = ctx.load_cert_crl_file(file,X509.X509_FILETYPE_PEM) != 0 ? 1 : 0;
-                        } else {
-                            ok = (ctx.load_cert_crl_file(X509.get_default_cert_file(),X509.X509_FILETYPE_PEM) != 0) ? 1 : 0;
-                        }
-                        if(ok == 0) {
-                            Err.PUT_err(X509.X509_R_LOADING_DEFAULTS);
-                        }
-                } else {
-                    if(argl == X509.X509_FILETYPE_PEM) {
-                        ok = (ctx.load_cert_crl_file(argp,X509.X509_FILETYPE_PEM) != 0) ? 1 : 0;
+                if (argl == X509.X509_FILETYPE_DEFAULT) {
+                    try {
+                        file = System.getenv(X509.get_default_cert_file_env());
+                    } catch (Error error) {
+                    }
+                    if (file != null) {
+                        ok = ctx.load_cert_crl_file(file, X509.X509_FILETYPE_PEM) != 0 ? 1 : 0;
                     } else {
-                        ok = (ctx.load_cert_file(argp,(int)argl) != 0) ? 1 : 0;
+                        ok = (ctx.load_cert_crl_file(X509.get_default_cert_file(), X509.X509_FILETYPE_PEM) != 0) ? 1 : 0;
+                    }
+                    if (ok == 0) {
+                        Err.PUT_err(X509.X509_R_LOADING_DEFAULTS);
+                    }
+                } else {
+                    if (argl == X509.X509_FILETYPE_PEM) {
+                        ok = (ctx.load_cert_crl_file(argp, X509.X509_FILETYPE_PEM) != 0) ? 1 : 0;
+                    } else {
+                        ok = (ctx.load_cert_file(argp, (int) argl) != 0) ? 1 : 0;
                     }
                 }
                 break;
@@ -353,7 +356,10 @@ public class X509_LOOKUP {
             switch(cmd) {
             case X509.X509_L_ADD_DIR:
 		if(argl == X509.X509_FILETYPE_DEFAULT) {
-                    dir = System.getenv(X509.get_default_cert_dir_env());
+                    try {
+                        dir = System.getenv(X509.get_default_cert_dir_env());
+                    } catch (Error error) {
+                    }
                     if(null != dir) {
                         ret = add_cert_dir(ld,dir,X509.X509_FILETYPE_PEM);
                     } else {
