@@ -1,0 +1,12 @@
+== 0.1
+
+- PLEASE NOTE: This release is not compatible with JRuby releases earlier than
+  1.0.3 or 1.1b2. If you must use JRuby 1.0.2 or earlier, please install the
+  0.6 release.
+- Release coincides with JRuby 1.0.3 and JRuby 1.1b2 releases
+- Simultaneous support for JRuby trunk and 1.0 branch
+- Start of support for OpenSSL::BN
+
+== 0.0.5 and prior
+
+- Initial versions with maintenance updates
