@@ -8,7 +8,7 @@ begin
   require 'openssl/test_ns_spki'
   # require 'openssl/test_pair'
   require 'openssl/test_pkey_rsa'
-  # require 'openssl/test_ssl' # won't work, since kill and pid is used.
+  require 'openssl/test_ssl'
   require 'openssl/test_x509cert'
   require 'openssl/test_x509crl'
   require 'openssl/test_x509name'

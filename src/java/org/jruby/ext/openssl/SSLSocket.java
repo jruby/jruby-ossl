@@ -133,7 +133,7 @@ public class SSLSocket extends RubyObject {
     private void ossl_ssl_setup() throws Exception {
         if(null == engine) {
             ThreadContext tc = getRuntime().getCurrentContext();
-            SSLContext ctx = SSLContext.getInstance("SSL",OpenSSLReal.PROVIDER);
+            SSLContext ctx = SSLContext.getInstance("SSL");
             IRubyObject store = callMethod(tc,"context").callMethod(tc,"cert_store");
             callMethod(tc,"context").callMethod(tc,"verify_mode");
 
@@ -182,6 +182,9 @@ public class SSLSocket extends RubyObject {
             } else {
                 throw new RaiseException(getRuntime(),sslError,null,true);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RaiseException(getRuntime(),sslError,e.getMessage(),true);
         }
         return this;
     }
@@ -432,6 +435,7 @@ public class SSLSocket extends RubyObject {
     }
 
     private void close() throws Exception {
+        if (engine == null) throw getRuntime().newEOFError();
         engine.closeOutbound();
         if (netData.hasRemaining()) {
             return;
