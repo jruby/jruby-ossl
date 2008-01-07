@@ -1,3 +1,7 @@
+== 0.1.1
+
+- Fixed blocker issue preventing HTTPS/SSL from working (JRUBY-1222)
+
 == 0.1
 
 - PLEASE NOTE: This release is not compatible with JRuby releases earlier than
