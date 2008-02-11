@@ -43,6 +43,7 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.common.IRubyWarnings;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
@@ -334,6 +335,13 @@ public class Cipher extends RubyObject {
         if(keyBytes.length < keyLen) {
             throw new RaiseException(getRuntime(), ciphErr, "key length to short", true);
         }
+
+        if(keyBytes.length > keyLen) {
+            byte[] keys = new byte[keyLen];
+            System.arraycopy(keyBytes, 0, keys, 0, keyLen);
+            keyBytes = keys;
+        }
+
         this.key = keyBytes;
         return key;
     }
@@ -499,7 +507,7 @@ public class Cipher extends RubyObject {
     }
 
     public IRubyObject update_deprecated(IRubyObject data) {
-        getRuntime().getWarnings().warn("" + this.getMetaClass().getRealClass().getName() + "#<< is deprecated; use " + this.getMetaClass().getRealClass().getName() + "#update instead");
+        getRuntime().getWarnings().warn(IRubyWarnings.ID.DEPRECATED_METHOD, "" + this.getMetaClass().getRealClass().getName() + "#<< is deprecated; use " + this.getMetaClass().getRealClass().getName() + "#update instead");
         return update(data);
     }
 
