@@ -267,6 +267,14 @@ public class Cipher extends RubyObject {
                 ivLen = 8;
             }
         }
+        
+        try {
+            if((javax.crypto.Cipher.getMaxAllowedKeyLength(name)/8) < keyLen) {
+                keyLen = javax.crypto.Cipher.getMaxAllowedKeyLength(name)/8;
+            }
+        } catch(Exception e) {
+            // I hate checked exceptions
+        }
 
         return this;
     }
@@ -466,8 +474,8 @@ public class Cipher extends RubyObject {
 
         ciphInited = true;
         try {
-            assert key.length * 8 == keyLen : "Key wrong length";
-            assert iv.length * 8 == ivLen : "IV wrong length";
+            assert (key.length * 8 == keyLen) || (key.length == keyLen) : "Key wrong length";
+            assert (iv.length * 8 == ivLen) || (iv.length == ivLen): "IV wrong length";
             if(!"ECB".equalsIgnoreCase(cryptoMode) && this.iv != null) {
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.iv));
             } else {
