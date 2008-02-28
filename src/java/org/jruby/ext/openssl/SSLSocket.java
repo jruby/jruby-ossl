@@ -450,7 +450,6 @@ public class SSLSocket extends RubyObject {
         close();
         ThreadContext tc = getRuntime().getCurrentContext();
         if(callMethod(tc,"sync_close").isTrue()) {
-            c.close();
             callMethod(tc,"io").callMethod(tc,"close");
         }
         return getRuntime().getNil();
