@@ -74,6 +74,7 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     jruby_oop {
       begin
         cmd = [RUBY]
+        cmd << "-Ilib"
         cmd << "-d" if $DEBUG
         cmd << SSL_SERVER << port0.to_s << verify_mode.to_s
         cmd << (start_immediately ? "yes" : "no")
@@ -81,15 +82,21 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
         server.write(@ca_cert.to_pem)
         server.write(@svr_cert.to_pem)
         server.write(@svr_key.to_pem)
-        pid = Integer(server.gets)
+        $stderr.puts "sent certs to server" if $DEBUG
+        str = server.gets
+        $stderr.puts "got pid from server: #{str}" if $DEBUG
+        pid = Integer(str)
         if port = server.gets
           if $DEBUG
             $stderr.printf("%s started: pid=%d port=%d\n", SSL_SERVER, pid, port)
           end
           block.call(server, port.to_i)
         end
+      rescue => e
+        puts e, *(e.backtrace)
       ensure
         if server
+          $stderr.puts "killing: #{pid}" if $DEBUG
           Process.kill(:KILL, pid)
           server.close
         end
