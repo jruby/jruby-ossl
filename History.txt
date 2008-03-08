@@ -1,3 +1,11 @@
+== 0.2
+
+- Fix socket buffering issue by setting socket IO sync = true
+- Fix bad file descriptor issue caused by unnecessary close (JRUBY-2152)
+- Fix AES key length (JRUBY-2187)
+- Fix cipher initialization (JRUBY-1100)
+- Now, only compatible with JRuby 1.1
+
 == 0.1.1
 
 - Fixed blocker issue preventing HTTPS/SSL from working (JRUBY-1222)
