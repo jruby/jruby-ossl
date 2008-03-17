@@ -390,7 +390,13 @@ public class SSLSocket extends RubyObject {
         //        System.err.println("WARNING: unimplemented method called: SSLSocket#sysread");
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2);
         int len = RubyNumeric.fix2int(args[0]);
-        IRubyObject str = args.length == 2 ? args[1] : getRuntime().newString("");
+        IRubyObject str = getRuntime().getNil();
+        if (args.length == 2) {
+            str = args[1];
+        }
+        if (str.isNil()) {
+            str = getRuntime().newString("");
+        }
         if(len == 0) {
             return str;
         }
