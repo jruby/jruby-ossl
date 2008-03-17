@@ -1,3 +1,9 @@
+= JRuby-OpenSSL
+
+* http://jruby-extras.rubyforge.org/jruby-openssl
+
+== DESCRIPTION:
+
 JRuby-OpenSSL is an add-on gem for JRuby that emulates the Ruby OpenSSL native library.
 
 JRuby offers *just enough* compatibility for most Ruby applications that use OpenSSL. 

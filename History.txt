@@ -1,5 +1,6 @@
 == 0.2
 
+- Enable remaining tests; fix a nil string issue in SSLSocket.sysread (JRUBY-1888)
 - Fix socket buffering issue by setting socket IO sync = true
 - Fix bad file descriptor issue caused by unnecessary close (JRUBY-2152)
 - Fix AES key length (JRUBY-2187)
