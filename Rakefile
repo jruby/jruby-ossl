@@ -41,7 +41,7 @@ begin
   require 'hoe'
   Hoe.new("jruby-openssl", Jopenssl::Version::VERSION) do |p|
     p.rubyforge_name = "jruby-extras"
-    p.url = "http://jruby-extras.rubyforge.org/jopenssl"
+    p.url = "http://jruby-extras.rubyforge.org/jruby-openssl"
     p.author = "Ola Bini and JRuby contributors"
     p.email = "ola.bini@gmail.com"
     p.summary = "OpenSSL add-on for JRuby"
