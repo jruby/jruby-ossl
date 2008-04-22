@@ -117,8 +117,7 @@ public class X509AuxCertificate extends X509Certificate {
         boolean ret = this == other;
         if(!ret && (other instanceof X509AuxCertificate)) {
             X509AuxCertificate o = (X509AuxCertificate)other;
-            ret = this.wrap.equals(o.wrap) && 
-                (this.aux == null) ? o.aux == null : this.aux.equals(o.aux);
+            ret = this.wrap.equals(o.wrap) && ((this.aux == null) ? o.aux == null : this.aux.equals(o.aux));
         }
         return ret;
     }

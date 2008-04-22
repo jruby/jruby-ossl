@@ -105,7 +105,7 @@ public class X509_STORE_CTX {
     public int get1_issuer(X509AuxCertificate[] issuer, X509AuxCertificate x) throws Exception { 
         X509_NAME xn = new X509_NAME(x.getIssuerX500Principal());
         X509_OBJECT[] s_obj = new X509_OBJECT[1];
-        int ok = get_by_subject(X509.X509_LU_X509,xn,s_obj);
+        int ok = ctx == null ? 0 : get_by_subject(X509.X509_LU_X509,xn,s_obj);
         if(ok != X509.X509_LU_X509) {
             if(ok == X509.X509_LU_RETRY) {
                 Err.PUT_err(X509.X509_R_SHOULD_RETRY);
@@ -122,12 +122,12 @@ public class X509_STORE_CTX {
         }
 
         int idx = X509_OBJECT.idx_by_subject(ctx.objs,X509.X509_LU_X509, xn);
-	if(idx == -1) {
+        if(idx == -1) {
             return 0;
         }
 
-	/* Look through all matching certificates for a suitable issuer */
-	for(int i = idx; i < ctx.objs.size(); i++) {
+        /* Look through all matching certificates for a suitable issuer */
+        for(int i = idx; i < ctx.objs.size(); i++) {
             X509_OBJECT pobj = (X509_OBJECT)ctx.objs.get(i);
             if(pobj.type() != X509.X509_LU_X509) {
                 return 0;
@@ -140,7 +140,7 @@ public class X509_STORE_CTX {
                 return 1;
             }
         }
-	return 0;
+        return 0;
     }
 
     public static List transform(Collection inp) {
@@ -168,25 +168,24 @@ public class X509_STORE_CTX {
     }
 
     public int init(X509_STORE store, X509AuxCertificate x509, List chain) { 
-	int ret = 1;
-	ctx=store;
-	current_method=0;
-	cert=x509;
-	untrusted=transform(chain);
-	crls = new ArrayList();
-	last_untrusted=0;
-	other_ctx = new ArrayList();
-	valid=false;
-	chain = new ArrayList();
-	error=0;
-	explicit_policy=0;
-	error_depth=0;
-	current_cert=null;
-	current_issuer=null;
+        int ret = 1;
+        ctx=store;
+        current_method=0;
+        cert=x509;
+        untrusted=transform(chain);
+        crls = new ArrayList();
+        last_untrusted=0;
+        other_ctx = new ArrayList();
+        valid=false;
+        chain = new ArrayList();
+        error=0;
+        explicit_policy=0;
+        error_depth=0;
+        current_cert=null;
+        current_issuer=null;
         tree = null;
 
-	param = new X509_VERIFY_PARAM();
-
+        param = new X509_VERIFY_PARAM();
 
         if(store != null) {
             ret = param.inherit(store.param);
@@ -204,7 +203,7 @@ public class X509_STORE_CTX {
             ret = param.inherit(X509_VERIFY_PARAM.lookup("default"));
         }
 
-	if(ret == 0) {
+        if(ret == 0) {
             Err.PUT_err(X509.ERR_R_MALLOC_FAILURE);
             return 0;
         }
@@ -266,7 +265,7 @@ public class X509_STORE_CTX {
         this.ex_data = new ArrayList();
         this.ex_data.add(null);this.ex_data.add(null);this.ex_data.add(null);
         this.ex_data.add(null);this.ex_data.add(null);this.ex_data.add(null);
-	return 1;
+        return 1;
     } 
 
     public void trusted_stack(List sk) {
@@ -334,6 +333,81 @@ public class X509_STORE_CTX {
     public int set_trust(int trust) { 
         return purpose_inherit(0,0,trust);
     }
+
+    private void resetSettingsToWithoutStore() {
+        ctx = null;
+        this.param = new X509_VERIFY_PARAM();
+        this.param.flags |= X509.X509_VP_FLAG_DEFAULT | X509.X509_VP_FLAG_ONCE;
+        this.param.inherit(X509_VERIFY_PARAM.lookup("default"));
+        this.cleanup = Function1.iZ;
+        this.check_issued = default_check_issued;
+        this.get_issuer = new Function3() {
+                public int call(Object arg1, Object arg2, Object arg3) throws Exception {
+                    return ((X509_STORE_CTX)arg2).get1_issuer((X509AuxCertificate[])arg1,(X509AuxCertificate)arg3);
+                }
+            };
+        this.verify_cb = null_callback;
+        this.verify = internal_verify;
+        this.check_revocation = default_check_revocation;
+        this.get_crl = default_get_crl;
+        this.check_crl = default_check_crl;
+        this.cert_crl = default_cert_crl;
+    }
+
+    public int load_verify_locations(String CAfile, String CApath) {
+        boolean reset = false;
+        try {
+            if(ctx == null) {
+                reset = true;
+                ctx = new X509_STORE();
+                this.param.inherit(ctx.param);
+                param.inherit(X509_VERIFY_PARAM.lookup("default"));
+                this.verify_cb = ctx.verify_cb;
+                this.cleanup = ctx.cleanup;
+                if(ctx.check_issued != null && ctx.check_issued != Function3.iZ) {
+                    this.check_issued = ctx.check_issued;
+                }
+                if(ctx.get_issuer != null && ctx.get_issuer != Function3.iZ) {
+                    this.get_issuer = ctx.get_issuer;
+                }
+
+                if(ctx.verify_cb != null && ctx.verify_cb != Function2.iZ) {
+                    this.verify_cb = ctx.verify_cb;
+                }
+
+                if(ctx.verify != null && ctx.verify != Function1.iZ) {
+                    this.verify = ctx.verify;
+                }
+
+                if(ctx.check_revocation != null && ctx.check_revocation != Function1.iZ) {
+                    this.check_revocation = ctx.check_revocation;
+                }
+
+                if(ctx.get_crl != null && ctx.get_crl != Function3.iZ) {
+                    this.get_crl = ctx.get_crl;
+                }
+
+                if(ctx.check_crl != null && ctx.check_crl != Function2.iZ) {
+                    this.check_crl = ctx.check_crl;
+                }
+
+                if(ctx.cert_crl != null && ctx.cert_crl != Function3.iZ) {
+                    this.cert_crl = ctx.cert_crl;
+                }
+            }
+
+            int ret = ctx.load_locations(CAfile, CApath);
+            if(ret == 0 && reset) resetSettingsToWithoutStore();
+
+            return ret;
+        } catch(Exception e) {
+            if(reset) {
+                resetSettingsToWithoutStore();
+            }
+            return 0;
+        }
+    }
+
     public int purpose_inherit(int def_purpose,int purpose, int trust) { 
         int idx;
         if(purpose == 0) {
@@ -426,7 +500,7 @@ public class X509_STORE_CTX {
             }
         }
         ret[0] = tmp;
-	return 1;
+        return 1;
     }
 
     public int verify_cert() throws Exception {
@@ -441,7 +515,7 @@ public class X509_STORE_CTX {
             Err.PUT_err(X509.X509_R_NO_CERT_SET_FOR_US_TO_VERIFY);
             return -1;
         }
-	cb=verify_cb;
+        cb=verify_cb;
 
         if(null == chain) {
             chain = new ArrayList();
@@ -456,7 +530,7 @@ public class X509_STORE_CTX {
         x = (X509AuxCertificate)chain.get(num-1);
         depth = param.depth;
 
-	for(;;) {
+        for(;;) {
             if(depth < num) {
                 break;
             }
@@ -507,7 +581,6 @@ public class X509_STORE_CTX {
                 x = (X509AuxCertificate)chain.get(num-1);
             }
         }
-
         for(;;) {
             if(depth<num) {
                 break;
@@ -617,13 +690,13 @@ public class X509_STORE_CTX {
     }
 
     public int check_chain_extensions() throws Exception {
-	int ok=0, must_be_ca;
-	X509AuxCertificate x;
+        int ok=0, must_be_ca;
+        X509AuxCertificate x;
         Function2 cb;
-	int proxy_path_length = 0;
-	int allow_proxy_certs = (param.flags & X509.V_FLAG_ALLOW_PROXY_CERTS) != 0 ? 1 : 0;
+        int proxy_path_length = 0;
+        int allow_proxy_certs = (param.flags & X509.V_FLAG_ALLOW_PROXY_CERTS) != 0 ? 1 : 0;
         cb = verify_cb;
-	must_be_ca = -1;
+        must_be_ca = -1;
 
         try {
             if (System.getenv("OPENSSL_ALLOW_PROXY_CERTS") != null && !"false".equalsIgnoreCase((String) System.getenv("OPENSSL_ALLOW_PROXY_CERTS"))) {
@@ -733,7 +806,7 @@ public class X509_STORE_CTX {
                 must_be_ca = 1;
             }
         }
-	return 1;
+        return 1;
     }
 
     public int check_trust() throws Exception {
@@ -779,7 +852,7 @@ public class X509_STORE_CTX {
                 return 0;
             }
         }
-	return 1;
+        return 1;
     }
 
     public int check_cert() throws Exception {
@@ -790,21 +863,21 @@ public class X509_STORE_CTX {
         x = (X509AuxCertificate)chain.get(cnum);
         current_cert = x;
         ok = get_crl.call(this,crl,x);
-	if(ok == 0) {
+        if(ok == 0) {
             error = X509.V_ERR_UNABLE_TO_GET_CRL;
             ok = verify_cb.call(new Integer(0), this);
             current_crl = null;
             return ok;
         }
-	current_crl = crl[0];
-	ok = check_crl.call(this, crl[0]);
+        current_crl = crl[0];
+        ok = check_crl.call(this, crl[0]);
         if(ok == 0) {
             current_crl = null;
             return ok;
         }
         ok = cert_crl.call(this,crl[0],x);
-	current_crl = null;
-	return ok;
+        current_crl = null;
+        return ok;
     }
 
     public int check_crl_time(X509CRL crl, int notify) throws Exception {
@@ -831,7 +904,7 @@ public class X509_STORE_CTX {
         }
 
         current_crl = null;
-	return 1;
+        return 1;
     }
 
     public int get_crl_sk(X509CRL[] pcrl, X509_NAME nm, List crls) throws Exception { 
@@ -922,11 +995,13 @@ public class X509_STORE_CTX {
                         try {
                             xs.verify(xi.getPublicKey());
                         } catch(Exception e) {
+                            /*
                             System.err.println("n: " + n);
                             System.err.println("verifying: " + xs);
                             System.err.println("verifying with issuer?: " + xi);
                             System.err.println("verifying with issuer.key?: " + xi.getPublicKey());
                             System.err.println("exception: " + e);
+                            */
                             ctx.error = X509.V_ERR_CERT_SIGNATURE_FAILURE;
                             ctx.current_cert = xs;
                             ok = cb.call(new Integer(0),ctx);

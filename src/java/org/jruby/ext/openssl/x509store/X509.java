@@ -31,6 +31,7 @@ import java.util.Arrays;
 
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier;
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
@@ -162,7 +163,14 @@ public abstract class X509 {
         }
 
         if(subject.getExtensionValue("2.5.29.35") != null) { //authorityKeyID
-            AuthorityKeyIdentifier sakid = new AuthorityKeyIdentifier(((DERSequence)(new ASN1InputStream(subject.getExtensionValue("2.5.29.35")).readObject())));
+            // I hate ASN1 and DER
+            Object key = new ASN1InputStream(subject.getExtensionValue("2.5.29.35")).readObject();
+            if(!(key instanceof ASN1Sequence)) {
+                byte[] b = ((ASN1OctetString)key).getOctets();
+                key = new ASN1InputStream(b).readObject();
+            }
+
+            AuthorityKeyIdentifier sakid = new AuthorityKeyIdentifier((ASN1Sequence)key);
 
             if(sakid.getKeyIdentifier() != null) {
                 if(issuer.getExtensionValue("2.5.29.14") != null) {

@@ -47,6 +47,7 @@ import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
+import org.jruby.common.IRubyWarnings.ID;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -283,6 +284,18 @@ public class SSLContext extends RubyObject {
                     }
 
                     ctx.set_default("ssl_client");
+
+                    IRubyObject val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_file");
+                    String ca_file = val.isNil() ? null : val.convertToString().toString();
+                    val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_path");
+                    String ca_path = val.isNil() ? null : val.convertToString().toString();
+
+                    if(ca_file != null || ca_path != null) {
+                        if(ctx.load_verify_locations(ca_file, ca_path) == 0) {
+                            ctt.getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
+                        }
+                    }
+
                     try {
                         if(ctx.verify_cert() == 0) {
                             throw new CertificateException("certificate verify failed");

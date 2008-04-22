@@ -487,7 +487,11 @@ public class X509Extensions {
         }
 
         public IRubyObject oid() {
-            return getRuntime().newString((String)(ASN1.getSymLookup(getRuntime()).get(oid)));
+            Object val = ASN1.getSymLookup(getRuntime()).get(oid);
+            if(null == val) {
+                val = oid.toString();
+            }
+            return getRuntime().newString((String)(val));
         }
 
         public IRubyObject value() throws Exception {
