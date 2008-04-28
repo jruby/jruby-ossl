@@ -30,8 +30,8 @@ package org.jruby.ext.openssl.x509store;
 import java.util.Date;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Iterator;
 
 import org.bouncycastle.asn1.DERObject;
 
@@ -48,7 +48,7 @@ public class VerifyParameter {
     public int purpose;
     public int trust;
     public int depth;
-    public List policies;
+    public List<DERObject> policies;
 
     /**
      * c: X509_VERIFY_PARAM_new
@@ -57,7 +57,7 @@ public class VerifyParameter {
         zero();
     }
 
-    public VerifyParameter(String n, long t, long i_f, long f, int p, int trs, int d, List pol) {
+    public VerifyParameter(String n, long t, long i_f, long f, int p, int trs, int d, List<DERObject> pol) {
         this.name = n;
         this.checkTime = new Date(t);
         this.inheritFlags = i_f;
@@ -131,15 +131,15 @@ public class VerifyParameter {
         if(to_o || ((src.policies != null && (to_d || this.policies == null)))) {
             setPolicies(src.policies);
         }
-	return 1;
+        return 1;
     }
     
     /**
      * c: X509_VERIFY_PARAM_set1
      */
     public int set(VerifyParameter from) { 
-	inheritFlags |= X509Utils.X509_VP_FLAG_DEFAULT;
-	return inherit(from);
+        inheritFlags |= X509Utils.X509_VP_FLAG_DEFAULT;
+        return inherit(from);
     } 
     
     /**
@@ -154,8 +154,8 @@ public class VerifyParameter {
      * c: X509_VERIFY_PARAM_set_flags
      */
     public int setFlags(long flags) { 
-	this.flags |= flags;
-	if((flags & X509Utils.V_FLAG_POLICY_MASK) == X509Utils.V_FLAG_POLICY_MASK) {
+        this.flags |= flags;
+        if((flags & X509Utils.V_FLAG_POLICY_MASK) == X509Utils.V_FLAG_POLICY_MASK) {
             this.flags |= X509Utils.V_FLAG_POLICY_CHECK;
         }
         return 1;
@@ -165,15 +165,15 @@ public class VerifyParameter {
      * c: X509_VERIFY_PARAM_clear_flags
      */
     public int clearFlags(long flags) { 
-	this.flags &= ~flags;
-	return 1;
+        this.flags &= ~flags;
+        return 1;
     } 
     
     /**
      * c: X509_VERIFY_PARAM_get_flags
      */
     public long getFlags() { 
-	return flags;
+        return flags;
     } 
     
     /**
@@ -200,15 +200,15 @@ public class VerifyParameter {
      * c: X509_VERIFY_PARAM_set_depth
      */
     public void setDepth(int depth) {
-	this.depth = depth;
+        this.depth = depth;
     }
     
     /**
      * c: X509_VERIFY_PARAM_set_time
      */
     public void setTime(Date t) {
-	this.checkTime = t;
-	this.flags |= X509Utils.V_FLAG_USE_CHECK_TIME;
+        this.checkTime = t;
+        this.flags |= X509Utils.V_FLAG_USE_CHECK_TIME;
     } 
     
     /**
@@ -216,7 +216,7 @@ public class VerifyParameter {
      */
     public int addPolicy(DERObject policy) { 
         if(policies == null) {
-            policies = new ArrayList();
+            policies = new ArrayList<DERObject>();
         }
         policies.add(policy);
         return 1;
@@ -225,48 +225,47 @@ public class VerifyParameter {
     /**
      * c: X509_VERIFY_PARAM_set1_policies
      */
-    public int setPolicies(List policies) { 
+    public int setPolicies(List<DERObject> policies) { 
         if(policies == null) {
             this.policies = null;
             return 1;
         }
-        this.policies = new ArrayList();
+        this.policies = new ArrayList<DERObject>();
         this.policies.addAll(policies);
         this.flags |= X509Utils.V_FLAG_POLICY_CHECK;
-	return 1;
+        return 1;
     }
     
     /**
      * c: X509_VERIFY_PARAM_get_depth
      */
     public int getDepth() { 
-	return depth;
+        return depth;
     }
     
     /**
      * c: X509_VERIFY_PARAM_add0_table
      */
     public int addTable() { 
-        for(Iterator iter = parameterTable.iterator();iter.hasNext();) {
-            VerifyParameter v = (VerifyParameter)iter.next();
+        for(Iterator<VerifyParameter> iter = parameterTable.iterator();iter.hasNext();) {
+            VerifyParameter v = iter.next();
             if(this.name.equals(v.name)) {
                 iter.remove();
             }
         }
         parameterTable.add(this);
-	return 1;
+        return 1;
     } 
 
     public static VerifyParameter lookup(String name) { 
-        for(Iterator iter = parameterTable.iterator();iter.hasNext();) {
-            VerifyParameter v = (VerifyParameter)iter.next();
+        for(VerifyParameter v : parameterTable) {
             if(name.equals(v.name)) {
                 return v;
             }
         }
-        for(int i=0;i<defaultTable.length;i++) {
-            if(name.equals(defaultTable[i].name)) {
-                return defaultTable[i];
+        for(VerifyParameter v : defaultTable) {
+            if(name.equals(v.name)) {
+                return v;
             }
         }
         return null; 
@@ -281,45 +280,45 @@ public class VerifyParameter {
 
     private final static VerifyParameter[] defaultTable = new VerifyParameter[] {
         new VerifyParameter(
-	"default",	/* X509 default parameters */
-	0,		/* Check time */
-	0,		/* internal flags */
-	0,		/* flags */
-	0,		/* purpose */
-	0,		/* trust */
-	9,		/* depth */
-	null		/* policies */
-                              ),
+                            "default",	/* X509 default parameters */
+                            0,		/* Check time */
+                            0,		/* internal flags */
+                            0,		/* flags */
+                            0,		/* purpose */
+                            0,		/* trust */
+                            9,		/* depth */
+                            null		/* policies */
+                            ),
         new VerifyParameter(
-	"pkcs7",			/* SSL/TLS client parameters */
-	0,				/* Check time */
-	0,				/* internal flags */
-	0,				/* flags */
-	X509Utils.X509_PURPOSE_SMIME_SIGN,	/* purpose */
-	X509Utils.X509_TRUST_EMAIL,		/* trust */
-	-1,				/* depth */
-	null				/* policies */
-                              ),
+                            "pkcs7",			/* SSL/TLS client parameters */
+                            0,				/* Check time */
+                            0,				/* internal flags */
+                            0,				/* flags */
+                            X509Utils.X509_PURPOSE_SMIME_SIGN,	/* purpose */
+                            X509Utils.X509_TRUST_EMAIL,		/* trust */
+                            -1,				/* depth */
+                            null				/* policies */
+                            ),
         new VerifyParameter(
-	"ssl_client",			/* SSL/TLS client parameters */
-	0,				/* Check time */
-	0,				/* internal flags */
-	0,				/* flags */
-	X509Utils.X509_PURPOSE_SSL_CLIENT,	/* purpose */
-	X509Utils.X509_TRUST_SSL_CLIENT,		/* trust */
-	-1,				/* depth */
-	null				/* policies */
-                              ),
+                            "ssl_client",			/* SSL/TLS client parameters */
+                            0,				/* Check time */
+                            0,				/* internal flags */
+                            0,				/* flags */
+                            X509Utils.X509_PURPOSE_SSL_CLIENT,	/* purpose */
+                            X509Utils.X509_TRUST_SSL_CLIENT,		/* trust */
+                            -1,				/* depth */
+                            null				/* policies */
+                            ),
         new VerifyParameter(
-	"ssl_server",			/* SSL/TLS server parameters */
-	0,				/* Check time */
-	0,				/* internal flags */
-	0,				/* flags */
-	X509Utils.X509_PURPOSE_SSL_SERVER,	/* purpose */
-	X509Utils.X509_TRUST_SSL_SERVER,		/* trust */
-	-1,				/* depth */
-	null				/* policies */
-                              )};
+                            "ssl_server",			/* SSL/TLS server parameters */
+                            0,				/* Check time */
+                            0,				/* internal flags */
+                            0,				/* flags */
+                            X509Utils.X509_PURPOSE_SSL_SERVER,	/* purpose */
+                            X509Utils.X509_TRUST_SSL_SERVER,		/* trust */
+                            -1,				/* depth */
+                            null				/* policies */
+                            )};
 
-    private final static List parameterTable = new ArrayList();
+    private final static List<VerifyParameter> parameterTable = new ArrayList<VerifyParameter>();
 }// X509_VERIFY_PARAM

@@ -382,8 +382,8 @@ public class Lookup {
      */
     private static class LookupDir {
         StringBuffer buffer;
-        List dirs;
-        List dirs_type;
+        List<String> dirs;
+        List<Integer> dirsType;
     }
 
     /**
@@ -394,8 +394,8 @@ public class Lookup {
             Lookup lu = (Lookup)_lu;
             LookupDir a = new LookupDir();
             a.buffer = new StringBuffer();
-            a.dirs = new ArrayList();
-            a.dirs_type = new ArrayList();
+            a.dirs = new ArrayList<String>();
+            a.dirsType = new ArrayList<Integer>();
             lu.methodData = a;
             return 1;
         }
@@ -409,7 +409,7 @@ public class Lookup {
             Lookup lu = (Lookup)_lu;
             LookupDir a = (LookupDir)lu.methodData;
             a.dirs = null;
-            a.dirs_type = null;
+            a.dirsType = null;
             a.buffer = null;
             lu.methodData = null;
             return -1;
@@ -469,7 +469,7 @@ public class Lookup {
                 if(ctx.dirs.contains(dirs[i])) {
                     continue;
                 }
-                ctx.dirs_type.add(new Integer(type));
+                ctx.dirsType.add(type);
                 ctx.dirs.add(dirs[i]);
             }
 
@@ -509,9 +509,9 @@ public class Lookup {
 
             long h = name.hash();
             
-            for(Iterator iter = ctx.dirs.iterator(), iter2 = ctx.dirs_type.iterator();iter.hasNext();) {
-                String cdir = (String)iter.next();
-                int tp = ((Integer)iter2.next()).intValue();
+            Iterator<Integer> iter = ctx.dirsType.iterator();
+            for(String cdir : ctx.dirs) {
+                int tp = iter.next();
                 int k = 0;
                 for(;;) {
                     b.append(String.format("%s/%08lx.%s%d",new Object[]{cdir,new Long(h),postfix,new Integer(k)}));
@@ -531,8 +531,7 @@ public class Lookup {
                 }
                 synchronized(X509Utils.CRYPTO_LOCK_X509_STORE) {
                     tmp = null;
-                    for(Iterator iterx = x1.store.objs.iterator();iterx.hasNext();) {
-                        X509Object o = (X509Object)iterx.next();
+                    for(X509Object o : x1.store.objs) {
                         if(o.type() == type && o.isName(name)) {
                             tmp = o;
                             break;

@@ -28,7 +28,6 @@
 package org.jruby.ext.openssl.x509store;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -63,7 +62,7 @@ public class Trust {
         return old_trust;
     }
 
-    private final static List trtable = new ArrayList();
+    private final static List<Trust> trtable = new ArrayList<Trust>();
 
     /**
      * c: X509_check_trust
@@ -108,8 +107,8 @@ public class Trust {
             return id - X509Utils.X509_TRUST_MIN;
         }
         int i = 0;
-        for(Iterator iter = trtable.iterator();iter.hasNext();i++) {
-            if(((Trust)iter.next()).trust == id) {
+        for(Trust t : trtable) {
+            if(t.trust == id) {
                 return i + trstandard.length;
             }
         }
@@ -248,13 +247,13 @@ public class Trust {
                 if(null == ax) {
                     return X509Utils.X509_TRUST_UNTRUSTED;
                 }
-                for(Iterator iter = ax.reject.iterator(); iter.hasNext(); ) {
-                    if(((String)iter.next()).equals(id)) {
+                for(String rej : ax.reject) {
+                    if(rej.equals(id)) {
                         return X509Utils.X509_TRUST_REJECTED;
                     }
                 }
-                for(Iterator iter = ax.trust.iterator(); iter.hasNext(); ) {
-                    if(((String)iter.next()).equals(id)) {
+                for(String t : ax.trust) {
+                    if(t.equals(id)) {
                         return X509Utils.X509_TRUST_TRUSTED;
                     }
                 }

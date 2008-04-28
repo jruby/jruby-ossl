@@ -101,8 +101,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import java.util.Iterator;
-
 /**
  * Helper class to read and write PEM files correctly.
  *
@@ -495,15 +493,15 @@ public class PEMInputOutput {
                 ASN1EncodableVector a1 = new ASN1EncodableVector();
                 if(aux.trust.size()>0) {
                     ASN1EncodableVector a2 = new ASN1EncodableVector();
-                    for(Iterator iter = aux.trust.iterator();iter.hasNext();) {
-                        a2.add(new DERObjectIdentifier((String)iter.next()));
+                    for(String trust : aux.trust) {
+                        a2.add(new DERObjectIdentifier(trust));
                     }
                     a1.add(new DERSequence(a2));
                 }
                 if(aux.reject.size()>0) {
                     ASN1EncodableVector a2 = new ASN1EncodableVector();
-                    for(Iterator iter = aux.reject.iterator();iter.hasNext();) {
-                        a2.add(new DERObjectIdentifier((String)iter.next()));
+                    for(String reject : aux.reject) {
+                        a2.add(new DERObjectIdentifier(reject));
                     }
                     a1.add(new DERTaggedObject(0,new DERSequence(a2)));
                 }
@@ -515,8 +513,8 @@ public class PEMInputOutput {
                 }
                 if(aux.other.size()>0) {
                     ASN1EncodableVector a2 = new ASN1EncodableVector();
-                    for(Iterator iter = aux.other.iterator();iter.hasNext();) {
-                        a2.add((DERObject)(iter.next()));
+                    for(DERObject other : aux.other) {
+                        a2.add(other);
                     }
                     a1.add(new DERTaggedObject(1,new DERSequence(a2)));
                 }
@@ -1005,7 +1003,7 @@ public class PEMInputOutput {
                 if(aux.size() > ix && aux.getObjectAt(ix) instanceof DERTaggedObject && ((DERTaggedObject)aux.getObjectAt(ix)).getTagNo() == 1) {
                     DERSequence other = (DERSequence)((DERTaggedObject)aux.getObjectAt(ix++)).getObject();
                     for(int i=0;i<other.size();i++) {
-                        ax.other.add(other.getObjectAt(i));
+                        ax.other.add((DERObject)(other.getObjectAt(i)));
                     }
                 }
             }

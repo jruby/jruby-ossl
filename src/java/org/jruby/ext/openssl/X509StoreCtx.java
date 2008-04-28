@@ -101,7 +101,7 @@ public class X509StoreCtx extends RubyObject {
         IRubyObject chain = getRuntime().getNil();
         Store x509st;
         X509AuxCertificate x509 = null;
-        List x509s = new ArrayList();
+        List<X509AuxCertificate> x509s = new ArrayList<X509AuxCertificate>();
 
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,3) > 1) {
             cert = args[1];
@@ -115,7 +115,7 @@ public class X509StoreCtx extends RubyObject {
             x509 = ((X509Cert)cert).getAuxCert();
         }
         if(!chain.isNil()) {
-            x509s = new ArrayList();
+            x509s = new ArrayList<X509AuxCertificate>();
             for(Iterator iter = ((RubyArray)chain).getList().iterator();iter.hasNext();) {
                 x509s.add(((X509Cert)iter.next()).getAuxCert());
             }
@@ -139,13 +139,12 @@ public class X509StoreCtx extends RubyObject {
     }
 
     public IRubyObject chain() throws Exception {
-        List chain = ctx.getChain();
+        List<X509AuxCertificate> chain = ctx.getChain();
         if(chain == null) {
             return getRuntime().getNil();
         }
-        List ary = new ArrayList();
-        for(Iterator iter = chain.iterator();iter.hasNext();) {
-            X509AuxCertificate x509 = (X509AuxCertificate)iter.next();
+        List<IRubyObject> ary = new ArrayList<IRubyObject>();
+        for(X509AuxCertificate x509 : chain) {
             ary.add(cX509Cert.callMethod(getRuntime().getCurrentContext(),"new",RubyString.newString(getRuntime(), x509.getEncoded())));
         }
         return getRuntime().newArray(ary);

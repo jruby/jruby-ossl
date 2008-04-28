@@ -339,7 +339,7 @@ public class PKeyDH extends PKey {
             y = this.dh_pub_key;
         }
         Ruby runtime = getRuntime();
-        HashMap params = new HashMap();
+        HashMap<IRubyObject, IRubyObject> params = new HashMap<IRubyObject, IRubyObject>();
         
         params.put(runtime.newString("p"), BN.newBN(runtime, p));
         params.put(runtime.newString("g"), BN.newBN(runtime, g));

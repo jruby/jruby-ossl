@@ -112,14 +112,14 @@ public class X509Name extends RubyObject {
 
     public X509Name(Ruby runtime, RubyClass type) {
         super(runtime,type);
-        oids = new ArrayList();
-        values = new ArrayList();
-        types = new ArrayList();
+        oids = new ArrayList<Object>();
+        values = new ArrayList<Object>();
+        types = new ArrayList<Object>();
     }
 
-    private List oids;
-    private List values;
-    private List types;
+    private List<Object> oids;
+    private List<Object> values;
+    private List<Object> types;
 
     void addEntry(Object oid, Object value, Object type) {
         oids.add(oid);
@@ -161,9 +161,9 @@ public class X509Name extends RubyObject {
         } else {
             try {
                 ASN1Sequence seq = (ASN1Sequence)new ASN1InputStream(OpenSSLImpl.to_der_if_possible(arg).convertToString().getBytes()).readObject();
-                oids = new ArrayList();
-                values = new ArrayList();
-                types = new ArrayList();
+                oids = new ArrayList<Object>();
+                values = new ArrayList<Object>();
+                types = new ArrayList<Object>();
                 for(Enumeration enm = seq.getObjects();enm.hasMoreElements();) {
                     ASN1Sequence value = (ASN1Sequence)(((ASN1Set)enm.nextElement()).getObjectAt(0));
                     oids.add(value.getObjectAt(0));
@@ -272,12 +272,12 @@ else
         }
 
         StringBuffer sb = new StringBuffer();
-        Map lookup = ASN1.getSymLookup(getRuntime());
-        Iterator oiter = null;
-        Iterator viter = null;
+        Map<DERObjectIdentifier, String>  lookup = ASN1.getSymLookup(getRuntime());
+        Iterator<Object> oiter = null;
+        Iterator<Object> viter = null;
         if(flag == RFC2253) {
-            List ao = new ArrayList(oids);
-            List av = new ArrayList(values);
+            List<Object> ao = new ArrayList<Object>(oids);
+            List<Object> av = new ArrayList<Object>(values);
             java.util.Collections.reverse(ao);
             java.util.Collections.reverse(av);
             oiter = ao.iterator();
@@ -291,7 +291,7 @@ else
         for(;oiter.hasNext();) {
             DERObjectIdentifier oid = (DERObjectIdentifier)oiter.next();
             String val = (String)viter.next();
-            String outOid = (String)lookup.get(oid);
+            String outOid = lookup.get(oid);
             if(null == outOid) {
                 outOid = oid.toString();
             }
@@ -306,15 +306,15 @@ else
     }
 
     public RubyArray to_a() {
-        List entries = new ArrayList();
-        Map lookup = ASN1.getSymLookup(getRuntime());
-        Iterator oiter = oids.iterator();
-        Iterator viter = values.iterator();
-        Iterator titer = types.iterator();
+        List<IRubyObject> entries = new ArrayList<IRubyObject>();
+        Map<DERObjectIdentifier, String> lookup = ASN1.getSymLookup(getRuntime());
+        Iterator<Object> oiter = oids.iterator();
+        Iterator<Object> viter = values.iterator();
+        Iterator<Object> titer = types.iterator();
         for(;oiter.hasNext();) {
             DERObjectIdentifier oid = (DERObjectIdentifier)oiter.next();
             String val = (String)viter.next();
-            String outOid = (String)lookup.get(oid);
+            String outOid = lookup.get(oid);
             if(null == outOid) {
                 outOid = "UNDEF";
             }
@@ -333,7 +333,7 @@ else
     }
 
     org.bouncycastle.asn1.x509.X509Name getRealName() {
-        return new org.bouncycastle.asn1.x509.X509Name(new Vector(oids),new Vector(values));
+        return new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values));
     }
 
     public IRubyObject eql_p(IRubyObject other) {
@@ -341,13 +341,13 @@ else
             return getRuntime().getFalse();
         }
         X509Name o = (X509Name)other;
-        org.bouncycastle.asn1.x509.X509Name nm = new org.bouncycastle.asn1.x509.X509Name(new Vector(oids),new Vector(values));
-        org.bouncycastle.asn1.x509.X509Name o_nm = new org.bouncycastle.asn1.x509.X509Name(new Vector(o.oids),new Vector(o.values));
+        org.bouncycastle.asn1.x509.X509Name nm = new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values));
+        org.bouncycastle.asn1.x509.X509Name o_nm = new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(o.oids),new Vector<Object>(o.values));
         return nm.equals(o_nm) ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
     public RubyFixnum hash() {
-        return getRuntime().newFixnum(new org.bouncycastle.asn1.x509.X509Name(new Vector(oids),new Vector(values)).hashCode());
+        return getRuntime().newFixnum(new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values)).hashCode());
     }
 
     public IRubyObject to_der() throws Exception {

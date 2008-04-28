@@ -96,13 +96,13 @@ public class Request extends RubyObject {
     private IRubyObject public_key;
     private boolean valid = false;
 
-    private List attrs;
+    private List<IRubyObject> attrs;
 
     private PKCS10CertificationRequestExt req;
 
     public Request(Ruby runtime, RubyClass type) {
         super(runtime,type);
-        attrs = new ArrayList();
+        attrs = new ArrayList<IRubyObject>();
     }
 
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
@@ -246,7 +246,7 @@ public class Request extends RubyObject {
         }
 
         final ASN1EncodableVector v1 = new ASN1EncodableVector();
-        for(Iterator iter = attrs.iterator();iter.hasNext();) {
+        for(Iterator<IRubyObject> iter = attrs.iterator();iter.hasNext();) {
             v1.add(((Attribute)iter.next()).toASN1());
         }
 
@@ -283,13 +283,14 @@ public class Request extends RubyObject {
         return getRuntime().newArray(attrs);
     }
 
+    @SuppressWarnings("unchecked")
     public IRubyObject set_attributes(IRubyObject val) throws Exception {
         valid = false;
         attrs.clear();
         attrs.addAll(((RubyArray)val).getList());
         if(req != null) {
             ASN1EncodableVector v1 = new ASN1EncodableVector();
-            for(Iterator iter = attrs.iterator();iter.hasNext();) {
+            for(Iterator<IRubyObject> iter = attrs.iterator();iter.hasNext();) {
                 v1.add(((Attribute)iter.next()).toASN1());
             }
             req.setAttributes(new DERSet(v1));
@@ -302,7 +303,7 @@ public class Request extends RubyObject {
         attrs.add(val);
         if(req != null) {
             ASN1EncodableVector v1 = new ASN1EncodableVector();
-            for(Iterator iter = attrs.iterator();iter.hasNext();) {
+            for(Iterator<IRubyObject> iter = attrs.iterator();iter.hasNext();) {
                 v1.add(((Attribute)iter.next()).toASN1());
             }
             req.setAttributes(new DERSet(v1));

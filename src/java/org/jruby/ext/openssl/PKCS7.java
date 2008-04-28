@@ -156,9 +156,9 @@ public class PKCS7 extends RubyObject {
 
         X509AuxCertificate x509 = ((X509Cert)cert).getAuxCert();
         PrivateKey pkey = ((PKey)key).getPrivateKey();
-        List x509s = null;
+        List<X509AuxCertificate> x509s = null;
         if(!certs.isNil()) {
-            x509s = new ArrayList();
+            x509s = new ArrayList<X509AuxCertificate>();
             for(Iterator iter = ((RubyArray)certs).getList().iterator();iter.hasNext();) {
                 x509s.add(((X509Cert)iter.next()).getAuxCert());
             }
@@ -302,8 +302,12 @@ public class PKCS7 extends RubyObject {
                 }
             });
         CertStore cc = result[0];
-        List l = StoreContext.ensureAux(cc.getCertificates(null));
-        return getRuntime().newArray(l);
+        List<X509AuxCertificate> l = StoreContext.ensureAux(cc.getCertificates(null));
+        List<IRubyObject> certs = new ArrayList<IRubyObject>(l.size());
+        for(X509AuxCertificate c : l) {
+            certs.add(X509Cert.wrap(getRuntime(), c));
+        }
+        return getRuntime().newArray(certs);
     }
 
     public IRubyObject add_crl(IRubyObject obj) {
@@ -344,9 +348,9 @@ public class PKCS7 extends RubyObject {
         if(indata.isNil()) {
             indata = getInstanceVariable("@data");
         }
-        List x509s = null;
+        List<X509AuxCertificate> x509s = null;
         if(!certs.isNil()) {
-            x509s = new ArrayList();
+            x509s = new ArrayList<X509AuxCertificate>();
             for(Iterator iter = ((RubyArray)certs).getList().iterator();iter.hasNext();) {
                 x509s.add(((X509Cert)iter.next()).getAuxCert());
             }

@@ -37,7 +37,7 @@ import java.util.List;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class X509Error {
-    private static ThreadLocal errors = new ThreadLocal();
+    private static ThreadLocal<List<ErrorException>> errors = new ThreadLocal<List<ErrorException>>();
 
     public static class ErrorException extends Exception {
         private static final long serialVersionUID = -3214495184277468063L;
@@ -53,16 +53,16 @@ public class X509Error {
     }
 
     public static synchronized void addError(int reason) {
-        List errs = (List)errors.get();
+        List<ErrorException> errs = errors.get();
         if(errs == null) {
-            errs = new ArrayList();
+            errs = new ArrayList<ErrorException>();
             errors.set(errs);
         }
         errs.add(new ErrorException(reason));
     }
 
     public static synchronized void clearErrors() {
-        List errs = (List)errors.get();
+        List<ErrorException> errs = errors.get();
         if(errs != null) {
             errs.clear();
         }

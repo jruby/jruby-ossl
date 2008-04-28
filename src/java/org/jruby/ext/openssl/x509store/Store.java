@@ -30,7 +30,6 @@ package org.jruby.ext.openssl.x509store;
 import java.security.cert.X509Certificate;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.net.ssl.X509TrustManager;
@@ -42,8 +41,8 @@ import javax.net.ssl.X509TrustManager;
  */
 public class Store implements X509TrustManager {
     public int cache;
-    public List objs; // List<X509_OBJECT>
-    public List certificateMethods; // List<X509_LOOKUP>
+    public List<X509Object> objs;
+    public List<Lookup> certificateMethods;
     public VerifyParameter param;
 
     public Function1 verify;
@@ -56,16 +55,16 @@ public class Store implements X509TrustManager {
     public Function3 certificateCRL;
     public Function1 cleanup;
 
-    public List extraData;
+    public List<Object> extraData;
     public int references;
 
     /**
      * c: X509_STORE_new
      */
     public Store() {
-        objs = new ArrayList();
+        objs = new ArrayList<X509Object>();
         cache = 1;
-        certificateMethods = new ArrayList();
+        certificateMethods = new ArrayList<Lookup>();
 
         verify = Function1.EMPTY;
         verifyCallback = Function2.EMPTY;
@@ -81,7 +80,7 @@ public class Store implements X509TrustManager {
         cleanup = Function1.EMPTY;
 
         references = 1;
-        extraData = new ArrayList();
+        extraData = new ArrayList<Object>();
         this.extraData.add(null);this.extraData.add(null);this.extraData.add(null);
         this.extraData.add(null);this.extraData.add(null);this.extraData.add(null);
         this.extraData.add(null);this.extraData.add(null);this.extraData.add(null);
@@ -105,8 +104,7 @@ public class Store implements X509TrustManager {
      * c: X509_STORE_free
      */
     public void free() throws Exception {
-        for(Iterator iter = certificateMethods.iterator();iter.hasNext();) {
-            Lookup lu = (Lookup)iter.next();
+        for(Lookup lu : certificateMethods) {
             lu.shutdown();
             lu.free();
         }
@@ -135,35 +133,35 @@ public class Store implements X509TrustManager {
      */
     public int setDepth(int depth) { 
         param.setDepth(depth);
-	return 1;
+        return 1;
     }
 
     /**
      * c: X509_STORE_set_flags
      */
     public int setFlags(long flags) { 
-	return param.setFlags(flags);
+        return param.setFlags(flags);
     }
 
     /**
      * c: X509_STORE_set_purpose
      */
     public int setPurpose(int purpose) { 
-	return param.setPurpose(purpose);
+        return param.setPurpose(purpose);
     }
 
     /**
      * c: X509_STORE_set_trust
      */
     public int setTrust(int trust) { 
-	return param.setTrust(trust);
+        return param.setTrust(trust);
     }
 
     /**
      * c: X509_STORE_set1_param
      */
     public int setParam(VerifyParameter pm) { 
-	return param.set(param);
+        return param.set(param);
     }
 
     /**
@@ -172,10 +170,9 @@ public class Store implements X509TrustManager {
     public Lookup addLookup(LookupMethod m) throws Exception { 
         Lookup lu;
 
-        for(Iterator iter = certificateMethods.iterator();iter.hasNext();) {
-            lu = (Lookup)iter.next();
-            if(lu.equals(m)) {
-                return lu;
+        for(Lookup l : certificateMethods) {
+            if(l.equals(m)) {
+                return l;
             }
         }
         lu = new Lookup(m);
@@ -196,15 +193,15 @@ public class Store implements X509TrustManager {
         Certificate obj = new Certificate();
         obj.x509 = StoreContext.ensureAux(x);
 
-	synchronized(X509Utils.CRYPTO_LOCK_X509_STORE) {
+        synchronized(X509Utils.CRYPTO_LOCK_X509_STORE) {
             if(X509Object.retrieveMatch(objs,obj) != null) {
                 X509Error.addError(X509Utils.X509_R_CERT_ALREADY_IN_HASH_TABLE);
-		ret=0;
+                ret=0;
             } else {
                 objs.add(obj);
             }
         }
-	return ret;
+        return ret;
     } 
 
     /**
@@ -218,24 +215,24 @@ public class Store implements X509TrustManager {
         CRL obj = new CRL();
         obj.crl = x;
 
-	synchronized(X509Utils.CRYPTO_LOCK_X509_STORE) {
+        synchronized(X509Utils.CRYPTO_LOCK_X509_STORE) {
             if(X509Object.retrieveMatch(objs,obj) != null) {
                 X509Error.addError(X509Utils.X509_R_CERT_ALREADY_IN_HASH_TABLE);
-		ret=0;
+                ret=0;
             } else {
                 objs.add(obj);
             }
         }
-	return ret;
+        return ret;
     } 
 
     /**
      * c: X509_STORE_load_locations
      */
     public int loadLocations(String file, String path) throws Exception { 
-	Lookup lookup;
+        Lookup lookup;
 
-	if(file != null) {
+        if(file != null) {
             lookup = addLookup(Lookup.fileLookup());
             if(lookup == null) {
                 return 0;
@@ -245,7 +242,7 @@ public class Store implements X509TrustManager {
             }
         }
 
-	if(path != null) {
+        if(path != null) {
             lookup = addLookup(Lookup.hashDirLookup());
             if(lookup == null) {
                 return 0;
@@ -254,36 +251,36 @@ public class Store implements X509TrustManager {
                 return 0;
             }
         }
-	if((path == null) && (file == null)) {
+        if((path == null) && (file == null)) {
             return 0;
         }
 
-	return 1;
+        return 1;
     } 
 
     /**
      * c: X509_STORE_set_default_paths
      */
     public int setDefaultPaths() throws Exception { 
-	Lookup lookup;
+        Lookup lookup;
 
-	lookup = addLookup(Lookup.fileLookup());
-	if(lookup == null) {
+        lookup = addLookup(Lookup.fileLookup());
+        if(lookup == null) {
             return 0;
         }
 
-	lookup.loadFile(new CertificateFile.Path(null,X509Utils.X509_FILETYPE_DEFAULT));
+        lookup.loadFile(new CertificateFile.Path(null,X509Utils.X509_FILETYPE_DEFAULT));
 
-	lookup = addLookup(Lookup.hashDirLookup());
-	if(lookup == null) {
+        lookup = addLookup(Lookup.hashDirLookup());
+        if(lookup == null) {
             return 0;
         }
 
-	lookup.addDir(new CertificateHashDir.Dir(null,X509Utils.X509_FILETYPE_DEFAULT));
+        lookup.addDir(new CertificateHashDir.Dir(null,X509Utils.X509_FILETYPE_DEFAULT));
 
-	X509Error.clearErrors();
+        X509Error.clearErrors();
 
-	return 1;
+        return 1;
     } 
 
 
@@ -294,9 +291,8 @@ public class Store implements X509TrustManager {
     }
 
     public X509Certificate[] getAcceptedIssuers() {
-        List l = new ArrayList();
-        for(Iterator iter = objs.iterator();iter.hasNext();) {
-            Object o = iter.next();
+        List<X509Certificate> l = new ArrayList<X509Certificate>();
+        for(X509Object o : objs) {
             if(o instanceof Certificate) {
                 l.add(((Certificate)o).x509);
             }

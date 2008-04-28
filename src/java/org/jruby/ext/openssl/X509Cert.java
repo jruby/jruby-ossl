@@ -125,7 +125,7 @@ public class X509Cert extends RubyObject {
     private IRubyObject sig_alg;
     private IRubyObject version;
 
-    private List extensions;
+    private List<IRubyObject> extensions;
 
     private boolean changed = true;
 
@@ -148,7 +148,7 @@ public class X509Cert extends RubyObject {
     }
 
     public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
-        extensions = new ArrayList();
+        extensions = new ArrayList<IRubyObject>();
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             return this;
         }
@@ -339,7 +339,7 @@ public class X509Cert extends RubyObject {
             throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("CertificateError")), null, true);
         }
 
-        for(Iterator iter = extensions.iterator();iter.hasNext();) {
+        for(Iterator<IRubyObject> iter = extensions.iterator();iter.hasNext();) {
             X509Extensions.Extension ag = (X509Extensions.Extension)iter.next();
             generator.addExtension(ag.getRealOid(),ag.getRealCritical(),ag.getRealValueBytes());
         }
@@ -380,6 +380,7 @@ public class X509Cert extends RubyObject {
         return getRuntime().newArray(extensions);
     }
 
+    @SuppressWarnings("unchecked")
     public IRubyObject set_extensions(IRubyObject arg) {
         extensions = ((RubyArray)arg).getList();
         return arg;

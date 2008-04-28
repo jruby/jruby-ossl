@@ -28,7 +28,6 @@
 package org.jruby.ext.openssl.x509store;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -84,7 +83,7 @@ public class Purpose {
         return 1;
     }
 
-    private final static List xptable = new ArrayList();
+    private final static List<Purpose> xptable = new ArrayList<Purpose>();
 
     /**
      * c: X509_PURPOSE_get_count
@@ -127,8 +126,8 @@ public class Purpose {
             return purpose - X509Utils.X509_PURPOSE_MIN;
         }
         int i = 0;
-        for(Iterator iter = xptable.iterator();iter.hasNext();i++) {
-            if(((Purpose)iter.next()).purpose == purpose) {
+        for(Purpose p : xptable) {
+            if(p.purpose == purpose) {
                 return i + xstandard.length;
             }
         }

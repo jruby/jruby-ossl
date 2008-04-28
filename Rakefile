@@ -23,7 +23,7 @@ end
 desc "Compile the native Java code."
 task :java_compile do
   mkdir_p "pkg/classes"
-  sh "javac -target 1.5 -source 1.5 -d pkg/classes #{java_classpath_arg} #{FileList['src/java/**/*.java'].join(' ')}"
+  sh "javac -target 1.5 -source 1.5 -Xlint:unchecked -d pkg/classes #{java_classpath_arg} #{FileList['src/java/**/*.java'].join(' ')}"
   File.open("pkg/classes/manifest.mf", "w") {|f| f.puts "Class-Path: #{BC_JARS.map{|f| File.basename(f) }.join(' ')}"}
   sh "jar cfm lib/jopenssl.jar pkg/classes/manifest.mf -C pkg/classes/ ."
 end

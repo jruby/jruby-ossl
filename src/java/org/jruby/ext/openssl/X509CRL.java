@@ -115,7 +115,7 @@ public class X509CRL extends RubyObject {
     private IRubyObject last_update;
     private IRubyObject next_update;
     private IRubyObject revoked;
-    private List extensions;
+    private List<IRubyObject> extensions;
 
     private IRubyObject sig_alg;
 
@@ -136,7 +136,7 @@ public class X509CRL extends RubyObject {
 
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
         //        System.err.println("WARNING: unimplemented method called: CRL#initialize");
-        extensions = new ArrayList();
+        extensions = new ArrayList<IRubyObject>();
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             version = getRuntime().getNil();
             issuer = getRuntime().getNil();
@@ -233,7 +233,7 @@ public class X509CRL extends RubyObject {
         }
         if(extensions.size()>0) {
             sbe.append(IND8).append("CRL extensions\n");
-            for(Iterator iter = extensions.iterator();iter.hasNext();) {
+            for(Iterator<IRubyObject> iter = extensions.iterator();iter.hasNext();) {
                 X509Extensions.Extension ext = (X509Extensions.Extension)iter.next();
                 DERObjectIdentifier oiden = ext.getRealOid();
                 sbe.append(IND12).append(ASN1.o2a(getRuntime(),oiden)).append(": ");
@@ -342,6 +342,7 @@ public class X509CRL extends RubyObject {
         return getRuntime().newArray(this.extensions);
     }
 
+    @SuppressWarnings("unchecked")
     public IRubyObject set_extensions(IRubyObject val) {
         this.extensions = ((RubyArray)val).getList();
         return val;
@@ -376,7 +377,7 @@ public class X509CRL extends RubyObject {
             generator.addCRLEntry(serial,((RubyTime)t1).getJavaDate(),new org.bouncycastle.asn1.x509.X509Extensions(new Hashtable()));
         }
 
-        for(Iterator iter = extensions.iterator();iter.hasNext();) {
+        for(Iterator<IRubyObject> iter = extensions.iterator();iter.hasNext();) {
             Object arg = iter.next();
             generator.addExtension(((X509Extensions.Extension)arg).getRealOid(),((X509Extensions.Extension)arg).getRealCritical(),((X509Extensions.Extension)arg).getRealValueBytes());
         }

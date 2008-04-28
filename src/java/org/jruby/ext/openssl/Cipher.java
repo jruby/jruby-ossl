@@ -94,7 +94,7 @@ public class Cipher extends RubyObject {
         cCipher.defineFastMethod("padding=",ciphercb.getFastMethod("set_padding",IRubyObject.class));
     }
 
-    private static final Set BLOCK_MODES = new HashSet();
+    private static final Set<String> BLOCK_MODES = new HashSet<String>();
     static {
         BLOCK_MODES.add("CBC");
         BLOCK_MODES.add("CFB");
@@ -168,7 +168,7 @@ public class Cipher extends RubyObject {
     }
 
     public static IRubyObject ciphers(IRubyObject recv) {
-        List ciphers = new ArrayList();
+        List<IRubyObject> ciphers = new ArrayList<IRubyObject>();
         String[] other = {"AES128","AES192","AES256","BLOWFISH", "RC2-40-CBC", "RC2-64-CBC","RC4","RC4-40", "CAST","CAST-CBC"};
         String[] bases = {"AES-128","AES-192","AES-256","BF", "DES", "DES-EDE","DES-EDE3", "RC2","CAST5"};
         String[] suffixes = {"","-CBC","-CFB","-CFB1","-CFB8","-ECB","-OFB"};

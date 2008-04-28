@@ -28,7 +28,6 @@
 package org.jruby.ext.openssl.x509store;
 
 import java.util.List;
-import java.util.Iterator;
 
 /**
  * c: X509_OBJECT
@@ -39,10 +38,9 @@ public abstract class X509Object implements Comparable {
     /**
      * c: X509_OBJECT_idx_by_subject
      */
-    public static int indexBySubject(List h, int type, Name name) {
+    public static int indexBySubject(List<? extends X509Object> h, int type, Name name) {
         int ix = 0;
-        for(Iterator iter = h.iterator();iter.hasNext();ix++) {
-            X509Object oo = (X509Object)iter.next();
+        for(X509Object oo : h) {
             if(type == oo.type() && oo.isName(name)) {
                 return ix;
             }
@@ -53,9 +51,8 @@ public abstract class X509Object implements Comparable {
     /**
      * c: X509_OBJECT_retrieve_by_subject
      */
-    public static X509Object retrieveBySubject(List h,int type,Name name) {
-        for(Iterator iter = h.iterator();iter.hasNext();) {
-            X509Object o = (X509Object)iter.next();
+    public static X509Object retrieveBySubject(List<? extends X509Object> h,int type,Name name) {
+        for(X509Object o : h) {
             if(type == o.type() && o.isName(name)) {
                 return o;
             }
@@ -66,9 +63,8 @@ public abstract class X509Object implements Comparable {
     /**
      * c: X509_OBJECT_retrieve_match
      */
-    public static X509Object retrieveMatch(List h, X509Object x) {
-        for(Iterator iter = h.iterator();iter.hasNext();) {
-            X509Object o = (X509Object)iter.next();
+    public static X509Object retrieveMatch(List<? extends X509Object> h, X509Object x) {
+        for(X509Object o : h) {
             if(o.matches(x)) {
                 return o;
             }

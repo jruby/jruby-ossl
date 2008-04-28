@@ -79,24 +79,23 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class ASN1 {
-    private static Map SYM_TO_OID = new IdentityHashMap();
-    private static Map OID_TO_SYM = new IdentityHashMap();
-    private static Map OID_TO_NID = new IdentityHashMap();
-    private static Map NID_TO_OID = new IdentityHashMap();
-    private static Map NID_TO_SN = new IdentityHashMap();
-    private static Map NID_TO_LN = new IdentityHashMap();
+    private static Map<Ruby, Map<String, DERObjectIdentifier>> SYM_TO_OID = new IdentityHashMap<Ruby, Map<String, DERObjectIdentifier>>();
+    private static Map<Ruby, Map<DERObjectIdentifier, String>> OID_TO_SYM = new IdentityHashMap<Ruby, Map<DERObjectIdentifier, String>>();
+    private static Map<Ruby, Map<DERObjectIdentifier, Integer>> OID_TO_NID = new IdentityHashMap<Ruby, Map<DERObjectIdentifier, Integer>>();
+    private static Map<Ruby, Map<Integer, DERObjectIdentifier>> NID_TO_OID = new IdentityHashMap<Ruby, Map<Integer, DERObjectIdentifier>>();
+    private static Map<Ruby, Map<Integer, String>> NID_TO_SN = new IdentityHashMap<Ruby, Map<Integer, String>>();
+    private static Map<Ruby, Map<Integer, String>> NID_TO_LN = new IdentityHashMap<Ruby, Map<Integer, String>>();
 
 
     static void addObject(Ruby runtime, int nid, String sn, String ln, String oid) {
-        Map s2o = (Map)SYM_TO_OID.get(runtime);
-        Map o2s = (Map)OID_TO_SYM.get(runtime);
-        Map o2n = (Map)OID_TO_NID.get(runtime);
-        Map n2o = (Map)NID_TO_OID.get(runtime);
-        Map n2s = (Map)NID_TO_SN.get(runtime);
-        Map n2l = (Map)NID_TO_LN.get(runtime);
+        Map<String, DERObjectIdentifier> s2o = SYM_TO_OID.get(runtime);
+        Map<DERObjectIdentifier, String> o2s = OID_TO_SYM.get(runtime);
+        Map<DERObjectIdentifier, Integer> o2n = OID_TO_NID.get(runtime);
+        Map<Integer, DERObjectIdentifier> n2o = NID_TO_OID.get(runtime);
+        Map<Integer, String> n2s = NID_TO_SN.get(runtime);
+        Map<Integer, String> n2l = NID_TO_LN.get(runtime);
         if(null != oid && (null != sn || null != ln)) {
             DERObjectIdentifier ident = new DERObjectIdentifier(oid);
-            Integer i_nid = new Integer(nid);
             if(sn != null) {
                 s2o.put(sn.toLowerCase(),ident);
             }
@@ -104,22 +103,23 @@ public class ASN1 {
                 s2o.put(ln.toLowerCase(),ident);
             }
             o2s.put(ident,sn == null ? ln : sn);
-            o2n.put(ident,i_nid);
-            n2o.put(i_nid,ident);
-            n2s.put(i_nid,sn);
-            n2l.put(i_nid,ln);
+            o2n.put(ident,nid);
+            n2o.put(nid,ident);
+            n2s.put(nid,sn);
+            n2l.put(nid,ln);
         }        
     }
 
+    @SuppressWarnings("unchecked")
     private synchronized static void initMaps(Ruby runtime) {
-        Object val = new HashMap(org.bouncycastle.asn1.x509.X509Name.DefaultLookUp);
-        Object val2 = new HashMap(org.bouncycastle.asn1.x509.X509Name.DefaultSymbols);
+        Map<String, DERObjectIdentifier> val = new HashMap<String, DERObjectIdentifier>(org.bouncycastle.asn1.x509.X509Name.DefaultLookUp);
+        Map<DERObjectIdentifier, String> val2 = new HashMap<DERObjectIdentifier, String>(org.bouncycastle.asn1.x509.X509Name.DefaultSymbols);
         SYM_TO_OID.put(runtime,val);
         OID_TO_SYM.put(runtime,val2);
-        OID_TO_NID.put(runtime,new HashMap());
-        NID_TO_OID.put(runtime,new HashMap());
-        NID_TO_SN.put(runtime,new HashMap());
-        NID_TO_LN.put(runtime,new HashMap());
+        OID_TO_NID.put(runtime,new HashMap<DERObjectIdentifier, Integer>());
+        NID_TO_OID.put(runtime,new HashMap<Integer, DERObjectIdentifier>());
+        NID_TO_SN.put(runtime,new HashMap<Integer, String>());
+        NID_TO_LN.put(runtime,new HashMap<Integer, String>());
         OpenSSLImpl.defaultObjects(runtime);
     }
 
@@ -128,21 +128,21 @@ public class ASN1 {
     }
 
     synchronized static Integer obj2nid(Ruby runtime, DERObjectIdentifier oid) {
-        Map o2n = (Map)OID_TO_NID.get(runtime);
+        Map<DERObjectIdentifier, Integer> o2n = OID_TO_NID.get(runtime);
         if(null == o2n) {
             initMaps(runtime);
-            o2n = (Map)OID_TO_NID.get(runtime);
+            o2n = OID_TO_NID.get(runtime);
         }
-        return (Integer)o2n.get(oid);
+        return o2n.get(oid);
     }
 
     synchronized static String o2a(Ruby runtime, DERObjectIdentifier obj) {
         Integer nid = obj2nid(runtime,obj);
-        Map n2l = (Map)NID_TO_LN.get(runtime);
-        Map n2s = (Map)NID_TO_SN.get(runtime);
-        String one = (String)n2l.get(nid);
+        Map<Integer, String> n2l = NID_TO_LN.get(runtime);
+        Map<Integer, String> n2s = NID_TO_SN.get(runtime);
+        String one = n2l.get(nid);
         if(one == null) {
-            one = (String)n2s.get(nid);
+            one = n2s.get(nid);
         }
         return one;
     }
@@ -152,30 +152,30 @@ public class ASN1 {
     }
 
     synchronized static String nid2ln(Ruby runtime, Integer nid) {
-        Map n2l = (Map)NID_TO_LN.get(runtime);
+        Map<Integer, String> n2l = NID_TO_LN.get(runtime);
         if(null == n2l) {
             initMaps(runtime);
-            n2l = (Map)NID_TO_LN.get(runtime);
+            n2l = NID_TO_LN.get(runtime);
         }
-        return (String)n2l.get(nid);
+        return n2l.get(nid);
     }
     
-    synchronized static Map getOIDLookup(Ruby runtime) {
-        Object val = SYM_TO_OID.get(runtime);
+    synchronized static Map<String, DERObjectIdentifier> getOIDLookup(Ruby runtime) {
+        Map<String, DERObjectIdentifier> val = SYM_TO_OID.get(runtime);
         if(null == val) {
             initMaps(runtime);
             val = SYM_TO_OID.get(runtime);
         }
-        return (Map)val;
+        return val;
     }
 
-    synchronized static Map getSymLookup(Ruby runtime) {
-        Object val = OID_TO_SYM.get(runtime);
+    synchronized static Map<DERObjectIdentifier, String> getSymLookup(Ruby runtime) {
+        Map<DERObjectIdentifier, String> val = OID_TO_SYM.get(runtime);
         if(null == val) {
             initMaps(runtime);
             val = OID_TO_SYM.get(runtime);
         }
-        return (Map)val;
+        return val;
     }
 
     private final static Object[][] ASN1_INFO = {
@@ -211,16 +211,16 @@ public class ASN1 {
         {"CHARACTER_STRING",  null, null },
         {"BMPSTRING", org.bouncycastle.asn1.DERBMPString.class, "BMPString" }};
 
-    private final static Map CLASS_TO_ID = new HashMap();
-    private final static Map RUBYNAME_TO_ID = new HashMap();
+    private final static Map<Class, Integer> CLASS_TO_ID = new HashMap<Class, Integer>();
+    private final static Map<String, Integer> RUBYNAME_TO_ID = new HashMap<String, Integer>();
     
     static {
         for(int i=0;i<ASN1_INFO.length;i++) {
             if(ASN1_INFO[i][1] != null) {
-                CLASS_TO_ID.put(ASN1_INFO[i][1],new Integer(i));
+                CLASS_TO_ID.put((Class)ASN1_INFO[i][1],new Integer(i));
             }
             if(ASN1_INFO[i][2] != null) {
-                RUBYNAME_TO_ID.put(ASN1_INFO[i][2],new Integer(i));
+                RUBYNAME_TO_ID.put((String)ASN1_INFO[i][2],new Integer(i));
             }
         }
     }
@@ -228,7 +228,7 @@ public class ASN1 {
     public static int idForClass(Class type) {
         Integer v = null;
         while(type != Object.class && v == null) {
-            v = (Integer)CLASS_TO_ID.get(type);
+            v = CLASS_TO_ID.get(type);
             if(v == null) {
                 type = type.getSuperclass();
             }
@@ -237,7 +237,7 @@ public class ASN1 {
     }
 
     public static int idForRubyName(String name) {
-        Integer v = (Integer)RUBYNAME_TO_ID.get(name);
+        Integer v = RUBYNAME_TO_ID.get(name);
         return null == v ? -1 : v.intValue();
     }
 
@@ -255,7 +255,7 @@ public class ASN1 {
         mASN1.getMetaClass().defineFastMethod("decode",asncb.getFastSingletonMethod("decode",IRubyObject.class));
         mASN1.getMetaClass().defineFastMethod("decode_all",asncb.getFastSingletonMethod("decode_all",IRubyObject.class));
 
-        List ary = new ArrayList();
+        List<IRubyObject> ary = new ArrayList<IRubyObject>();
         mASN1.setConstant("UNIVERSAL_TAG_NAME",runtime.newArray(ary));
         for(int i=0;i<ASN1_INFO.length;i++) {
             if(((String)(ASN1_INFO[i][0])).charAt(0) != '[') {
@@ -515,13 +515,13 @@ public class ASN1 {
                 }
                 return c.callMethod(tc,"new",asnM.getRuntime().newString(val));
             } else if(v instanceof ASN1Sequence) {
-                List l = new ArrayList();
+                List<IRubyObject> l = new ArrayList<IRubyObject>();
                 for(Enumeration enm = ((ASN1Sequence)v).getObjects(); enm.hasMoreElements(); ) {
                     l.add(decodeObj(asnM,enm.nextElement()));
                 }
                 return c.callMethod(tc,"new",asnM.getRuntime().newArray(l));
             } else if(v instanceof DERSet) {
-                List l = new ArrayList();
+                List<IRubyObject> l = new ArrayList<IRubyObject>();
                 for(Enumeration enm = ((DERSet)v).getObjects(); enm.hasMoreElements(); ) {
                     l.add(decodeObj(asnM,enm.nextElement()));
                 }

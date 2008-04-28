@@ -97,8 +97,8 @@ public class X509AuxCertificate extends X509Certificate {
     public void checkValidity() throws CertificateExpiredException, CertificateNotYetValidException { wrap.checkValidity(); }
     public void 	checkValidity(Date date) throws CertificateExpiredException, CertificateNotYetValidException { wrap.checkValidity(date); }
     public int 	getBasicConstraints()  { return wrap.getBasicConstraints(); }
-    public List 	getExtendedKeyUsage() throws CertificateParsingException { return wrap.getExtendedKeyUsage(); }
-    public Collection 	getIssuerAlternativeNames() throws CertificateParsingException { return wrap.getIssuerAlternativeNames(); }
+    public List<String> 	getExtendedKeyUsage() throws CertificateParsingException { return wrap.getExtendedKeyUsage(); }
+    public Collection<List<?>> 	getIssuerAlternativeNames() throws CertificateParsingException { return wrap.getIssuerAlternativeNames(); }
     public Principal 	getIssuerDN() { return wrap.getIssuerDN(); }
     public boolean[] 	getIssuerUniqueID() { return wrap.getIssuerUniqueID(); }
     public X500Principal 	getIssuerX500Principal() { return wrap.getIssuerX500Principal(); }
@@ -110,7 +110,7 @@ public class X509AuxCertificate extends X509Certificate {
     public String 	getSigAlgOID() { return wrap.getSigAlgOID(); }
     public byte[] 	getSigAlgParams() { return wrap.getSigAlgParams(); }
     public byte[] 	getSignature() { return wrap.getSignature(); }
-    public Collection 	getSubjectAlternativeNames() throws CertificateParsingException { return wrap.getSubjectAlternativeNames(); }
+    public Collection<List<?>> 	getSubjectAlternativeNames() throws CertificateParsingException { return wrap.getSubjectAlternativeNames(); }
     public Principal 	getSubjectDN() { return wrap.getSubjectDN(); }
     public boolean[] 	getSubjectUniqueID() { return wrap.getSubjectUniqueID(); }
     public X500Principal 	getSubjectX500Principal() { return wrap.getSubjectX500Principal(); }
@@ -135,8 +135,8 @@ public class X509AuxCertificate extends X509Certificate {
     public String 	toString(){ return wrap.toString(); }
     public void 	verify(PublicKey key) throws CertificateException,NoSuchAlgorithmException,InvalidKeyException,NoSuchProviderException,SignatureException { wrap.verify(key); }
     public void 	verify(PublicKey key, String sigProvider) throws CertificateException,NoSuchAlgorithmException,InvalidKeyException,NoSuchProviderException,SignatureException { wrap.verify(key,sigProvider); }
-    public  Set 	getCriticalExtensionOIDs(){ return wrap.getCriticalExtensionOIDs(); }
+    public  Set<String> 	getCriticalExtensionOIDs(){ return wrap.getCriticalExtensionOIDs(); }
     public byte[] 	getExtensionValue(String oid){ return wrap.getExtensionValue(oid); }
-    public Set 	getNonCriticalExtensionOIDs(){ return wrap.getNonCriticalExtensionOIDs(); }
+    public Set<String> 	getNonCriticalExtensionOIDs(){ return wrap.getNonCriticalExtensionOIDs(); }
     public boolean 	hasUnsupportedCriticalExtension(){ return wrap.hasUnsupportedCriticalExtension(); }
 }// X509AuxCertificate

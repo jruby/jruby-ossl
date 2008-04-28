@@ -37,7 +37,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -57,12 +56,12 @@ public class StoreContext {
     public int currentMethod;
 
     public X509AuxCertificate certificate;
-    public List untrusted; //List<X509AuxCertificate>
-    public List crls; //List<CRL>
+    public List<X509AuxCertificate> untrusted;
+    public List<X509CRL> crls;
 
     public VerifyParameter param;
 
-    public List otherContext;
+    public List<X509AuxCertificate> otherContext;
 
     public Function1 verify;
     public Function2 verifyCallback;
@@ -78,7 +77,7 @@ public class StoreContext {
     public boolean isValid;
     public int lastUntrusted;
     
-    public List chain; //List<X509AuxCertificate>
+    public List<X509AuxCertificate> chain; //List<X509AuxCertificate>
     public PolicyTree tree;
 
     public int explicitPolicy;
@@ -89,7 +88,7 @@ public class StoreContext {
     public X509AuxCertificate currentIssuer;
     public java.security.cert.CRL currentCRL;
 
-    public List extraData;
+    public List<Object> extraData;
 
     /**
      * c: X509_STORE_CTX_set_depth
@@ -156,18 +155,18 @@ public class StoreContext {
         return 0;
     }
 
-    public static List ensureAux(Collection inp) {
-        List o = new ArrayList();
-        for(Iterator iter = inp.iterator();iter.hasNext();) {
-            o.add(ensureAux((X509Certificate)iter.next()));
+    public static List<X509AuxCertificate> ensureAux(Collection inp) {
+        List<X509AuxCertificate> out = new ArrayList<X509AuxCertificate>();
+        for(Object o : inp) {
+            out.add(ensureAux((X509Certificate)o));
         }
-        return o;
+        return out;
     }
 
-    public static List ensureAux(X509Certificate[] inp) {
-        List o = new ArrayList();
-        for(int i=0;i<inp.length;i++) {
-            o.add(ensureAux(inp[i]));
+    public static List<X509AuxCertificate> ensureAux(X509Certificate[] inp) {
+        List<X509AuxCertificate> o = new ArrayList<X509AuxCertificate>();
+        for(X509Certificate c : inp) {
+            o.add(ensureAux(c));
         }
         return o;
     }
@@ -176,32 +175,32 @@ public class StoreContext {
         if(i instanceof X509AuxCertificate) {
             return (X509AuxCertificate)i;
         } else {
-            return new X509AuxCertificate((X509Certificate)i);
+            return new X509AuxCertificate(i);
         }
     }
 
     /**
      * c: X509_STORE_CTX_init
      */
-    public int init(Store store, X509AuxCertificate x509, List chain) { 
+    public int init(Store store, X509AuxCertificate x509, List<X509AuxCertificate> chain) { 
         int ret = 1;
-        ctx=store;
-        currentMethod=0;
-        certificate=x509;
-        untrusted=ensureAux(chain);
-        crls = new ArrayList();
-        lastUntrusted=0;
-        otherContext = new ArrayList();
-        isValid=false;
-        chain = new ArrayList();
-        error=0;
-        explicitPolicy=0;
-        errorDepth=0;
-        currentCertificate=null;
-        currentIssuer=null;
-        tree = null;
+        this.ctx=store;
+        this.currentMethod=0;
+        this.certificate=x509;
+        this.untrusted=ensureAux(chain);
+        this.crls = null;
+        this.lastUntrusted=0;
+        this.otherContext = null;
+        this.isValid=false;
+        this.chain = null;
+        this.error=0;
+        this.explicitPolicy=0;
+        this.errorDepth=0;
+        this.currentCertificate=null;
+        this.currentIssuer=null;
+        this.tree = null;
 
-        param = new VerifyParameter();
+        this.param = new VerifyParameter();
 
         if(store != null) {
             ret = param.inherit(store.param);
@@ -278,7 +277,7 @@ public class StoreContext {
 
         this.checkPolicy = defaultCheckPolicy;
 
-        this.extraData = new ArrayList();
+        this.extraData = new ArrayList<Object>();
         this.extraData.add(null);this.extraData.add(null);this.extraData.add(null);
         this.extraData.add(null);this.extraData.add(null);this.extraData.add(null);
         return 1;
@@ -287,7 +286,7 @@ public class StoreContext {
     /**
      * c: X509_STORE_CTX_trusted_stack
      */
-    public void trustedStack(List sk) {
+    public void trustedStack(List<X509AuxCertificate> sk) {
         otherContext = sk;
         getIssuer = getIssuerStack;
     }
@@ -308,10 +307,8 @@ public class StoreContext {
     /**
      * c: find_issuer
      */
-    public X509AuxCertificate findIssuer(List sk, X509AuxCertificate x) throws Exception {
-        X509AuxCertificate issuer = null;
-        for(Iterator iter = sk.iterator();iter.hasNext();) {
-            issuer = (X509AuxCertificate)iter.next();
+    public X509AuxCertificate findIssuer(List<X509AuxCertificate> sk, X509AuxCertificate x) throws Exception {
+        for(X509AuxCertificate issuer : sk) {
             if(checkIssued.call(this,x,issuer) != 0) {
                 return issuer;
             }
@@ -365,7 +362,7 @@ public class StoreContext {
     /**
      * c: X509_STORE_CTX_get_chain
      */
-    public List getChain() { 
+    public List<X509AuxCertificate> getChain() { 
         return chain; 
     } 
 
@@ -373,7 +370,10 @@ public class StoreContext {
      * c: X509_STORE_CTX_get1_chain
      */
     public List getFirstChain() { 
-        return new ArrayList(chain); 
+        if(null == chain) {
+            return null;
+        }
+        return new ArrayList<X509AuxCertificate>(chain); 
     } 
 
     /**
@@ -393,7 +393,7 @@ public class StoreContext {
     /**
      * c: X509_STORE_CTX_set0_crls
      */
-    public void setCRLs(List sk) {
+    public void setCRLs(List<X509CRL> sk) {
         this.crls = sk;
     } 
 
@@ -631,7 +631,7 @@ public class StoreContext {
         int depth,i,ok=0;
         int num;
         Function2 cb;
-        List sktmp = null;
+        List<X509AuxCertificate> sktmp = null;
         if(certificate == null) {
             X509Error.addError(X509Utils.X509_R_NO_CERT_SET_FOR_US_TO_VERIFY);
             return -1;
@@ -639,16 +639,16 @@ public class StoreContext {
         cb=verifyCallback;
 
         if(null == chain) {
-            chain = new ArrayList();
+            chain = new ArrayList<X509AuxCertificate>();
             chain.add(certificate);
             lastUntrusted = 1;
         }
 
         if(untrusted != null) {
-            sktmp = new ArrayList(untrusted);
+            sktmp = new ArrayList<X509AuxCertificate>(untrusted);
         }
         num = chain.size();
-        x = (X509AuxCertificate)chain.get(num-1);
+        x = chain.get(num-1);
         depth = param.depth;
 
         for(;;) {
@@ -696,10 +696,10 @@ public class StoreContext {
                     lastUntrusted = 0;
                 }
             } else {
-                chain_ss = (X509AuxCertificate)chain.remove(chain.size()-1);
+                chain_ss = chain.remove(chain.size()-1);
                 lastUntrusted--;
                 num--;
-                x = (X509AuxCertificate)chain.get(num-1);
+                x = chain.get(num-1);
             }
         }
         for(;;) {
@@ -783,7 +783,7 @@ public class StoreContext {
     }
 
 
-    private final static Set CRITICAL_EXTENSIONS = new HashSet();
+    private final static Set<String> CRITICAL_EXTENSIONS = new HashSet<String>();
     static {
         CRITICAL_EXTENSIONS.add("2.16.840.1.113730.1.1"); // netscape cert type, NID 71
         CRITICAL_EXTENSIONS.add("2.5.29.15"); // key usage, NID 83
@@ -801,8 +801,7 @@ public class StoreContext {
         if(xx.getCriticalExtensionOIDs() == null || xx.getCriticalExtensionOIDs().size() == 0) {
             return false;
         }
-        for(Iterator iter = xx.getCriticalExtensionOIDs().iterator();iter.hasNext();) {
-            String ss = (String)iter.next();
+        for(String ss : xx.getCriticalExtensionOIDs()) {
             if(!supportsCriticalExtension(ss)) {
                 return true;
             }
@@ -832,7 +831,7 @@ public class StoreContext {
 
         for(int i = 0; i<lastUntrusted;i++) {
             int ret;
-            x = (X509AuxCertificate)chain.get(i);
+            x = chain.get(i);
             if((param.flags & X509Utils.V_FLAG_IGNORE_CRITICAL) == 0 && unhandledCritical(x)) {
                 error = X509Utils.V_ERR_UNHANDLED_CRITICAL_EXTENSION;
                 errorDepth = i;
@@ -942,7 +941,7 @@ public class StoreContext {
         Function2 cb;
         cb = verifyCallback;
         i = chain.size()-1;
-        x = (X509AuxCertificate)chain.get(i);
+        x = chain.get(i);
         ok = Trust.checkTrust(x,param.trust,0);
         if(ok == X509Utils.X509_TRUST_TRUSTED) {
             return 1;
@@ -993,7 +992,7 @@ public class StoreContext {
         X509AuxCertificate x;
         int ok,cnum;
         cnum = errorDepth;
-        x = (X509AuxCertificate)chain.get(cnum);
+        x = chain.get(cnum);
         currentCertificate = x;
         ok = getCRL.call(this,crl,x);
         if(ok == 0) {
@@ -1046,18 +1045,19 @@ public class StoreContext {
     /**
      * c: get_crl_sk
      */
-    public int getCRLStack(X509CRL[] pcrl, Name nm, List crls) throws Exception { 
-        X509CRL crl, best_crl = null;
-        for(int i=0;i<crls.size();i++) {
-            crl = (X509CRL)crls.get(i);
-            if(!nm.isEqual(crl.getIssuerX500Principal())) {
-                continue;
+    public int getCRLStack(X509CRL[] pcrl, Name nm, List<X509CRL> crls) throws Exception { 
+        X509CRL best_crl = null;
+        if(null != crls) {
+            for(X509CRL crl : crls) {
+                if(!nm.isEqual(crl.getIssuerX500Principal())) {
+                    continue;
+                }
+                if(checkCRLTime(crl,0) != 0) {
+                    pcrl[0] = crl;
+                    return 1;
+                }
+                best_crl = crl;
             }
-            if(checkCRLTime(crl,0) != 0) {
-                pcrl[0] = crl;
-                return 1;
-            }
-            best_crl = crl;
         }
         if(best_crl != null) {
             pcrl[0] = best_crl;
@@ -1123,7 +1123,7 @@ public class StoreContext {
                 int n = ctx.chain.size();
                 ctx.errorDepth = n-1;
                 n--;
-                X509AuxCertificate xi = (X509AuxCertificate)ctx.chain.get(n);
+                X509AuxCertificate xi = ctx.chain.get(n);
                 X509AuxCertificate xs = null;
                 int ok = 0;
                 if(ctx.checkIssued.call(ctx,xi,xi) != 0) {
@@ -1137,7 +1137,7 @@ public class StoreContext {
                     } else {
                         n--;
                         ctx.errorDepth = n;
-                        xs = (X509AuxCertificate)ctx.chain.get(n);
+                        xs = ctx.chain.get(n);
                     }
                 }
                 while(n>=0) {
@@ -1175,7 +1175,7 @@ public class StoreContext {
                     n--;
                     if(n>=0) {
                         xi = xs;
-                        xs = (X509AuxCertificate)ctx.chain.get(n);
+                        xs = ctx.chain.get(n);
                     }
                 }
                 ok = 1;
@@ -1250,9 +1250,9 @@ public class StoreContext {
                 cnum = ctx.errorDepth;
                 chnum = ctx.chain.size()-1;
                 if(cnum < chnum) {
-                    issuer = (X509AuxCertificate)ctx.chain.get(cnum+1);
+                    issuer = ctx.chain.get(cnum+1);
                 } else {
-                    issuer = (X509AuxCertificate)ctx.chain.get(chnum);
+                    issuer = ctx.chain.get(chnum);
                     if(ctx.checkIssued.call(ctx,issuer,issuer) == 0) {
                         ctx.error = X509Utils.V_ERR_UNABLE_TO_GET_CRL_ISSUER;
                         ok = ctx.verifyCallback.call(new Integer(0),ctx);
