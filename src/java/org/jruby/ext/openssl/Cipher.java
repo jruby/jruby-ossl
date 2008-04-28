@@ -44,6 +44,7 @@ import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.common.IRubyWarnings;
+import org.jruby.common.IRubyWarnings.ID;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
@@ -373,21 +374,60 @@ public class Cipher extends RubyObject {
         return getRuntime().newFixnum(ciph.getBlockSize());
     }
 
-    public IRubyObject encrypt(IRubyObject[] args) {
-        //TODO: implement backwards compat
+    protected void init(IRubyObject[] args, boolean encrypt) {
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
-        encryptMode = true;
-        //modeParams = args;
+        
+        encryptMode = encrypt;
         ciphInited = false;
+
+        if(args.length > 0) {
+            /*
+             * oops. this code mistakes salt for IV.
+             * We deprecated the arguments for this method, but we decided
+             * keeping this behaviour for backward compatibility.
+             */
+            byte[] pass = args[0].convertToString().getBytes();
+            byte[] iv = null;
+            try {
+                iv = "OpenSSL for Ruby rulez!".getBytes("ISO8859-1");
+                byte[] iv2 = new byte[this.ivLen];
+                System.arraycopy(iv, 0, iv2, 0, this.ivLen);
+                iv = iv2;
+            } catch(Exception e) {}
+
+            if(args.length > 1 && !args[1].isNil()) {
+                getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "key derivation by " + getMetaClass().getRealClass().getName() + "#encrypt is deprecated; use " + getMetaClass().getRealClass().getName() + "::pkcs5_keyivgen instead");
+                iv = args[1].convertToString().getBytes();
+                if(iv.length > this.ivLen) {
+                    byte[] iv2 = new byte[this.ivLen];
+                    System.arraycopy(iv, 0, iv2, 0, this.ivLen);
+                    iv = iv2;
+                }
+            }
+
+            MessageDigest digest = (MessageDigest)OpenSSLReal.getWithBCProvider(new Callable() {
+                    public Object call() {
+                        try {
+                            return MessageDigest.getInstance("MD5", "BC");
+                        } catch (Exception e) {
+                            throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
+                        }
+                    }
+                });
+
+            OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen,ivLen,digest,iv,pass,2048);
+            this.key = result.getKey();
+            this.iv = iv;
+        }
+    }
+
+    public IRubyObject encrypt(IRubyObject[] args) {
+        init(args, true);
         return this;
     }
 
     public IRubyObject decrypt(IRubyObject[] args) {
-        //TODO: implement backwards compat
-        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
-        encryptMode = false;
-        //modeParams = args;
-        ciphInited = false;
+        init(args, false);
         return this;
     }
 
