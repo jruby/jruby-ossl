@@ -57,7 +57,7 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.ext.openssl.x509store.PEM;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -177,21 +177,21 @@ public class PKeyRSA extends PKey {
 
                 if(null == val) {
                     try {
-                        val = PEM.read_RSAPrivateKey(new StringReader(input),passwd);
+                        val = PEMInputOutput.readRSAPrivateKey(new StringReader(input),passwd);
                     } catch(Exception e) {
                         val = null;
                     }
                 }
                 if(null == val) {
                     try {
-                        val = PEM.read_RSAPublicKey(new StringReader(input),passwd);
+                        val = PEMInputOutput.readRSAPublicKey(new StringReader(input),passwd);
                     } catch(Exception e) {
                         val = null;
                     }
                 }
                 if(null == val) {
                     try {
-                        val = PEM.read_RSA_PUBKEY(new StringReader(input),passwd);
+                        val = PEMInputOutput.readRSAPubKey(new StringReader(input),passwd);
                     } catch(Exception e) {
                         val = null;
                     }
@@ -318,9 +318,9 @@ public class PKeyRSA extends PKey {
             }
         }
         if(privKey != null) {
-            PEM.write_RSAPrivateKey(w,privKey,algo,passwd);
+            PEMInputOutput.writeRSAPrivateKey(w,privKey,algo,passwd);
         } else {
-            PEM.write_RSAPublicKey(w,pubKey);
+            PEMInputOutput.writeRSAPublicKey(w,pubKey);
         }
         w.close();
         return getRuntime().newString(w.toString());

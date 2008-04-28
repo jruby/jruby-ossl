@@ -27,17 +27,54 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
+import java.security.MessageDigest;
+
+import javax.security.auth.x500.X500Principal;
+
+import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.x509.X509Name;
+
 /**
+ * c: X509_NAME
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_CERT_FILE_CTX {
-    public static class Path {
-        public Path(String name, int type) {
-            this.name = name; this.type = type;
+public class Name {
+    public X509Name name;
+
+    public Name(X500Principal nm) {
+        try {
+            this.name = new X509Name((ASN1Sequence)new ASN1InputStream(nm.getEncoded()).readObject());
+        } catch(Exception e) {
+            this.name = null;
         }
-        public String name;
-        public int type;
     }
-    public int num_paths; // This details how many of the paths-var that is actually used
-    public Path[] paths;
-}// X509_CERT_FILE_CTX
+
+    public Name(X509Name nm) {
+        this.name = nm;
+    }
+
+    /**
+     * c: X509_NAME_hash
+     */
+    public long hash() { 
+        try {
+            byte[] bytes = name.getEncoded();
+            byte[] md = null;
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            md = md5.digest(bytes);
+            return md[0] | ((long)md[1] << 8) | ((long)md[2] << 16) | ((long)md[3] << 24);
+        } catch(Exception e) {
+            return 0;
+        }
+    }
+
+    public boolean isEqual(X500Principal oname) {
+        try {
+            return new X500Principal(name.getEncoded()).equals(oname);
+        } catch(Exception e) {
+            return false;
+        }
+    }
+}// X509_NAME

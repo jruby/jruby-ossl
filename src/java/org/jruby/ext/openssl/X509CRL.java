@@ -58,7 +58,7 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.RubyTime;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.ext.openssl.x509store.PEM;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -205,7 +205,7 @@ public class X509CRL extends RubyObject {
 
     public IRubyObject to_pem() throws Exception {
         StringWriter w = new StringWriter();
-        PEM.write_X509_CRL(w,crl);
+        PEMInputOutput.writeX509CRL(w,crl);
         w.close();
         return getRuntime().newString(w.toString());
     }

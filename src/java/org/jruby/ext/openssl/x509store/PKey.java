@@ -27,32 +27,15 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
-import java.security.cert.CRL;
-import java.security.cert.X509CRL;
-
 /**
+ * c: X509_OBJECT
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_OBJECT_CRL extends X509_OBJECT {
-    public CRL crl;
+public class PKey extends X509Object {
+    public java.security.PrivateKey pkey;
 
     public int type() {
-        return X509.X509_LU_CRL;
+        return X509Utils.X509_LU_PKEY;
     }
-
-    public boolean isName(X509_NAME nm) {
-        return nm.isEqual(((X509CRL)crl).getIssuerX500Principal());
-    }
-
-    public boolean matches(X509_OBJECT o) {
-        return o instanceof X509_OBJECT_CRL && ((X509CRL)crl).getIssuerX500Principal().equals(((X509CRL)((X509_OBJECT_CRL)o).crl).getIssuerX500Principal());
-    }
-
-    public int compareTo(Object oth) {
-        int ret1 = super.compareTo(oth);
-        if(ret1 == 0) {
-            ret1 = crl.equals(((X509_OBJECT_CRL)oth).crl) ? 0 : -1;
-        }
-        return ret1;
-    }
-}// X509_OBJECT_CRL
+}// X509_OBJECT_PKEY

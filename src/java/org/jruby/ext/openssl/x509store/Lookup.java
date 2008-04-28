@@ -48,57 +48,80 @@ import java.util.List;
 import org.jruby.ext.openssl.OpenSSLReal;
 
 /**
+ * X509_LOOKUP
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_LOOKUP {
+public class Lookup {
     public boolean init;
     public boolean skip;
-    public X509_LOOKUP_METHOD method;
-    public Object method_data;
-    public X509_STORE store_ctx;
+    public LookupMethod method;
+    public Object methodData;
+    public Store store;
 
-    public final static int X509_L_FILE_LOAD = 1;
-    public final static int X509_L_ADD_DIR = 2;
+    public final static int FILE_LOAD = 1;
+    public final static int ADD_DIR = 2;
 
-    public X509_LOOKUP(X509_LOOKUP_METHOD method) throws Exception {
-	init=false;
-	skip=false;
-	this.method=method;
-	method_data=null;
-	store_ctx=null;
-        if(method.new_item != null && method.new_item != Function1.iZ && method.new_item.call(this) == 0) {
+    /**
+     * c: X509_LOOKUP_new
+     */
+    public Lookup(LookupMethod method) throws Exception {
+        init=false;
+        skip=false;
+        this.method=method;
+        methodData=null;
+        store=null;
+        if(method.newItem != null && method.newItem != Function1.EMPTY && method.newItem.call(this) == 0) {
             throw new Exception();
         }
     }
 
-    public int load_file(X509_CERT_FILE_CTX.Path file) throws Exception {
-        return ctrl(X509_L_FILE_LOAD,file.name,file.type,null);
+    /**
+     * c: X509_LOOKUP_load_file
+     */
+    public int loadFile(CertificateFile.Path file) throws Exception {
+        return control(FILE_LOAD,file.name,file.type,null);
     }
 
-    public int add_dir(X509_HASH_DIR_CTX.Dir dir) throws Exception {
-        return ctrl(X509_L_ADD_DIR,dir.name,dir.type,null);
+    /**
+     * c: X509_LOOKUP_add_dir
+     */
+    public int addDir(CertificateHashDir.Dir dir) throws Exception {
+        return control(ADD_DIR,dir.name,dir.type,null);
     }
 
-    public static X509_LOOKUP_METHOD hash_dir() { 
-        return x509_dir_lookup;
+    /**
+     * c: X509_LOOKUP_hash_dir
+     */
+    public static LookupMethod hashDirLookup() { 
+        return x509DirectoryLookup;
     } 
 
-    public static X509_LOOKUP_METHOD file() { 
-        return x509_file_lookup;
+    /**
+     * c: X509_LOOKUP_file
+     */
+    public static LookupMethod fileLookup() { 
+        return x509FileLookup;
     }
 
-    public int ctrl(int cmd, String argc, long argl, String[] ret) throws Exception {
+    /**
+     * c: X509_LOOKUP_ctrl
+     */
+    public int control(int cmd, String argc, long argl, String[] ret) throws Exception {
         if(method == null) {
             return -1;
         }
-        if(method.ctrl != null && method.ctrl != Function5.iZ) {
-            return method.ctrl.call(this,new Integer(cmd),argc,new Long(argl),ret);
+        if(method.control != null && method.control != Function5.EMPTY) {
+            return method.control.call(this,new Integer(cmd),argc,new Long(argl),ret);
         } else {
             return 1;
         }
     }
 
-    public int load_cert_file(String file, int type) throws Exception { 
+    /**
+     * c: X509_LOOKUP_load_cert_file
+     */
+    public int loadCertificateFile(String file, int type) throws Exception { 
         if(file == null) {
             return 1;
         }
@@ -107,14 +130,14 @@ public class X509_LOOKUP {
         InputStream in = new BufferedInputStream(new FileInputStream(file));
         X509AuxCertificate x = null;
 
-        if(type == X509.X509_FILETYPE_PEM) {
+        if(type == X509Utils.X509_FILETYPE_PEM) {
             Reader r = new InputStreamReader(in);
             for(;;) {
-                x = PEM.read_X509_AUX(r,null);
+                x = PEMInputOutput.readX509Aux(r,null);
                 if(null == x) {
                     break;
                 }
-                int i = store_ctx.add_cert(x);
+                int i = store.addCertificate(x);
                 if(i == 0) {
                     return ret;
                 }
@@ -122,26 +145,29 @@ public class X509_LOOKUP {
                 x = null;
             }
             ret = count;
-        } else if(type == X509.X509_FILETYPE_ASN1) {
+        } else if(type == X509Utils.X509_FILETYPE_ASN1) {
             CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
-            x = X509_STORE_CTX.transform((X509Certificate)cf.generateCertificate(in));
+            x = StoreContext.ensureAux((X509Certificate)cf.generateCertificate(in));
             if(x == null) {
-                Err.PUT_err(13);
+                X509Error.addError(13);
                 return ret;
             }
-            int i = store_ctx.add_cert(x);
+            int i = store.addCertificate(x);
             if(i == 0) {
                 return ret;
             }
             ret = i;
         } else {
-            Err.PUT_err(X509.X509_R_BAD_X509_FILETYPE);
+            X509Error.addError(X509Utils.X509_R_BAD_X509_FILETYPE);
         }
 
         return ret;
     } 
 
-    public int load_crl_file(String file, int type) throws Exception { 
+    /**
+     * c: X509_LOOKUP_load_crl_file
+     */
+    public int loadCRLFile(String file, int type) throws Exception { 
         if(file == null) {
             return 1;
         }
@@ -150,14 +176,14 @@ public class X509_LOOKUP {
         InputStream in = new BufferedInputStream(new FileInputStream(file));
         CRL x = null;
 
-        if(type == X509.X509_FILETYPE_PEM) {
+        if(type == X509Utils.X509_FILETYPE_PEM) {
             Reader r = new InputStreamReader(in);
             for(;;) {
-                x = PEM.read_X509_CRL(r,null);;
+                x = PEMInputOutput.readX509CRL(r,null);;
                 if(null == x) {
                     break;
                 }
-                int i = store_ctx.add_crl(x);
+                int i = store.addCRL(x);
                 if(i == 0) {
                     return ret;
                 }
@@ -165,41 +191,44 @@ public class X509_LOOKUP {
                 x = null;
             }
             ret = count;
-        } else if(type == X509.X509_FILETYPE_ASN1) {
+        } else if(type == X509Utils.X509_FILETYPE_ASN1) {
             CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
             x = cf.generateCRL(in);
             if(x == null) {
-                Err.PUT_err(13);
+                X509Error.addError(13);
                 return ret;
             }
-            int i = store_ctx.add_crl(x);
+            int i = store.addCRL(x);
             if(i == 0) {
                 return ret;
             }
             ret = i;
         } else {
-            Err.PUT_err(X509.X509_R_BAD_X509_FILETYPE);
+            X509Error.addError(X509Utils.X509_R_BAD_X509_FILETYPE);
         }
 
         return ret;
     }
 
-    public int load_cert_crl_file(String file, int type) throws Exception { 
-        if(type != X509.X509_FILETYPE_PEM) {
-            return load_cert_file(file,type);
+    /**
+     * c: X509_LOOKUP_load_cert_crl_file
+     */
+    public int loadCertificateOrCRLFile(String file, int type) throws Exception { 
+        if(type != X509Utils.X509_FILETYPE_PEM) {
+            return loadCertificateFile(file,type);
         }
         int count = 0;
         Reader r  = new FileReader(file);
         for(;;) {
-            Object v = PEM.read(r,null);
+            Object v = PEMInputOutput.readPEM(r,null);
             if(null == v) {
                 break;
             }
             if(v instanceof X509Certificate) {
-                store_ctx.add_cert(X509_STORE_CTX.transform((X509Certificate)v));
+                store.addCertificate(StoreContext.ensureAux((X509Certificate)v));
                 count++;
             } else if(v instanceof CRL) {
-                store_ctx.add_crl((CRL)v);
+                store.addCRL((CRL)v);
                 count++;
             }
         }
@@ -207,79 +236,111 @@ public class X509_LOOKUP {
         return count; 
     } 
 
+    /**
+     * c: X509_LOOKUP_free
+     */
     public void free() throws Exception {
-        if(method != null && method.free != null && method.free != Function1.iZ) {
+        if(method != null && method.free != null && method.free != Function1.EMPTY) {
             method.free.call(this);
         }
     }
 
+    /**
+     * c: X509_LOOKUP_init
+     */
     public int init() throws Exception { 
         if(method == null) {
             return 0;
         }
-        if(method.init != null && method.init != Function1.iZ) {
+        if(method.init != null && method.init != Function1.EMPTY) {
             return method.init.call(this);
         }
         return 1;
     }
 
-    public int by_subject(int type, X509_NAME name,X509_OBJECT[] ret) throws Exception { 
-        if(method == null || method.get_by_subject == null || method.get_by_subject == Function4.iZ) {
-            return X509.X509_LU_FAIL;
+    /**
+     * c: X509_LOOKUP_by_subject
+     */
+    public int bySubject(int type, Name name,X509Object[] ret) throws Exception { 
+        if(method == null || method.getBySubject == null || method.getBySubject == Function4.EMPTY) {
+            return X509Utils.X509_LU_FAIL;
         }
         if(skip) {
             return 0;
         }
-        return method.get_by_subject.call(this,new Integer(type),name,ret);
+        return method.getBySubject.call(this,new Integer(type),name,ret);
     }
 
-    public int by_issuer_serial(int type, X509_NAME name,BigInteger serial, X509_OBJECT[] ret) throws Exception { 
-        if(method == null || method.get_by_issuer_serial == null || method.get_by_issuer_serial == Function5.iZ) {
-            return X509.X509_LU_FAIL;
+    /**
+     * c: X509_LOOKUP_by_issuer_serial
+     */
+    public int byIssuerSerialNumber(int type, Name name,BigInteger serial, X509Object[] ret) throws Exception { 
+        if(method == null || method.getByIssuerSerialNumber == null || method.getByIssuerSerialNumber == Function5.EMPTY) {
+            return X509Utils.X509_LU_FAIL;
         }
-        return method.get_by_issuer_serial.call(this,new Integer(type),name,serial,ret);
+        return method.getByIssuerSerialNumber.call(this,new Integer(type),name,serial,ret);
     } 
 
-    public int by_fingerprint(int type,String bytes, X509_OBJECT[] ret) throws Exception { 
-        if(method == null || method.get_by_fingerprint == null || method.get_by_fingerprint == Function4.iZ) {
-            return X509.X509_LU_FAIL;
+    /**
+     * c: X509_LOOKUP_by_fingerprint
+     */
+    public int byFingerprint(int type,String bytes, X509Object[] ret) throws Exception { 
+        if(method == null || method.getByFingerprint == null || method.getByFingerprint == Function4.EMPTY) {
+            return X509Utils.X509_LU_FAIL;
         }
-        return method.get_by_fingerprint.call(this,new Integer(type),bytes,ret);
+        return method.getByFingerprint.call(this,new Integer(type),bytes,ret);
     } 
 
-    public int by_alias(int type, String str, X509_OBJECT[] ret) throws Exception { 
-        if(method == null || method.get_by_alias == null || method.get_by_alias == Function4.iZ) {
-            return X509.X509_LU_FAIL;
+    /**
+     * c: X509_LOOKUP_by_alias
+     */
+    public int byAlias(int type, String str, X509Object[] ret) throws Exception { 
+        if(method == null || method.getByAlias == null || method.getByAlias == Function4.EMPTY) {
+            return X509Utils.X509_LU_FAIL;
         }
-        return method.get_by_alias.call(this,new Integer(type),str,ret);
+        return method.getByAlias.call(this,new Integer(type),str,ret);
     } 
 
+    /**
+     * c: X509_LOOKUP_shutdown
+     */
     public int shutdown() throws Exception { 
         if(method == null) {
             return 0;
         }
-        if(method.shutdown != null && method.shutdown != Function1.iZ) {
+        if(method.shutdown != null && method.shutdown != Function1.EMPTY) {
             return method.shutdown.call(this);
         }
         return 1;
     }
 
-    private final static X509_LOOKUP_METHOD x509_file_lookup = new X509_LOOKUP_METHOD();
-    private final static X509_LOOKUP_METHOD x509_dir_lookup = new X509_LOOKUP_METHOD();
+    /**
+     * c: x509_file_lookup
+     */
+    private final static LookupMethod x509FileLookup = new LookupMethod();
+
+    /**
+     * c: x509_dir_lookup
+     */
+    private final static LookupMethod x509DirectoryLookup = new LookupMethod();
+
     static {
-        x509_file_lookup.name = "Load file into cache";
-        x509_file_lookup.ctrl = new File_ByFileCtrl();
+        x509FileLookup.name = "Load file into cache";
+        x509FileLookup.control = new ByFile();
 
-        x509_dir_lookup.name = "Load certs from files in a directory";
-        x509_dir_lookup.new_item = new Dir_New();
-        x509_dir_lookup.free = new Dir_Free();
-        x509_dir_lookup.ctrl = new Dir_Ctrl();
-        x509_dir_lookup.get_by_subject = new Dir_GetCertBySubject();
+        x509DirectoryLookup.name = "Load certs from files in a directory";
+        x509DirectoryLookup.newItem = new NewLookupDir();
+        x509DirectoryLookup.free = new FreeLookupDir();
+        x509DirectoryLookup.control = new LookupDirControl();
+        x509DirectoryLookup.getBySubject = new GetCertificateBySubject();
     }
-
-    private static class File_ByFileCtrl implements Function5 {
+    
+    /**
+     * c: by_file_ctrl
+     */
+    private static class ByFile implements Function5 {
         public int call(Object _ctx, Object _cmd, Object _argp, Object _argl, Object _ret) throws Exception {
-            X509_LOOKUP ctx = (X509_LOOKUP)_ctx;
+            Lookup ctx = (Lookup)_ctx;
             int cmd = ((Integer)_cmd).intValue();
             String argp = (String)_argp;
             long argl = ((Long)_argl).longValue();
@@ -288,25 +349,25 @@ public class X509_LOOKUP {
             String file = null;
             
             switch(cmd) {
-            case X509.X509_L_FILE_LOAD:
-                if (argl == X509.X509_FILETYPE_DEFAULT) {
+            case X509Utils.X509_L_FILE_LOAD:
+                if (argl == X509Utils.X509_FILETYPE_DEFAULT) {
                     try {
-                        file = System.getenv(X509.get_default_cert_file_env());
+                        file = System.getenv(X509Utils.getDefaultCertificateFileEnvironment());
                     } catch (Error error) {
                     }
                     if (file != null) {
-                        ok = ctx.load_cert_crl_file(file, X509.X509_FILETYPE_PEM) != 0 ? 1 : 0;
+                        ok = ctx.loadCertificateOrCRLFile(file, X509Utils.X509_FILETYPE_PEM) != 0 ? 1 : 0;
                     } else {
-                        ok = (ctx.load_cert_crl_file(X509.get_default_cert_file(), X509.X509_FILETYPE_PEM) != 0) ? 1 : 0;
+                        ok = (ctx.loadCertificateOrCRLFile(X509Utils.getDefaultCertificateFile(), X509Utils.X509_FILETYPE_PEM) != 0) ? 1 : 0;
                     }
                     if (ok == 0) {
-                        Err.PUT_err(X509.X509_R_LOADING_DEFAULTS);
+                        X509Error.addError(X509Utils.X509_R_LOADING_DEFAULTS);
                     }
                 } else {
-                    if (argl == X509.X509_FILETYPE_PEM) {
-                        ok = (ctx.load_cert_crl_file(argp, X509.X509_FILETYPE_PEM) != 0) ? 1 : 0;
+                    if (argl == X509Utils.X509_FILETYPE_PEM) {
+                        ok = (ctx.loadCertificateOrCRLFile(argp, X509Utils.X509_FILETYPE_PEM) != 0) ? 1 : 0;
                     } else {
-                        ok = (ctx.load_cert_file(argp, (int) argl) != 0) ? 1 : 0;
+                        ok = (ctx.loadCertificateFile(argp, (int) argl) != 0) ? 1 : 0;
                     }
                 }
                 break;
@@ -316,69 +377,86 @@ public class X509_LOOKUP {
         }
     }
 
-    private static class BY_DIR {
-	StringBuffer buffer;
+    /**
+     * c: BY_DIR, lookup_dir_st
+     */
+    private static class LookupDir {
+        StringBuffer buffer;
         List dirs;
         List dirs_type;
     }
 
-    private static class Dir_New implements Function1 {
+    /**
+     * c: new_dir
+     */
+    private static class NewLookupDir implements Function1 {
         public int call(Object _lu) {
-            X509_LOOKUP lu = (X509_LOOKUP)_lu;
-            BY_DIR a = new BY_DIR();
+            Lookup lu = (Lookup)_lu;
+            LookupDir a = new LookupDir();
             a.buffer = new StringBuffer();
             a.dirs = new ArrayList();
             a.dirs_type = new ArrayList();
-            lu.method_data = a;
+            lu.methodData = a;
             return 1;
         }
     }
-    private static class Dir_Free implements Function1 {
+
+    /**
+     * c: free_dir
+     */
+    private static class FreeLookupDir implements Function1 {
         public int call(Object _lu) {
-            X509_LOOKUP lu = (X509_LOOKUP)_lu;
-            BY_DIR a = (BY_DIR)lu.method_data;
+            Lookup lu = (Lookup)_lu;
+            LookupDir a = (LookupDir)lu.methodData;
             a.dirs = null;
             a.dirs_type = null;
             a.buffer = null;
-            lu.method_data = null;
+            lu.methodData = null;
             return -1;
         }
     }
-    private static class Dir_Ctrl implements Function5 {
+
+    /**
+     * c: dir_ctrl
+     */
+    private static class LookupDirControl implements Function5 {
         public int call(Object _ctx, Object _cmd, Object _argp, Object _argl, Object _retp) {
-            X509_LOOKUP ctx = (X509_LOOKUP)_ctx;
+            Lookup ctx = (Lookup)_ctx;
             int cmd = ((Integer)_cmd).intValue();
             String argp = (String)_argp;
             long argl = ((Long)_argl).longValue();
             int ret = 0;
-            BY_DIR ld = (BY_DIR)ctx.method_data;
+            LookupDir ld = (LookupDir)ctx.methodData;
             String dir = null;
             switch(cmd) {
-            case X509.X509_L_ADD_DIR:
-		if(argl == X509.X509_FILETYPE_DEFAULT) {
+            case X509Utils.X509_L_ADD_DIR:
+                if(argl == X509Utils.X509_FILETYPE_DEFAULT) {
                     try {
-                        dir = System.getenv(X509.get_default_cert_dir_env());
+                        dir = System.getenv(X509Utils.getDefaultCertificateDirectoryEnvironment());
                     } catch (Error error) {
                     }
                     if(null != dir) {
-                        ret = add_cert_dir(ld,dir,X509.X509_FILETYPE_PEM);
+                        ret = addCertificateDirectory(ld,dir,X509Utils.X509_FILETYPE_PEM);
                     } else {
-                        ret = add_cert_dir(ld,X509.get_default_cert_dir(),X509.X509_FILETYPE_PEM);
+                        ret = addCertificateDirectory(ld,X509Utils.getDefaultCertificateDirectory(),X509Utils.X509_FILETYPE_PEM);
                     }
                     if(ret == 0) {
-                        Err.PUT_err(X509.X509_R_LOADING_CERT_DIR);
+                        X509Error.addError(X509Utils.X509_R_LOADING_CERT_DIR);
                     }
                 } else {
-                    ret = add_cert_dir(ld,argp,(int)argl);
+                    ret = addCertificateDirectory(ld,argp,(int)argl);
                 }
-		break;
+                break;
             }
             return ret;
         }
 
-        private int add_cert_dir(BY_DIR ctx,String dir,int type) {
+        /**
+         * c: add_cert_dir
+         */
+        private int addCertificateDirectory(LookupDir ctx,String dir,int type) {
             if(dir == null || "".equals(dir)) {
-                Err.PUT_err(X509.X509_R_INVALID_DIRECTORY);
+                X509Error.addError(X509Utils.X509_R_INVALID_DIRECTORY);
                 return 0;
             }
  
@@ -398,14 +476,18 @@ public class X509_LOOKUP {
             return 1;
         }
     }
-    private static class Dir_GetCertBySubject implements Function4 {
-        public int call(Object _xl, Object _type, Object _name, Object _ret) throws Exception {
-            X509_LOOKUP x1 = (X509_LOOKUP)_xl;
-            int type = ((Integer)_type).intValue();
-            X509_NAME name = (X509_NAME)_name;
-            X509_OBJECT[] ret = (X509_OBJECT[])_ret;
 
-            X509_OBJECT tmp = null;
+    /**
+     * c: get_cert_by_subject
+     */
+    private static class GetCertificateBySubject implements Function4 {
+        public int call(Object _xl, Object _type, Object _name, Object _ret) throws Exception {
+            Lookup x1 = (Lookup)_xl;
+            int type = ((Integer)_type).intValue();
+            Name name = (Name)_name;
+            X509Object[] ret = (X509Object[])_ret;
+
+            X509Object tmp = null;
 
             int ok = 0;
             StringBuffer b = new StringBuffer();
@@ -415,15 +497,15 @@ public class X509_LOOKUP {
             }
 
             String postfix = "";
-            if(type == X509.X509_LU_X509) {
-            } else if(type == X509.X509_LU_CRL) {
+            if(type == X509Utils.X509_LU_X509) {
+            } else if(type == X509Utils.X509_LU_CRL) {
                 postfix = "r";
             } else {
-                Err.PUT_err(X509.X509_R_WRONG_LOOKUP_TYPE);
+                X509Error.addError(X509Utils.X509_R_WRONG_LOOKUP_TYPE);
                 return ok;
             }
             
-            BY_DIR ctx = (BY_DIR)x1.method_data;
+            LookupDir ctx = (LookupDir)x1.methodData;
 
             long h = name.hash();
             
@@ -437,20 +519,20 @@ public class X509_LOOKUP {
                     if(!(new File(b.toString()).exists())) {
                         break;
                     }
-                    if(type == X509.X509_LU_X509) {
-                        if((x1.load_cert_file(b.toString(),tp)) == 0) {
+                    if(type == X509Utils.X509_LU_X509) {
+                        if((x1.loadCertificateFile(b.toString(),tp)) == 0) {
                             break;
                         }
-                    } else if(type == X509.X509_LU_CRL) {
-                        if((x1.load_crl_file(b.toString(),tp)) == 0) {
+                    } else if(type == X509Utils.X509_LU_CRL) {
+                        if((x1.loadCRLFile(b.toString(),tp)) == 0) {
                             break;
                         }
                     }
                 }
-                synchronized(X509.CRYPTO_LOCK_X509_STORE) {
+                synchronized(X509Utils.CRYPTO_LOCK_X509_STORE) {
                     tmp = null;
-                    for(Iterator iterx = x1.store_ctx.objs.iterator();iterx.hasNext();) {
-                        X509_OBJECT o = (X509_OBJECT)iterx.next();
+                    for(Iterator iterx = x1.store.objs.iterator();iterx.hasNext();) {
+                        X509Object o = (X509Object)iterx.next();
                         if(o.type() == type && o.isName(name)) {
                             tmp = o;
                             break;

@@ -27,8 +27,44 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
+ * Used to handle OpenSSL errors in a sane way. These are not safe for
+ * multi runtimes at the moments.
+ * 
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_POLICY_TREE {
-}// X509_POLICY_TREE
+public class X509Error {
+    private static ThreadLocal errors = new ThreadLocal();
+
+    public static class ErrorException extends Exception {
+        private static final long serialVersionUID = -3214495184277468063L;
+        
+        private int reason;
+        public ErrorException(int reason) {
+            super();
+            this.reason = reason;
+        }
+        public int getReason() {
+            return reason;
+        }
+    }
+
+    public static synchronized void addError(int reason) {
+        List errs = (List)errors.get();
+        if(errs == null) {
+            errs = new ArrayList();
+            errors.set(errs);
+        }
+        errs.add(new ErrorException(reason));
+    }
+
+    public static synchronized void clearErrors() {
+        List errs = (List)errors.get();
+        if(errs != null) {
+            errs.clear();
+        }
+    }
+}// Err

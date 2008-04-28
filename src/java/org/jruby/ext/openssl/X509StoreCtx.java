@@ -41,8 +41,8 @@ import org.jruby.RubyString;
 import org.jruby.RubyTime;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
-import org.jruby.ext.openssl.x509store.X509_STORE;
-import org.jruby.ext.openssl.x509store.X509_STORE_CTX;
+import org.jruby.ext.openssl.x509store.Store;
+import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
@@ -80,13 +80,13 @@ public class X509StoreCtx extends RubyObject {
         cX509StoreContext.defineFastMethod("time=",storectxcb.getFastMethod("set_time",IRubyObject.class));
     }
 
-    private X509_STORE_CTX ctx;
+    private StoreContext ctx;
     private RubyClass cStoreError;
     private RubyClass cX509Cert;
 
     public X509StoreCtx(Ruby runtime, RubyClass type) {
         super(runtime,type);
-        ctx = new X509_STORE_CTX();
+        ctx = new StoreContext();
         cStoreError = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreError")); 
         cX509Cert = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
    }
@@ -99,7 +99,7 @@ public class X509StoreCtx extends RubyObject {
         IRubyObject store;
         IRubyObject cert = getRuntime().getNil();
         IRubyObject chain = getRuntime().getNil();
-        X509_STORE x509st;
+        Store x509st;
         X509AuxCertificate x509 = null;
         List x509s = new ArrayList();
 
@@ -133,13 +133,13 @@ public class X509StoreCtx extends RubyObject {
     }
 
     public IRubyObject verify() throws Exception {
-        ctx.set_ex_data(1,getInstanceVariable("@verify_callback"));
-        int result = ctx.verify_cert();
+        ctx.setExtraData(1,getInstanceVariable("@verify_callback"));
+        int result = ctx.verifyCertificate();
         return result != 0 ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
     public IRubyObject chain() throws Exception {
-        List chain = ctx.get_chain();
+        List chain = ctx.getChain();
         if(chain == null) {
             return getRuntime().getNil();
         }
@@ -152,7 +152,7 @@ public class X509StoreCtx extends RubyObject {
    }
 
     public IRubyObject error() {
-        return getRuntime().newFixnum(ctx.get_error());
+        return getRuntime().newFixnum(ctx.getError());
     }
 
     public IRubyObject set_error(IRubyObject arg) {
@@ -161,8 +161,8 @@ public class X509StoreCtx extends RubyObject {
     }
 
     public IRubyObject error_string() {
-        int err = ctx.get_error();
-        return getRuntime().newString(org.jruby.ext.openssl.x509store.X509.verify_cert_error_string(err));
+        int err = ctx.getError();
+        return getRuntime().newString(org.jruby.ext.openssl.x509store.X509Utils.verifyCertificateErrorString(err));
     }
 
     public IRubyObject error_depth() {
@@ -201,7 +201,7 @@ public class X509StoreCtx extends RubyObject {
     }
 
     public IRubyObject set_time(IRubyObject arg) {
-        ctx.set_time(0,((RubyTime)arg).getJavaDate());
+        ctx.setTime(0,((RubyTime)arg).getJavaDate());
         return arg;
     }
 }// X509StoreCtx

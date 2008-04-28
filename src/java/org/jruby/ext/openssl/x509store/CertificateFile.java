@@ -27,15 +27,20 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
-import java.security.PrivateKey;
-
 /**
+ * Contains information like x509_file_st and X509_CERT_FILER_CTX in
+ * x509_vfy.h
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_OBJECT_PKEY extends X509_OBJECT {
-    public PrivateKey pkey;
-
-    public int type() {
-        return X509.X509_LU_PKEY;
+public class CertificateFile {
+    public static class Path {
+        public Path(String name, int type) {
+            this.name = name; this.type = type;
+        }
+        public String name;
+        public int type;
     }
-}// X509_OBJECT_PKEY
+    public int numberOfPaths; // This details how many of the paths-var that is actually used
+    public Path[] paths;
+}// X509_CERT_FILE_CTX

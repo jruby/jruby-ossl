@@ -50,12 +50,16 @@ import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 
 /**
+ * Since regular X509Certificate doesn't represent the Aux part of a
+ * certification, this class uses composition and extension to contain
+ * both pieces of information.
+ * 
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class X509AuxCertificate extends X509Certificate {
     private static final long serialVersionUID = -909543379295427515L;
     private final X509Certificate wrap;
-    private final X509_AUX aux;
+    private final X509Aux aux;
 
     private boolean valid = false;
     private int ex_flags = 0;
@@ -64,13 +68,13 @@ public class X509AuxCertificate extends X509Certificate {
         this(wrap,null);
     }
 
-    public X509AuxCertificate(X509Certificate wrap, X509_AUX aux) {
+    public X509AuxCertificate(X509Certificate wrap, X509Aux aux) {
         super();
         this.wrap = wrap;
         this.aux = aux;
     }
 
-    public X509_AUX getAux() {
+    public X509Aux getAux() {
         return this.aux;
     }
 

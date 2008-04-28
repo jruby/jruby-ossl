@@ -48,7 +48,7 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.ext.openssl.x509store.PEM;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
@@ -153,7 +153,7 @@ public class PKeyDH extends PKey {
             IRubyObject arg0 = args[0];
             if (argc == 1 && arg0 instanceof RubyString) {
                 try {
-                    DHParameterSpec spec = PEM.read_DHParameters(new StringReader(arg0.toString()));
+                    DHParameterSpec spec = PEMInputOutput.readDHParameters(new StringReader(arg0.toString()));
                     this.dh_p = spec.getP();
                     this.dh_g = spec.getG();
                 } catch (IOException e) {
@@ -298,7 +298,7 @@ public class PKeyDH extends PKey {
         }
         StringWriter w = new StringWriter();
         try {
-            PEM.write_DHParameters(w, new DHParameterSpec(p, g));
+            PEMInputOutput.writeDHParameters(w, new DHParameterSpec(p, g));
             w.flush();
             w.close();
         } catch (IOException e) {

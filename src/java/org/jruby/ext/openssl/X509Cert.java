@@ -56,7 +56,7 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.RubyTime;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.ext.openssl.x509store.PEM;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
@@ -223,7 +223,7 @@ public class X509Cert extends RubyObject {
 
     public IRubyObject to_pem() throws Exception {
         StringWriter w = new StringWriter();
-        PEM.write_X509(w,getAuxCert());
+        PEMInputOutput.writeX509Certificate(w,getAuxCert());
         w.close();
         return getRuntime().newString(w.toString());
     }

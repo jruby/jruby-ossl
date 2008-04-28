@@ -31,13 +31,18 @@ import java.util.List;
 import java.util.Iterator;
 
 /**
+ * c: X509_OBJECT
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public abstract class X509_OBJECT implements Comparable {
-    public static int idx_by_subject(List h, int type, X509_NAME name) {
+public abstract class X509Object implements Comparable {
+    /**
+     * c: X509_OBJECT_idx_by_subject
+     */
+    public static int indexBySubject(List h, int type, Name name) {
         int ix = 0;
         for(Iterator iter = h.iterator();iter.hasNext();ix++) {
-            X509_OBJECT oo = (X509_OBJECT)iter.next();
+            X509Object oo = (X509Object)iter.next();
             if(type == oo.type() && oo.isName(name)) {
                 return ix;
             }
@@ -45,9 +50,12 @@ public abstract class X509_OBJECT implements Comparable {
         return -1;
     }
 
-    public static X509_OBJECT retrieve_by_subject(List h,int type,X509_NAME name) {
+    /**
+     * c: X509_OBJECT_retrieve_by_subject
+     */
+    public static X509Object retrieveBySubject(List h,int type,Name name) {
         for(Iterator iter = h.iterator();iter.hasNext();) {
-            X509_OBJECT o = (X509_OBJECT)iter.next();
+            X509Object o = (X509Object)iter.next();
             if(type == o.type() && o.isName(name)) {
                 return o;
             }
@@ -55,9 +63,12 @@ public abstract class X509_OBJECT implements Comparable {
         return null;
     }
 
-    public static X509_OBJECT retrieve_match(List h, X509_OBJECT x) {
+    /**
+     * c: X509_OBJECT_retrieve_match
+     */
+    public static X509Object retrieveMatch(List h, X509Object x) {
         for(Iterator iter = h.iterator();iter.hasNext();) {
-            X509_OBJECT o = (X509_OBJECT)iter.next();
+            X509Object o = (X509Object)iter.next();
             if(o.matches(x)) {
                 return o;
             }
@@ -65,17 +76,17 @@ public abstract class X509_OBJECT implements Comparable {
         return null;
     }
 
-    public boolean isName(X509_NAME nm) {
+    public boolean isName(Name nm) {
         return false;
     }
 
-    public boolean matches(X509_OBJECT o) {
+    public boolean matches(X509Object o) {
         return false;
     }
 
     public abstract int type();
 
     public int compareTo(Object other) {
-        return type() - ((X509_OBJECT)other).type();
+        return type() - ((X509Object)other).type();
     }
 }// X509_OBJECT

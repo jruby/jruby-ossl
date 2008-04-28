@@ -104,9 +104,11 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Iterator;
 
 /**
+ * Helper class to read and write PEM files correctly.
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class PEM {
+public class PEMInputOutput {
     public static final String BEF = "-----";
     public static final String AFT = "-----";
     public static final String BEF_G = BEF+"BEGIN ";
@@ -139,22 +141,22 @@ public class PEM {
             Pattern.MULTILINE);
     private static final int DH_PARAM_GROUP = 2; // the group above containing encoded params
 
-    private static BufferedReader into(Reader in) {
+    private static BufferedReader makeBuffered(Reader in) {
         if(in instanceof BufferedReader) {
             return (BufferedReader)in;
         }
         return new BufferedReader(in);
     }
 
-    private static BufferedWriter outo(Writer out) {
+    private static BufferedWriter makeBuffered(Writer out) {
         if(out instanceof BufferedWriter) {
             return (BufferedWriter)out;
         }
         return new BufferedWriter(out);
     }
 
-    public static Object read(Reader in,char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static Object readPEM(Reader in,char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_PUBLIC) != -1) {
@@ -210,12 +212,12 @@ public class PEM {
         return null; 
     }
 
-    public static DSAPublicKey read_DSA_PUBKEY(Reader in, char[] f) throws IOException {
+    public static DSAPublicKey readDSAPubKey(Reader in, char[] f) throws IOException {
         //        System.out.println("WARNING: read_DSA_PUBKEY");
         return null;
     }
-    public static DSAPublicKey read_DSAPublicKey(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static DSAPublicKey readDSAPublicKey(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_PUBLIC) != -1) {
@@ -228,8 +230,8 @@ public class PEM {
         }
         return null; 
     }
-    public static KeyPair read_DSAPrivateKey(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static KeyPair readDSAPrivateKey(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_DSA) != -1) {
@@ -243,8 +245,8 @@ public class PEM {
         return null; 
     }
     /** reads an RSA public key encoded in an SubjectPublicKeyInfo RSA structure. */
-    public static RSAPublicKey read_RSA_PUBKEY(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static RSAPublicKey readRSAPubKey(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_PUBLIC) != -1) {
@@ -264,8 +266,8 @@ public class PEM {
         return null; 
     }
     /** reads an RSA public key encoded in an PKCS#1 RSA structure. */
-    public static RSAPublicKey read_RSAPublicKey(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static RSAPublicKey readRSAPublicKey(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_PUBLIC) != -1) {
@@ -284,8 +286,8 @@ public class PEM {
         }
         return null; 
     }
-    public static KeyPair read_RSAPrivateKey(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static KeyPair readRSAPrivateKey(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_RSA) != -1) {
@@ -298,8 +300,8 @@ public class PEM {
         }
         return null;
     }
-    public static CMSSignedData read_PKCS7(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static CMSSignedData readPKCS7(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_PKCS7) != -1) {
@@ -312,8 +314,8 @@ public class PEM {
         }
         return null;
     }
-    public static X509AuxCertificate read_X509(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static X509AuxCertificate readX509Certificate(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_X509_OLD) != -1) {
@@ -338,8 +340,8 @@ public class PEM {
         }
         return null;
     }
-    public static X509AuxCertificate read_X509_AUX(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static X509AuxCertificate readX509Aux(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_X509_OLD) != -1) {
@@ -364,8 +366,8 @@ public class PEM {
         }
         return null;
     }
-    public static X509CRL read_X509_CRL(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static X509CRL readX509CRL(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_X509_CRL) != -1) {
@@ -378,8 +380,8 @@ public class PEM {
         }
         return null;
     }
-    public static PKCS10CertificationRequestExt read_X509_REQ(Reader in, char[] f) throws IOException {
-        BufferedReader _in = into(in);
+    public static PKCS10CertificationRequestExt readX509Request(Reader in, char[] f) throws IOException {
+        BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
             if(line.indexOf(BEF_G+PEM_STRING_X509_REQ) != -1) {
@@ -393,9 +395,9 @@ public class PEM {
         return null;
     }
 
-    public static DHParameterSpec read_DHParameters(Reader _in)
+    public static DHParameterSpec readDHParameters(Reader _in)
     throws IOException, InvalidParameterSpecException {
-        BufferedReader in = into(_in);
+        BufferedReader in = makeBuffered(_in);
         String line;
         StringBuilder buf = new StringBuilder();
         while ((line = in.readLine()) != null) {
@@ -423,8 +425,8 @@ public class PEM {
         throw new InvalidParameterSpecException("invalid " + PEM_STRING_DHPARAMS);
     }
 
-    public static void write_DSAPublicKey(Writer _out, DSAPublicKey obj) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeDSAPublicKey(Writer _out, DSAPublicKey obj) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         byte[] encoding = obj.getEncoded();
         out.write(BEF_G + PEM_STRING_PUBLIC + AFT);
         out.newLine();
@@ -434,8 +436,8 @@ public class PEM {
         out.flush();
     }
     /** writes an RSA public key encoded in an PKCS#1 RSA structure. */
-    public static void write_RSAPublicKey(Writer _out, RSAPublicKey obj) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeRSAPublicKey(Writer _out, RSAPublicKey obj) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         byte[] encoding = obj.getEncoded();
         out.write(BEF_G + PEM_STRING_PUBLIC + AFT);
         out.newLine();
@@ -444,8 +446,8 @@ public class PEM {
         out.newLine();
         out.flush();
     }
-    public static void write_PKCS7(Writer _out, ContentInfo obj) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writePKCS7(Writer _out, ContentInfo obj) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         byte[] encoding = obj.getEncoded();
         out.write(BEF_G + PEM_STRING_PKCS7 + AFT);
         out.newLine();
@@ -454,8 +456,8 @@ public class PEM {
         out.newLine();
         out.flush();
     }
-    public static void write_PKCS7(Writer _out, CMSSignedData obj) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writePKCS7(Writer _out, CMSSignedData obj) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         byte[] encoding = obj.getEncoded();
         out.write(BEF_G + PEM_STRING_PKCS7 + AFT);
         out.newLine();
@@ -464,8 +466,8 @@ public class PEM {
         out.newLine();
         out.flush();
     }
-    public static void write_X509(Writer _out, X509Certificate obj) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeX509Certificate(Writer _out, X509Certificate obj) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         try {
             byte[] encoding = obj.getEncoded();
             out.write(BEF_G + PEM_STRING_X509 + AFT);
@@ -478,8 +480,8 @@ public class PEM {
             throw new IOException("problem with encoding object in write_X509");
         }
     }
-    public static void write_X509_AUX(Writer _out, X509AuxCertificate obj) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeX509Aux(Writer _out, X509AuxCertificate obj) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         byte[] encoding = null;
         try {
             if(obj.getAux() == null) {
@@ -489,7 +491,7 @@ public class PEM {
                 byte[] ymp = obj.getEncoded();
                 baos.write(ymp,0,ymp.length);
             
-                X509_AUX aux = obj.getAux();
+                X509Aux aux = obj.getAux();
                 ASN1EncodableVector a1 = new ASN1EncodableVector();
                 if(aux.trust.size()>0) {
                     ASN1EncodableVector a2 = new ASN1EncodableVector();
@@ -532,8 +534,8 @@ public class PEM {
         out.newLine();
         out.flush();
     }
-    public static void write_X509_CRL(Writer _out, X509CRL obj) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeX509CRL(Writer _out, X509CRL obj) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         try {
             byte[] encoding = obj.getEncoded();
             out.write(BEF_G + PEM_STRING_X509_CRL + AFT);
@@ -546,8 +548,8 @@ public class PEM {
             throw new IOException("problem with encoding object in write_X509_CRL");
         }
     }
-    public static void write_X509_REQ(Writer _out, PKCS10CertificationRequestExt obj) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeX509Request(Writer _out, PKCS10CertificationRequestExt obj) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         byte[] encoding = obj.getEncoded();
         out.write(BEF_G + PEM_STRING_X509_REQ + AFT);
         out.newLine();
@@ -566,8 +568,8 @@ public class PEM {
         }
     }
 
-    public static void write_DSAPrivateKey(Writer _out, DSAPrivateKey obj, String algo, char[] f) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeDSAPrivateKey(Writer _out, DSAPrivateKey obj, String algo, char[] f) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         ByteArrayInputStream    bIn = new ByteArrayInputStream(obj.getEncoded());
         ASN1InputStream         aIn = new ASN1InputStream(bIn);
         PrivateKeyInfo          info = new PrivateKeyInfo((ASN1Sequence)aIn.readObject());
@@ -637,8 +639,8 @@ public class PEM {
         }
     }
 
-    public static void write_RSAPrivateKey(Writer _out, RSAPrivateCrtKey obj, String algo, char[] f) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeRSAPrivateKey(Writer _out, RSAPrivateCrtKey obj, String algo, char[] f) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         RSAPrivateKeyStructure keyStruct = new RSAPrivateKeyStructure(
                 obj.getModulus(),
                 obj.getPublicExponent(),
@@ -704,8 +706,8 @@ public class PEM {
         }
     }
     
-    public static void write_DHParameters(Writer _out, DHParameterSpec params) throws IOException {
-        BufferedWriter out = outo(_out);
+    public static void writeDHParameters(Writer _out, DHParameterSpec params) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
         ByteArrayOutputStream bOut = new ByteArrayOutputStream();
         ASN1OutputStream aOut = new ASN1OutputStream(bOut);
 
@@ -978,9 +980,9 @@ public class PEM {
             CertificateFactory certFact = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
             X509Certificate bCert = (X509Certificate)certFact.generateCertificate(bIn);
             DERSequence aux = (DERSequence)try1.readObject();
-            X509_AUX ax = null;
+            X509Aux ax = null;
             if(aux != null) {
-                ax = new X509_AUX();
+                ax = new X509Aux();
                 int ix = 0;
                 if(aux.size() > ix && aux.getObjectAt(ix) instanceof DERSequence) {
                     DERSequence trust = (DERSequence)aux.getObjectAt(ix++);

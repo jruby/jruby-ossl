@@ -28,14 +28,16 @@
 package org.jruby.ext.openssl.x509store;
 
 /**
+ * One arity function call.
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public interface Function1 {
-    public static class Z implements Function1 {
+    public static class Empty implements Function1 {
         public int call(Object arg0) {
             return -1;
         }
     }
-    public static final Function1 iZ = new Z();
+    public static final Function1.Empty EMPTY = new Empty();
     int call(Object arg0) throws Exception;
 }// Function1

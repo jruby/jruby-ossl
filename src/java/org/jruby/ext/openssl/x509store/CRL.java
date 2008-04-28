@@ -27,17 +27,33 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
+import java.security.cert.X509CRL;
+
 /**
+ * c: X509_OBJECT
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_HASH_DIR_CTX {
-    public static class Dir {
-        public Dir(String name, int type) {
-            this.name = name; this.type = type;
-        }
-        public String name;
-        public int type;
+public class CRL extends X509Object {
+    public java.security.cert.CRL crl;
+
+    public int type() {
+        return X509Utils.X509_LU_CRL;
     }
-    public int num_dirs; // This details how many of the dirs-var that is actually used
-    public Dir[] dirs;
-}// X509_HASH_DIR_CTX
+
+    public boolean isName(Name nm) {
+        return nm.isEqual(((X509CRL)crl).getIssuerX500Principal());
+    }
+
+    public boolean matches(X509Object o) {
+        return o instanceof CRL && ((X509CRL)crl).getIssuerX500Principal().equals(((X509CRL)((CRL)o).crl).getIssuerX500Principal());
+    }
+
+    public int compareTo(Object oth) {
+        int ret1 = super.compareTo(oth);
+        if(ret1 == 0) {
+            ret1 = crl.equals(((CRL)oth).crl) ? 0 : -1;
+        }
+        return ret1;
+    }
+}// X509_OBJECT_CRL

@@ -36,8 +36,8 @@ import org.jruby.RubyObject;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.Function2;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
-import org.jruby.ext.openssl.x509store.X509_STORE;
-import org.jruby.ext.openssl.x509store.X509_STORE_CTX;
+import org.jruby.ext.openssl.x509store.Store;
+import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -83,14 +83,14 @@ public class X509Store extends RubyObject {
 
     public X509Store(Ruby runtime, RubyClass type) {
         super(runtime,type);
-        store = new X509_STORE();
+        store = new Store();
         cStoreError = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreError"));
         cStoreContext = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreContext"));
     }
 
-    private X509_STORE store;
+    private Store store;
 
-    X509_STORE getStore() {
+    Store getStore() {
         return store;
     }
 
@@ -99,7 +99,7 @@ public class X509Store extends RubyObject {
     }
 
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
-        store.set_verify_cb_func(ossl_verify_cb);
+        store.setVerifyCallbackFunction(ossl_verify_cb);
         this.set_verify_callback(getRuntime().getNil());
         this.setInstanceVariable("@flags",RubyFixnum.zero(getRuntime()));
         this.setInstanceVariable("@purpose",RubyFixnum.zero(getRuntime()));
@@ -113,23 +113,23 @@ public class X509Store extends RubyObject {
     }
 
     public IRubyObject set_verify_callback(IRubyObject cb) {
-        store.set_ex_data(1, cb);
+        store.setExtraData(1, cb);
         this.setInstanceVariable("@verify_callback", cb);
         return cb;
     }
 
     public IRubyObject set_flags(IRubyObject arg) {
-        store.set_flags(RubyNumeric.fix2long(arg));
+        store.setFlags(RubyNumeric.fix2long(arg));
         return arg;
     }
 
     public IRubyObject set_purpose(IRubyObject arg) throws Exception {
-        store.set_purpose(RubyNumeric.fix2int(arg));
+        store.setPurpose(RubyNumeric.fix2int(arg));
         return arg;
     }
 
     public IRubyObject set_trust(IRubyObject arg) {
-        store.set_trust(RubyNumeric.fix2int(arg));
+        store.setTrust(RubyNumeric.fix2int(arg));
         return arg;
     }
 
@@ -155,7 +155,7 @@ public class X509Store extends RubyObject {
 
     public IRubyObject add_cert(IRubyObject _cert) {
         X509AuxCertificate cert = (_cert instanceof X509Cert) ? ((X509Cert)_cert).getAuxCert() : (X509AuxCertificate)null;
-        if(store.add_cert(cert) != 1) {
+        if(store.addCertificate(cert) != 1) {
             raise(null);
         }
         return this;
@@ -163,7 +163,7 @@ public class X509Store extends RubyObject {
 
     public IRubyObject add_crl(IRubyObject arg) {
         java.security.cert.X509CRL crl = (arg instanceof X509CRL) ? ((X509CRL)arg).getCRL() : null;
-        if(store.add_crl(crl) != 1) {
+        if(store.addCRL(crl) != 1) {
             raise(null);
         }
         return this;
@@ -194,11 +194,11 @@ public class X509Store extends RubyObject {
 
     private final static Function2 ossl_verify_cb = new Function2() {
             public int call(Object a1, Object a2) throws Exception {
-                X509_STORE_CTX ctx = (X509_STORE_CTX)a2;
+                StoreContext ctx = (StoreContext)a2;
                 int ok = ((Integer)a1).intValue();
-                IRubyObject proc = (IRubyObject)ctx.get_ex_data(1);
+                IRubyObject proc = (IRubyObject)ctx.getExtraData(1);
                 if(null == proc) {
-                    proc = (IRubyObject)ctx.ctx.get_ex_data(0);
+                    proc = (IRubyObject)ctx.ctx.getExtraData(0);
                 }
                 if(null == proc) {
                     return ok;

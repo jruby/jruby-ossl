@@ -28,18 +28,30 @@
 package org.jruby.ext.openssl.x509store;
 
 /**
+ * c: X509_OBJECT
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_LOOKUP_METHOD {
-    public String name;
+public class Certificate extends X509Object {
+    public X509AuxCertificate x509;
 
-    public Function1 new_item;
-    public Function1 free;
-    public Function1 init;
-    public Function1 shutdown;
-    public Function5 ctrl;
-    public Function4 get_by_subject;
-    public Function5 get_by_issuer_serial;
-    public Function4 get_by_fingerprint;
-    public Function4 get_by_alias;
-}// X509_LOOKUP_METHOD
+    public int type() {
+        return X509Utils.X509_LU_X509;
+    }
+
+    public boolean isName(Name nm) {
+        return nm.isEqual(x509.getSubjectX500Principal());
+    }
+
+    public boolean matches(X509Object o) {
+        return o instanceof Certificate && x509.getSubjectX500Principal().equals(((Certificate)o).x509.getSubjectX500Principal());
+    }
+
+    public int compareTo(Object oth) {
+        int ret1 = super.compareTo(oth);
+        if(ret1 == 0) {
+            ret1 = x509.equals(((Certificate)oth).x509) ? 0 : -1;
+        }
+        return ret1;
+    }
+}// X509_OBJECT_CERT

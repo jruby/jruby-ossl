@@ -27,41 +27,16 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class Err {
-    private static ThreadLocal errors = new ThreadLocal();
-
-    public static class ErrException extends Exception {
-        private static final long serialVersionUID = -3214495184277468063L;
-        
-        private int reason;
-        public ErrException(int reason) {
-            super();
-            this.reason = reason;
-        }
-        public int getReason() {
-            return reason;
-        }
-    }
-
-    public static synchronized void PUT_err(int reason) {
-        List errs = (List)errors.get();
-        if(errs == null) {
-            errs = new ArrayList();
-            errors.set(errs);
-        }
-        errs.add(new ErrException(reason));
-    }
-
-    public static synchronized void clear_error() {
-        List errs = (List)errors.get();
-        if(errs != null) {
-            errs.clear();
-        }
-    }
-}// Err
+public class X509Aux {
+    public List trust = new ArrayList(); // String of OID's /* trusted uses */
+    public List reject = new ArrayList(); // String of OID's /* rejected uses */
+    public String alias; /* "friendly name" */
+    public byte[] keyid; /* key id of private key */
+    public List other = new ArrayList(); /* String of OID's of sigAlgs, other unspecified info */
+}// X509_AUX

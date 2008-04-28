@@ -54,9 +54,9 @@ import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
-import org.jruby.ext.openssl.x509store.PEM;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
-import org.jruby.ext.openssl.x509store.X509_STORE_CTX;
+import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -212,7 +212,7 @@ public class PKCS7 extends RubyObject {
         }
         IRubyObject arg = OpenSSLImpl.to_der_if_possible(args[0]);
         byte[] b = arg.convertToString().getBytes();
-        signedData = PEM.read_PKCS7(new InputStreamReader(new ByteArrayInputStream(b)),null);
+        signedData = PEMInputOutput.readPKCS7(new InputStreamReader(new ByteArrayInputStream(b)),null);
         if(null == signedData) {
             signedData = new CMSSignedData(ContentInfo.getInstance(new ASN1InputStream(b).readObject()));
         }
@@ -302,7 +302,7 @@ public class PKCS7 extends RubyObject {
                 }
             });
         CertStore cc = result[0];
-        List l = X509_STORE_CTX.transform(cc.getCertificates(null));
+        List l = StoreContext.ensureAux(cc.getCertificates(null));
         return getRuntime().newArray(l);
     }
 
@@ -419,7 +419,7 @@ public class PKCS7 extends RubyObject {
 
     public IRubyObject to_pem() throws Exception {
         StringWriter w = new StringWriter();
-        PEM.write_PKCS7(w,signedData);
+        PEMInputOutput.writePKCS7(w,signedData);
         w.close();
         return getRuntime().newString(w.toString());
     }

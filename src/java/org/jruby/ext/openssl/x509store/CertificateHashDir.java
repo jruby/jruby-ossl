@@ -27,16 +27,20 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
-import java.util.List;
-import java.util.ArrayList;
-
 /**
+ * Contains information like x509_hash_dir_st and X509_HASH_DIR_CTX in
+ * x509_vfy.h
+ * 
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_AUX {
-    public List trust = new ArrayList(); // String of OID's /* trusted uses */
-    public List reject = new ArrayList(); // String of OID's /* rejected uses */
-    public String alias; /* "friendly name" */
-    public byte[] keyid; /* key id of private key */
-    public List other = new ArrayList(); /* String of OID's of sigAlgs, other unspecified info */
-}// X509_AUX
+public class CertificateHashDir {
+    public static class Dir {
+        public Dir(String name, int type) {
+            this.name = name; this.type = type;
+        }
+        public String name;
+        public int type;
+    }
+    public int numberOfDirs; // This details how many of the dirs-var that is actually used
+    public Dir[] dirs;
+}// X509_HASH_DIR_CTX

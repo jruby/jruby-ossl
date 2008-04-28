@@ -39,30 +39,60 @@ import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.X509Name;
 
 /**
+ * Contains most of the functionality that beings with X509 in
+ * crypty/x509/x509_def.c, crypty/x509/x509_txt.c and others.
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public abstract class X509 {
-    private X509() {}
+public abstract class X509Utils {
+    private X509Utils() {}
 
-    public static String get_default_private_dir() {
+    /**
+     * c: X509_get_default_private_dir
+     */
+    public static String getDefaultPrivateDir() {
         return X509_PRIVATE_DIR;
     }
-    public static String get_default_cert_area() {
+
+    /**
+     * c: X509_get_default_cert_area
+     */
+    public static String getDefaultCertificateArea() {
         return X509_CERT_AREA;
     }
-    public static String get_default_cert_dir() {
+
+    /**
+     * c: X509_get_default_cert_dir
+     */
+    public static String getDefaultCertificateDirectory() {
         return X509_CERT_DIR;
     }
-    public static String get_default_cert_file() {
+
+    /**
+     * c: X509_get_default_cert_file
+     */
+    public static String getDefaultCertificateFile() {
         return X509_CERT_FILE;
     }
-    public static String get_default_cert_dir_env() {
+
+    /**
+     * c: X509_get_default_cert_dir_env
+     */
+    public static String getDefaultCertificateDirectoryEnvironment() {
         return X509_CERT_DIR_EVP;
     }
-    public static String get_default_cert_file_env() {
+
+    /**
+     * c: X509_get_default_cert_file_env
+     */
+    public static String getDefaultCertificateFileEnvironment() {
         return X509_CERT_FILE_EVP;
     }
-    public static String verify_cert_error_string(int n) {
+
+    /**
+     * c: X509_verify_cert_error_string
+     */
+    public static String verifyCertificateErrorString(int n) {
 	switch(n){
         case V_OK:
             return("ok");
@@ -157,7 +187,11 @@ public abstract class X509 {
         }
     }
 
-    public static int check_issued(X509AuxCertificate issuer, X509AuxCertificate subject) throws Exception { 
+
+    /**
+     * c: X509_check_issued
+     */
+    public static int checkIfIssuedBy(X509AuxCertificate issuer, X509AuxCertificate subject) throws Exception { 
         if(!issuer.getSubjectX500Principal().equals(subject.getIssuerX500Principal())) {
             return V_ERR_SUBJECT_ISSUER_MISMATCH;
         }
@@ -195,7 +229,7 @@ public abstract class X509 {
                     }
                 }
                 if(nm != null) {
-                    if(!(new X509_NAME(nm).isEqual(issuer.getIssuerX500Principal()))) {
+                    if(!(new Name(nm).isEqual(issuer.getIssuerX500Principal()))) {
                         return V_ERR_AKID_ISSUER_SERIAL_MISMATCH;
                     }
                 }

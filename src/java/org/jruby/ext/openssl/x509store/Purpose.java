@@ -35,41 +35,49 @@ import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.DERBitString;
 
 /**
+ * c: X509_PURPOSE
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_PURPOSE {
+public class Purpose {
     public int purpose;
     public int trust;		/* Default trust ID */
     public int flags;
-    public Function3 check_purpose;
+    public Function3 checkPurpose;
     public String name;
     public String sname;
-    public Object usr_data;
+    public Object userData;
 
-    public X509_PURPOSE() {}
+    public Purpose() {}
 
-    public X509_PURPOSE(int p, int t, int f, Function3 cp, String n, String s, Object u) {
+    public Purpose(int p, int t, int f, Function3 cp, String n, String s, Object u) {
         this.purpose = p; this.trust = t;
-        this.flags = f; this.check_purpose = cp;
+        this.flags = f; this.checkPurpose = cp;
         this.name = n; this.sname = s;
-        this.usr_data = u;
+        this.userData = u;
     }
 
-    public static int check_purpose(X509AuxCertificate x, int id, int ca) throws Exception {
+    /**
+     * c: X509_check_purpose
+     */
+    public static int checkPurpose(X509AuxCertificate x, int id, int ca) throws Exception {
         if(id == -1) {
             return 1;
         }
-        int idx = get_by_id(id);
+        int idx = getByID(id);
         if(idx == -1) {
             return -1;
         }
-        X509_PURPOSE pt = get0(idx);
-        return pt.check_purpose.call(pt,x,new Integer(ca));
+        Purpose pt = getFirst(idx);
+        return pt.checkPurpose.call(pt,x,new Integer(ca));
     }
 
+    /**
+     * c: X509_PURPOSE_set
+     */
     public static int set(int[] p, int purpose) {
-        if(get_by_id(purpose) == -1) {
-            Err.PUT_err(X509.X509V3_R_INVALID_PURPOSE);
+        if(getByID(purpose) == -1) {
+            X509Error.addError(X509Utils.X509V3_R_INVALID_PURPOSE);
             return 0;
         }
         p[0] = purpose;
@@ -78,23 +86,32 @@ public class X509_PURPOSE {
 
     private final static List xptable = new ArrayList();
 
-    public static int get_count() {
+    /**
+     * c: X509_PURPOSE_get_count
+     */
+    public static int getCount() {
         return xptable.size() + xstandard.length;
     }
 
-    public static X509_PURPOSE get0(int idx) {
+    /**
+     * c: X509_PURPOSE_get0
+     */
+    public static Purpose getFirst(int idx) {
         if(idx < 0) {
             return null;
         }
         if(idx < xstandard.length) {
             return xstandard[idx];
         }
-        return (X509_PURPOSE)xptable.get(idx - xstandard.length);
+        return (Purpose)xptable.get(idx - xstandard.length);
     }
 
-    public static int get_by_sname(String sname) {
-        for(int i=0;i<get_count();i++) {
-            X509_PURPOSE xptmp = get0(i);
+    /**
+     * c: X509_PURPOSE_get_by_sname
+     */
+    public static int getBySName(String sname) {
+        for(int i=0;i<getCount();i++) {
+            Purpose xptmp = getFirst(i);
             if(xptmp.sname.equals(sname)) {
                 return i;
             }
@@ -102,62 +119,89 @@ public class X509_PURPOSE {
         return -1;
     }
 
-    public static int get_by_id(int purpose) {
-        if(purpose >= X509.X509_PURPOSE_MIN && (purpose <= X509.X509_PURPOSE_MAX)) {
-            return purpose - X509.X509_PURPOSE_MIN;
+    /**
+     * c: X509_PURPOSE_getby_id
+     */
+    public static int getByID(int purpose) {
+        if(purpose >= X509Utils.X509_PURPOSE_MIN && (purpose <= X509Utils.X509_PURPOSE_MAX)) {
+            return purpose - X509Utils.X509_PURPOSE_MIN;
         }
         int i = 0;
         for(Iterator iter = xptable.iterator();iter.hasNext();i++) {
-            if(((X509_PURPOSE)iter.next()).purpose == purpose) {
+            if(((Purpose)iter.next()).purpose == purpose) {
                 return i + xstandard.length;
             }
         }
         return -1;
     }
 
+    /**
+     * c: X509_PURPOSE_add
+     */
     public static int add(int id, int trust, int flags, Function3 ck, String name, String sname, Object arg) {
-        flags &= ~X509.X509_PURPOSE_DYNAMIC;
-        flags |= X509.X509_PURPOSE_DYNAMIC_NAME;
-        int idx = get_by_id(id);
-        X509_PURPOSE ptmp;
+        flags &= ~X509Utils.X509_PURPOSE_DYNAMIC;
+        flags |= X509Utils.X509_PURPOSE_DYNAMIC_NAME;
+        int idx = getByID(id);
+        Purpose ptmp;
         if(idx == -1) {
-            ptmp = new X509_PURPOSE();
-            ptmp.flags = X509.X509_PURPOSE_DYNAMIC;
+            ptmp = new Purpose();
+            ptmp.flags = X509Utils.X509_PURPOSE_DYNAMIC;
         } else {
-            ptmp = get0(idx);
+            ptmp = getFirst(idx);
         }
         ptmp.name = name;
         ptmp.sname = sname;
-        ptmp.flags &= X509.X509_PURPOSE_DYNAMIC;
+        ptmp.flags &= X509Utils.X509_PURPOSE_DYNAMIC;
         ptmp.flags |= flags;
         ptmp.purpose = id;
         ptmp.trust = trust;
-        ptmp.check_purpose = ck;
-        ptmp.usr_data = arg;
+        ptmp.checkPurpose = ck;
+        ptmp.userData = arg;
         if(idx == -1) {
             xptable.add(ptmp);
         }
         return 1;
     }
 
+    /**
+     * c: X509_PURPOSE_cleanup
+     */
     public static void cleanup() {
         xptable.clear();
     }
 
-    public int get_id() {
+    /**
+     * c: X509_PURPOSE_get_id
+     */
+    public int getID() {
         return purpose;
     }
-    public String get0_name() {
+
+    /**
+     * c: X509_PURPOSE_get0_name
+     */
+    public String getName() {
         return name;
     }
-    public String get0_sname() {
+
+    /**
+     * c: X509_PURPOSE_get0_sname
+     */
+    public String getSName() {
         return sname;
     }
-    public int get_trust() {
+
+    /**
+     * c: X509_PURPOSE_get_trust
+     */
+    public int getTrust() {
         return trust;
     }
  
-    public static int check_ca(X509AuxCertificate x) throws Exception {
+    /**
+     * c: X509_check_ca
+     */
+    public static int checkCA(X509AuxCertificate x) throws Exception {
         if(x.getKeyUsage() != null && !x.getKeyUsage()[5]) { // KEY_CERT_SIGN
             return 0;
         }
@@ -175,37 +219,43 @@ public class X509_PURPOSE {
                 return 4;
             }
             byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-            if(ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509.NS_ANY_CA) != 0) {
+            if(ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_ANY_CA) != 0) {
                 return 5;
             }
             return 0;
         }
     }
 
-    public static int check_ssl_ca(X509AuxCertificate x) throws Exception {
-        int ca_ret = check_ca(x);
+     /**
+     * c: check_ssl_ca
+     */
+    public static int checkSSLCA(X509AuxCertificate x) throws Exception {
+        int ca_ret = checkCA(x);
         if(ca_ret == 0) {
             return 0;
         }
         byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-        boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509.NS_SSL_CA) != 0;
+        boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_SSL_CA) != 0;
         if(ca_ret != 5 || v2) {
             return ca_ret;
         }
         return 0;
     }
 
-    public static int purpose_smime(X509AuxCertificate x, int ca) throws Exception {
+     /**
+     * c: purpose_smime
+     */
+    public static int purposeSMIME(X509AuxCertificate x, int ca) throws Exception {
         if(x.getExtendedKeyUsage() != null && !x.getExtendedKeyUsage().contains("1.3.6.1.5.5.7.3.4")) {
             return 0; // must allow email protection
         }
         if(ca != 0) {
-            int ca_ret = check_ca(x);
+            int ca_ret = checkCA(x);
             if(ca_ret == 0) {
                 return 0;
             }
             byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-            boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509.NS_SMIME_CA) != 0;
+            boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_SMIME_CA) != 0;
             if(ca_ret != 5 || v2) {
                 return ca_ret;
             } else {
@@ -215,10 +265,10 @@ public class X509_PURPOSE {
         byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
         if(ns1 != null) {
             int nscert = ((DERBitString)new ASN1InputStream(ns1).readObject()).intValue();
-            if((nscert & X509.NS_SMIME) != 0) {
+            if((nscert & X509Utils.NS_SMIME) != 0) {
                 return 1;
             }
-            if((nscert & X509.NS_SSL_CLIENT) != 0) {
+            if((nscert & X509Utils.NS_SSL_CLIENT) != 0) {
                 return 2;
             }
             return 0;
@@ -226,7 +276,10 @@ public class X509_PURPOSE {
         return 1;
     }
 
-    public final static Function3 cp_ssl_client = new Function3() {
+    /**
+     * c: check_purpose_ssl_client
+     */
+     public final static Function3 checkPurposeSSLClient = new Function3() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
@@ -235,13 +288,13 @@ public class X509_PURPOSE {
                     return 0;
                 }
                 if(ca != 0) {
-                    return check_ssl_ca(x);
+                    return checkSSLCA(x);
                 }
                 if(x.getKeyUsage() != null && !x.getKeyUsage()[0]) {
                     return 0;
                 }
                 byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-                boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509.NS_SSL_CLIENT) != 0;
+                boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_SSL_CLIENT) != 0;
                 if(v2) {
                     return 0;
                 }
@@ -249,7 +302,10 @@ public class X509_PURPOSE {
             }
         };
 
-    public final static Function3 cp_ssl_server =  new Function3() {
+    /**
+     * c: check_purpose_ssl_server
+     */
+    public final static Function3 checkPurposeSSLServer =  new Function3() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
@@ -260,10 +316,10 @@ public class X509_PURPOSE {
                     return 0;
                 }
                 if(ca != 0) {
-                    return check_ssl_ca(x);
+                    return checkSSLCA(x);
                 }
                 byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-                boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509.NS_SSL_SERVER) != 0;
+                boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_SSL_SERVER) != 0;
                 if(v2) {
                     return 0;
                 }
@@ -274,12 +330,15 @@ public class X509_PURPOSE {
             }
         };
 
-    public final static Function3 cp_ns_ssl_server = new Function3() {
+    /**
+     * c: check_purpose_ns_ssl_server
+     */
+    public final static Function3 checkPurposeNSSSLServer = new Function3() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
-                X509_PURPOSE xp = (X509_PURPOSE)_xp;
+                Purpose xp = (Purpose)_xp;
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
-                int ret = cp_ssl_server.call(xp,x,_ca);
+                int ret = checkPurposeSSLServer.call(xp,x,_ca);
                 if(ret == 0 || ca != 0) {
                     return ret;
                 }
@@ -290,11 +349,14 @@ public class X509_PURPOSE {
             }
         };
 
-    public final static Function3 cp_smime_sign = new Function3() {
+    /**
+     * c: check_purpose_smime_sign
+     */
+    public final static Function3 checkPurposeSMIMESign = new Function3() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
-                int ret = purpose_smime(x,ca);
+                int ret = purposeSMIME(x,ca);
                 if(ret == 0 || ca != 0) {
                     return ret;
                 }
@@ -305,11 +367,14 @@ public class X509_PURPOSE {
             }
         };
 
-    public final static Function3 cp_smime_encrypt = new Function3() {
+    /**
+     * c: check_purpose_smime_encrypt
+     */
+    public final static Function3 checkPurposeSMIMEEncrypt = new Function3() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
-                int ret = purpose_smime(x,ca);
+                int ret = purposeSMIME(x,ca);
                 if(ret == 0 || ca != 0) {
                     return ret;
                 }
@@ -320,13 +385,16 @@ public class X509_PURPOSE {
             }
         };
 
-    public final static Function3 cp_crl_sign = new Function3() {
+    /**
+     * c: check_purpose_crl_sign
+     */
+    public final static Function3 checkPurposeCRLSign = new Function3() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
                 
                 if(ca != 0) {
-                    int ca_ret = check_ca(x);
+                    int ca_ret = checkCA(x);
                     if(ca_ret != 2) {
                         return ca_ret;
                     }
@@ -339,28 +407,35 @@ public class X509_PURPOSE {
             }
         };
 
-    public final static Function3 cp_no_check = new Function3() {
+    /**
+     * c: no_check
+     */
+    public final static Function3 noCheck = new Function3() {
             public int call(Object _xp, Object _x, Object _ca) {
                 return 1;
             }
         };
-    public final static Function3 cp_ocsp_helper = new Function3() {
+
+    /**
+     * c: ocsp_helper
+     */
+    public final static Function3 oscpHelper = new Function3() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 if(((Integer)_ca).intValue() != 0) {
-                    return check_ca((X509AuxCertificate)_x);
+                    return checkCA((X509AuxCertificate)_x);
                 }
                 return 1;
             }
         };
 
-    public final static X509_PURPOSE[] xstandard = new X509_PURPOSE[] {
-	new X509_PURPOSE(X509.X509_PURPOSE_SSL_CLIENT, X509.X509_TRUST_SSL_CLIENT, 0, cp_ssl_client, "SSL client", "sslclient", null),
-	new X509_PURPOSE(X509.X509_PURPOSE_SSL_SERVER, X509.X509_TRUST_SSL_SERVER, 0, cp_ssl_server, "SSL server", "sslserver", null),
-	new X509_PURPOSE(X509.X509_PURPOSE_NS_SSL_SERVER, X509.X509_TRUST_SSL_SERVER, 0, cp_ns_ssl_server, "Netscape SSL server", "nssslserver", null),
-	new X509_PURPOSE(X509.X509_PURPOSE_SMIME_SIGN, X509.X509_TRUST_EMAIL, 0, cp_smime_sign, "S/MIME signing", "smimesign", null),
-	new X509_PURPOSE(X509.X509_PURPOSE_SMIME_ENCRYPT, X509.X509_TRUST_EMAIL, 0, cp_smime_encrypt, "S/MIME encryption", "smimeencrypt", null),
-	new X509_PURPOSE(X509.X509_PURPOSE_CRL_SIGN, X509.X509_TRUST_COMPAT, 0, cp_crl_sign, "CRL signing", "crlsign", null),
-	new X509_PURPOSE(X509.X509_PURPOSE_ANY, X509.X509_TRUST_DEFAULT, 0, cp_no_check, "Any Purpose", "any", null),
-	new X509_PURPOSE(X509.X509_PURPOSE_OCSP_HELPER, X509.X509_TRUST_COMPAT, 0, cp_ocsp_helper, "OCSP helper", "ocsphelper", null),
+    public final static Purpose[] xstandard = new Purpose[] {
+	new Purpose(X509Utils.X509_PURPOSE_SSL_CLIENT, X509Utils.X509_TRUST_SSL_CLIENT, 0, checkPurposeSSLClient, "SSL client", "sslclient", null),
+	new Purpose(X509Utils.X509_PURPOSE_SSL_SERVER, X509Utils.X509_TRUST_SSL_SERVER, 0, checkPurposeSSLServer, "SSL server", "sslserver", null),
+	new Purpose(X509Utils.X509_PURPOSE_NS_SSL_SERVER, X509Utils.X509_TRUST_SSL_SERVER, 0, checkPurposeNSSSLServer, "Netscape SSL server", "nssslserver", null),
+	new Purpose(X509Utils.X509_PURPOSE_SMIME_SIGN, X509Utils.X509_TRUST_EMAIL, 0, checkPurposeSMIMESign, "S/MIME signing", "smimesign", null),
+	new Purpose(X509Utils.X509_PURPOSE_SMIME_ENCRYPT, X509Utils.X509_TRUST_EMAIL, 0, checkPurposeSMIMEEncrypt, "S/MIME encryption", "smimeencrypt", null),
+	new Purpose(X509Utils.X509_PURPOSE_CRL_SIGN, X509Utils.X509_TRUST_COMPAT, 0, checkPurposeCRLSign, "CRL signing", "crlsign", null),
+	new Purpose(X509Utils.X509_PURPOSE_ANY, X509Utils.X509_TRUST_DEFAULT, 0, noCheck, "Any Purpose", "any", null),
+	new Purpose(X509Utils.X509_PURPOSE_OCSP_HELPER, X509Utils.X509_TRUST_COMPAT, 0, oscpHelper, "OCSP helper", "ocsphelper", null),
     };
 }// X509_PURPOSE

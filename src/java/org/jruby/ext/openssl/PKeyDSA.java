@@ -54,7 +54,7 @@ import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
 import org.jruby.RubyString;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.ext.openssl.x509store.PEM;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -163,21 +163,21 @@ public class PKeyDSA extends PKey {
                 }
                 if(null == val) {
                     try {
-                        val = PEM.read_DSAPrivateKey(new StringReader(input),passwd);
+                        val = PEMInputOutput.readDSAPrivateKey(new StringReader(input),passwd);
                     } catch(Exception e3) {
                         val = null;
                     }
                 }
                 if(null == val) {
                     try {
-                        val = PEM.read_DSAPublicKey(new StringReader(input),passwd);
+                        val = PEMInputOutput.readDSAPublicKey(new StringReader(input),passwd);
                     } catch(Exception e3) {
                         val = null;
                     }
                 }
                 if(null == val) {
                     try {
-                        val = PEM.read_DSA_PUBKEY(new StringReader(input),passwd);
+                        val = PEMInputOutput.readDSAPubKey(new StringReader(input),passwd);
                     } catch(Exception e3) {
                         val = null;
                     }
@@ -266,9 +266,9 @@ public class PKeyDSA extends PKey {
             }
         }
         if(privKey != null) {
-            PEM.write_DSAPrivateKey(w,privKey,algo,passwd);
+            PEMInputOutput.writeDSAPrivateKey(w,privKey,algo,passwd);
         } else {
-            PEM.write_DSAPublicKey(w,pubKey);
+            PEMInputOutput.writeDSAPublicKey(w,pubKey);
         }
         w.close();
         return getRuntime().newString(w.toString());

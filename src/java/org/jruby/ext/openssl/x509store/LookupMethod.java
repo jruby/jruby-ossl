@@ -28,28 +28,47 @@
 package org.jruby.ext.openssl.x509store;
 
 /**
+ * x509_lookup_method_st and X509_LOOKUP_METHOD in x509_vfy.h
+ *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class X509_OBJECT_CERT extends X509_OBJECT {
-    public X509AuxCertificate x509;
+public class LookupMethod {
+    public String name;
 
-    public int type() {
-        return X509.X509_LU_X509;
-    }
-
-    public boolean isName(X509_NAME nm) {
-        return nm.isEqual(x509.getSubjectX500Principal());
-    }
-
-    public boolean matches(X509_OBJECT o) {
-        return o instanceof X509_OBJECT_CERT && x509.getSubjectX500Principal().equals(((X509_OBJECT_CERT)o).x509.getSubjectX500Principal());
-    }
-
-    public int compareTo(Object oth) {
-        int ret1 = super.compareTo(oth);
-        if(ret1 == 0) {
-            ret1 = x509.equals(((X509_OBJECT_CERT)oth).x509) ? 0 : -1;
-        }
-        return ret1;
-    }
-}// X509_OBJECT_CERT
+    /**
+     * c: new_item
+     */
+    public Function1 newItem;
+    /**
+     * c: free
+     */
+    public Function1 free;
+    /**
+     * c: init
+     */
+    public Function1 init;
+    /**
+     * c: shutdown
+     */
+    public Function1 shutdown;
+    /**
+     * c: ctrl
+     */
+    public Function5 control;
+    /**
+     * c: get_by_subject
+     */
+    public Function4 getBySubject;
+    /**
+     * c: get_by_issuer_serial
+     */
+    public Function5 getByIssuerSerialNumber;
+    /**
+     * c: get_by_fingerprint
+     */
+    public Function4 getByFingerprint;
+    /**
+     * c: get_by_alias
+     */
+    public Function4 getByAlias;
+}// X509_LOOKUP_METHOD

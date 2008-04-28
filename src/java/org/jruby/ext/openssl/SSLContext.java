@@ -41,8 +41,8 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
-import org.jruby.ext.openssl.x509store.X509_STORE;
-import org.jruby.ext.openssl.x509store.X509_STORE_CTX;
+import org.jruby.ext.openssl.x509store.Store;
+import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
@@ -272,18 +272,18 @@ public class SSLContext extends RubyObject {
             if(chain != null && chain.length > 0) {
                 ctt.setPeer(chain[0]);
                 if((verify_mode & 0x1) != 0) { // verify_peer
-                    X509AuxCertificate x = X509_STORE_CTX.transform(chain[0]);
-                    X509_STORE_CTX ctx = new X509_STORE_CTX();
+                    X509AuxCertificate x = StoreContext.ensureAux(chain[0]);
+                    StoreContext ctx = new StoreContext();
                     IRubyObject str = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"cert_store");
-                    X509_STORE store = null;
+                    Store store = null;
                     if(!str.isNil()) {
                         store = ((X509Store)str).getStore();
                     }
-                    if(ctx.init(store,x,X509_STORE_CTX.transform(chain)) == 0) {
+                    if(ctx.init(store,x,StoreContext.ensureAux(chain)) == 0) {
                         throw new CertificateException("couldn't initialize store");
                     }
 
-                    ctx.set_default("ssl_client");
+                    ctx.setDefault("ssl_client");
 
                     IRubyObject val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_file");
                     String ca_file = val.isNil() ? null : val.convertToString().toString();
@@ -291,13 +291,13 @@ public class SSLContext extends RubyObject {
                     String ca_path = val.isNil() ? null : val.convertToString().toString();
 
                     if(ca_file != null || ca_path != null) {
-                        if(ctx.load_verify_locations(ca_file, ca_path) == 0) {
+                        if(ctx.loadVerifyLocations(ca_file, ca_path) == 0) {
                             ctt.getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
                         }
                     }
 
                     try {
-                        if(ctx.verify_cert() == 0) {
+                        if(ctx.verifyCertificate() == 0) {
                             throw new CertificateException("certificate verify failed");
                         }
                     } catch(Exception e) {
