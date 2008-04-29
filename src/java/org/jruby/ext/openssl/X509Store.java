@@ -33,13 +33,13 @@ import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.Function2;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -57,24 +57,11 @@ public class X509Store extends RubyObject {
         RubyClass cX509Store = mX509.defineClassUnder("Store",runtime.getObject(),X509STORE_ALLOCATOR);
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
         mX509.defineClassUnder("StoreError",openSSLError,openSSLError.getAllocator());
-        cX509Store.attr_accessor(new IRubyObject[]{runtime.newSymbol("verify_callback"),runtime.newSymbol("error"),
-                                                   runtime.newSymbol("error_string"),runtime.newSymbol("chain")});
+        cX509Store.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newSymbol("verify_callback"),runtime.newSymbol("error"),
+                                                                                runtime.newSymbol("error_string"),runtime.newSymbol("chain")});
 
-        CallbackFactory storecb = runtime.callbackFactory(X509Store.class);
+        cX509Store.defineAnnotatedMethods(X509Store.class);
 
-        cX509Store.defineMethod("initialize",storecb.getOptMethod("_initialize"));
-        cX509Store.defineFastMethod("verify_callback=",storecb.getFastMethod("set_verify_callback",IRubyObject.class));
-        cX509Store.defineFastMethod("flags=",storecb.getFastMethod("set_flags",IRubyObject.class));
-        cX509Store.defineFastMethod("purpose=",storecb.getFastMethod("set_purpose",IRubyObject.class));
-        cX509Store.defineFastMethod("trust=",storecb.getFastMethod("set_trust",IRubyObject.class));
-        cX509Store.defineFastMethod("time=",storecb.getFastMethod("set_time",IRubyObject.class));
-        cX509Store.defineFastMethod("add_path",storecb.getFastMethod("add_path",IRubyObject.class));
-        cX509Store.defineFastMethod("add_file",storecb.getFastMethod("add_file",IRubyObject.class));
-        cX509Store.defineFastMethod("set_default_paths",storecb.getFastMethod("set_default_paths"));
-        cX509Store.defineFastMethod("add_cert",storecb.getFastMethod("add_cert",IRubyObject.class));
-        cX509Store.defineFastMethod("add_crl",storecb.getFastMethod("add_crl",IRubyObject.class));
-        cX509Store.defineMethod("verify",storecb.getOptMethod("verify"));
-        
         X509StoreCtx.createX509StoreCtx(runtime, mX509);
     }
 
@@ -98,6 +85,7 @@ public class X509Store extends RubyObject {
         throw new RaiseException(getRuntime(),cStoreError, msg, true);
     }
 
+    @JRubyMethod(name="initialize", rest=true, frame=true)
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
         store.setVerifyCallbackFunction(ossl_verify_cb);
         this.set_verify_callback(getRuntime().getNil());
@@ -112,47 +100,56 @@ public class X509Store extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(name="verify_callback=")
     public IRubyObject set_verify_callback(IRubyObject cb) {
         store.setExtraData(1, cb);
         this.setInstanceVariable("@verify_callback", cb);
         return cb;
     }
 
+    @JRubyMethod(name="flags=")
     public IRubyObject set_flags(IRubyObject arg) {
         store.setFlags(RubyNumeric.fix2long(arg));
         return arg;
     }
 
+    @JRubyMethod(name="purpose=")
     public IRubyObject set_purpose(IRubyObject arg) throws Exception {
         store.setPurpose(RubyNumeric.fix2int(arg));
         return arg;
     }
 
+    @JRubyMethod(name="trust=")
     public IRubyObject set_trust(IRubyObject arg) {
         store.setTrust(RubyNumeric.fix2int(arg));
         return arg;
     }
 
+    @JRubyMethod(name="time=")
     public IRubyObject set_time(IRubyObject arg) {
         setInstanceVariable("@time",arg);
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject add_path(IRubyObject arg) {
         System.err.println("WARNING: unimplemented method called: Store#add_path");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject add_file(IRubyObject arg) {
         System.err.println("WARNING: unimplemented method called: Store#add_file");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject set_default_paths() {
         System.err.println("WARNING: unimplemented method called: Store#set_default_paths");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject add_cert(IRubyObject _cert) {
         X509AuxCertificate cert = (_cert instanceof X509Cert) ? ((X509Cert)_cert).getAuxCert() : (X509AuxCertificate)null;
         if(store.addCertificate(cert) != 1) {
@@ -161,6 +158,7 @@ public class X509Store extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject add_crl(IRubyObject arg) {
         java.security.cert.X509CRL crl = (arg instanceof X509CRL) ? ((X509CRL)arg).getCRL() : null;
         if(store.addCRL(crl) != 1) {
@@ -169,6 +167,7 @@ public class X509Store extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(rest=true, frame=true)
     public IRubyObject verify(IRubyObject[] args, Block block) throws Exception {
         IRubyObject cert, chain;
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2) {

@@ -57,10 +57,10 @@ import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.RubyTime;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -80,34 +80,7 @@ public class X509CRL extends RubyObject {
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
         mX509.defineClassUnder("CRLError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory crlcb = runtime.callbackFactory(X509CRL.class);
-
-        cX509CRL.defineMethod("initialize",crlcb.getOptMethod("_initialize"));
-        cX509CRL.defineFastMethod("initialize_copy",crlcb.getFastMethod("initialize_copy",IRubyObject.class));
-
-        cX509CRL.defineFastMethod("version",crlcb.getFastMethod("version"));
-        cX509CRL.defineFastMethod("version=",crlcb.getFastMethod("set_version",IRubyObject.class));
-        cX509CRL.defineFastMethod("signature_algorithm",crlcb.getFastMethod("signature_algorithm"));
-        cX509CRL.defineFastMethod("issuer",crlcb.getFastMethod("issuer"));
-        cX509CRL.defineFastMethod("issuer=",crlcb.getFastMethod("set_issuer",IRubyObject.class));
-        cX509CRL.defineFastMethod("last_update",crlcb.getFastMethod("last_update"));
-        cX509CRL.defineFastMethod("last_update=",crlcb.getFastMethod("set_last_update",IRubyObject.class));
-        cX509CRL.defineFastMethod("next_update",crlcb.getFastMethod("next_update"));
-        cX509CRL.defineFastMethod("next_update=",crlcb.getFastMethod("set_next_update",IRubyObject.class));
-        cX509CRL.defineFastMethod("revoked",crlcb.getFastMethod("revoked"));
-        cX509CRL.defineFastMethod("revoked=",crlcb.getFastMethod("set_revoked",IRubyObject.class));
-        cX509CRL.defineFastMethod("add_revoked",crlcb.getFastMethod("add_revoked",IRubyObject.class));
-
-        cX509CRL.defineFastMethod("sign",crlcb.getFastMethod("sign",IRubyObject.class,IRubyObject.class));
-        cX509CRL.defineFastMethod("verify",crlcb.getFastMethod("verify",IRubyObject.class));
-
-        cX509CRL.defineFastMethod("to_der",crlcb.getFastMethod("to_der"));
-        cX509CRL.defineFastMethod("to_pem",crlcb.getFastMethod("to_pem"));
-        cX509CRL.defineFastMethod("to_s",crlcb.getFastMethod("to_pem")); 
-        cX509CRL.defineFastMethod("to_text",crlcb.getFastMethod("to_text"));
-        cX509CRL.defineFastMethod("extensions",crlcb.getFastMethod("extensions"));
-        cX509CRL.defineFastMethod("extensions=",crlcb.getFastMethod("set_extensions",IRubyObject.class));
-        cX509CRL.defineFastMethod("add_extension",crlcb.getFastMethod("add_extension",IRubyObject.class));
+        cX509CRL.defineAnnotatedMethods(X509CRL.class);
     }
 
     private IRubyObject version;
@@ -134,6 +107,7 @@ public class X509CRL extends RubyObject {
         super(runtime,type);
     }
 
+    @JRubyMethod(name="initialize", rest=true, frame=true)
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
         //        System.err.println("WARNING: unimplemented method called: CRL#initialize");
         extensions = new ArrayList<IRubyObject>();
@@ -194,6 +168,7 @@ public class X509CRL extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         System.err.println("WARNING: unimplemented method called: CRL#init_copy");
         if(this == obj) {
@@ -203,6 +178,7 @@ public class X509CRL extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(name={"to_pem","to_s"})
     public IRubyObject to_pem() throws Exception {
         StringWriter w = new StringWriter();
         PEMInputOutput.writeX509CRL(w,crl);
@@ -210,6 +186,7 @@ public class X509CRL extends RubyObject {
         return getRuntime().newString(w.toString());
     }
 
+    @JRubyMethod
     public IRubyObject to_der() throws Exception {
         return RubyString.newString(getRuntime(), crl_v.getEncoded());
     }
@@ -218,6 +195,7 @@ public class X509CRL extends RubyObject {
     private static final String IND12 = "            ";
     private static final String IND16 = "                ";
     private static final DateFormat ASN_DATE = new SimpleDateFormat("MMM dd HH:mm:ss yyyy zzz");
+    @JRubyMethod
     public IRubyObject to_text() throws Exception {
         StringBuffer sbe = new StringBuffer();
         sbe.append("Certificate Revocation List (CRL):\n");
@@ -267,10 +245,12 @@ public class X509CRL extends RubyObject {
         return getRuntime().newString(sbe.toString());
     }
 
+    @JRubyMethod
     public IRubyObject version() {
         return this.version;
     }
 
+    @JRubyMethod(name="version=")
     public IRubyObject set_version(IRubyObject val) {
         if(!val.equals(this.version)) {
             changed = true;
@@ -279,14 +259,17 @@ public class X509CRL extends RubyObject {
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject signature_algorithm() {
         return sig_alg;
     }
 
+    @JRubyMethod
     public IRubyObject issuer() {
         return this.issuer;
     }
 
+    @JRubyMethod(name="issuer=")
     public IRubyObject set_issuer(IRubyObject val) {
         if(!val.equals(this.issuer)) {
             changed = true;
@@ -296,10 +279,12 @@ public class X509CRL extends RubyObject {
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject last_update() {
         return this.last_update;
     }
 
+    @JRubyMethod(name="last_update=")
     public IRubyObject set_last_update(IRubyObject val) {
         changed = true;
         last_update = val.callMethod(getRuntime().getCurrentContext(),"getutc");
@@ -309,10 +294,12 @@ public class X509CRL extends RubyObject {
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject next_update() {
         return this.next_update;
     }
 
+    @JRubyMethod(name="next_update=")
     public IRubyObject set_next_update(IRubyObject val) {
         changed = true;
         next_update = val.callMethod(getRuntime().getCurrentContext(),"getutc");
@@ -322,37 +309,44 @@ public class X509CRL extends RubyObject {
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject revoked() {
         return this.revoked;
     }
 
+    @JRubyMethod(name="revoked=")
     public IRubyObject set_revoked(IRubyObject val) {
         changed = true;
         this.revoked = val;
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject add_revoked(IRubyObject val) {
         changed = true;
         this.revoked.callMethod(getRuntime().getCurrentContext(),"<<",val);
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject extensions() {
         return getRuntime().newArray(this.extensions);
     }
 
     @SuppressWarnings("unchecked")
+    @JRubyMethod(name="extensions=")
     public IRubyObject set_extensions(IRubyObject val) {
         this.extensions = ((RubyArray)val).getList();
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject add_extension(IRubyObject val) {
         this.extensions.add(val);
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject sign(final IRubyObject key, IRubyObject digest) throws Exception {
         //System.err.println("WARNING: unimplemented method called: CRL#sign");
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
@@ -411,6 +405,7 @@ public class X509CRL extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject verify(final IRubyObject key) {
         if(changed) {
             return getRuntime().getFalse();

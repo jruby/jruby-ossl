@@ -31,8 +31,8 @@ import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -51,16 +51,7 @@ public class X509Revoked extends RubyObject {
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
         mX509.defineClassUnder("RevokedError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory revcb = runtime.callbackFactory(X509Revoked.class);
-
-        cX509Rev.defineMethod("initialize",revcb.getOptMethod("_initialize"));
-        cX509Rev.defineFastMethod("serial",revcb.getFastMethod("serial"));
-        cX509Rev.defineFastMethod("serial=",revcb.getFastMethod("set_serial",IRubyObject.class));
-        cX509Rev.defineFastMethod("time",revcb.getFastMethod("time"));
-        cX509Rev.defineFastMethod("time=",revcb.getFastMethod("set_time",IRubyObject.class));
-        cX509Rev.defineFastMethod("extensions",revcb.getFastMethod("extensions"));
-        cX509Rev.defineFastMethod("extensions=",revcb.getFastMethod("set_extensions",IRubyObject.class));
-        cX509Rev.defineFastMethod("add_extension",revcb.getFastMethod("add_extension",IRubyObject.class));
+        cX509Rev.defineAnnotatedMethods(X509Revoked.class);
     }
 
     private IRubyObject serial;
@@ -71,6 +62,7 @@ public class X509Revoked extends RubyObject {
         super(runtime,type);
     }
 
+    @JRubyMethod(name="initialize",rest=true,frame=true)
     public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
         serial = getRuntime().getNil();
         time = getRuntime().getNil();
@@ -78,33 +70,40 @@ public class X509Revoked extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject serial() {
         return this.serial;
     }
 
+    @JRubyMethod(name="serial=")
     public IRubyObject set_serial(IRubyObject val) {
         this.serial = val;
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject time() {
         return this.time;
     }
 
+    @JRubyMethod(name="time=")
     public IRubyObject set_time(IRubyObject val) {
         this.time = val;
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject extensions() {
         return this.extensions;
     }
 
+    @JRubyMethod(name="extensions=")
     public IRubyObject set_extensions(IRubyObject val) {
         this.extensions = val;
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject add_extension(IRubyObject val) {
         this.extensions.callMethod(getRuntime().getCurrentContext(),"<<",val);
         return val;

@@ -53,9 +53,9 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -70,29 +70,14 @@ public class X509Extensions {
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
         mX509.defineClassUnder("ExtensionError",openSSLError,openSSLError.getAllocator());
         
-        CallbackFactory extfcb = runtime.callbackFactory(ExtensionFactory.class);
-        cX509ExtFactory.defineMethod("initialize",extfcb.getOptMethod("initialize"));
+        cX509ExtFactory.attr_reader(runtime.getCurrentContext(), new IRubyObject[]{runtime.newString("issuer_certificate"),runtime.newString("subject_certificate"),
+                                                                                   runtime.newString("subject_request"),runtime.newString("crl"),
+                                                                                   runtime.newString("config")});
 
-        cX509ExtFactory.attr_reader(new IRubyObject[]{runtime.newString("issuer_certificate"),runtime.newString("subject_certificate"),
-                                            runtime.newString("subject_request"),runtime.newString("crl"),
-                                            runtime.newString("config")});
-        cX509ExtFactory.defineFastMethod("issuer_certificate=",extfcb.getFastMethod("set_issuer_cert",IRubyObject.class));
-        cX509ExtFactory.defineFastMethod("subject_certificate=",extfcb.getFastMethod("set_subject_cert",IRubyObject.class));
-        cX509ExtFactory.defineFastMethod("subject_request=",extfcb.getFastMethod("set_subject_req",IRubyObject.class));
-        cX509ExtFactory.defineFastMethod("crl=",extfcb.getFastMethod("set_crl",IRubyObject.class));
-        cX509ExtFactory.defineFastMethod("config=",extfcb.getFastMethod("set_config",IRubyObject.class));
-        cX509ExtFactory.defineFastMethod("create_ext",extfcb.getFastOptMethod("create_ext"));
+        cX509ExtFactory.defineAnnotatedMethods(ExtensionFactory.class);
 
         RubyClass cX509Ext = mX509.defineClassUnder("Extension",runtime.getObject(),Extension.ALLOCATOR);
-        CallbackFactory extcb = runtime.callbackFactory(Extension.class);
-        cX509Ext.defineFastMethod("initialize",extcb.getFastOptMethod("_initialize"));
-        cX509Ext.defineFastMethod("oid=",extcb.getFastMethod("set_oid",IRubyObject.class));
-        cX509Ext.defineFastMethod("value=",extcb.getFastMethod("set_value",IRubyObject.class));
-        cX509Ext.defineFastMethod("critical=",extcb.getFastMethod("set_critical",IRubyObject.class));
-        cX509Ext.defineFastMethod("oid",extcb.getFastMethod("oid"));
-        cX509Ext.defineFastMethod("value",extcb.getFastMethod("value"));
-        cX509Ext.defineFastMethod("critical?",extcb.getFastMethod("critical_p"));
-        cX509Ext.defineFastMethod("to_der",extcb.getFastMethod("to_der"));
+        cX509Ext.defineAnnotatedMethods(Extension.class);
     }
 
     public static class ExtensionFactory extends RubyObject {
@@ -106,6 +91,7 @@ public class X509Extensions {
             super(runtime,type);
         }
 
+        @JRubyMethod(rest=true,frame=true)
         public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
             org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,4);
             if(args.length > 0 && !args[0].isNil()) {
@@ -123,26 +109,31 @@ public class X509Extensions {
             return this;
         }
 
+        @JRubyMethod(name="issuer_certificate=")
         public IRubyObject set_issuer_cert(IRubyObject arg) {
             setInstanceVariable("@issuer_certificate",arg);
             return arg;
         }
 
+        @JRubyMethod(name="subject_certificate=")
         public IRubyObject set_subject_cert(IRubyObject arg) {
             setInstanceVariable("@subject_certificate",arg);
             return arg;
         }
 
+        @JRubyMethod(name="subject_request=")
         public IRubyObject set_subject_req(IRubyObject arg) {
             setInstanceVariable("@subject_request",arg);
             return arg;
         }
 
+        @JRubyMethod(name="crl=")
         public IRubyObject set_crl(IRubyObject arg) {
             setInstanceVariable("@crl",arg);
             return arg;
         }
 
+        @JRubyMethod(name="config=")
         public IRubyObject set_config(IRubyObject arg) {
             setInstanceVariable("@config",arg);
             return arg;
@@ -161,6 +152,7 @@ public class X509Extensions {
             return ('0'<=c && c<='9') || ('A'<= c && c <= 'F') || ('a'<= c && c <= 'f');
         }
 
+        @JRubyMethod(rest=true)
         public IRubyObject create_ext(IRubyObject[] args) throws Exception {
             IRubyObject critical = getRuntime().getFalse();
             if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,2,3) == 3 && !args[2].isNil()) {
@@ -448,6 +440,7 @@ public class X509Extensions {
             return val2;
         }
 
+        @JRubyMethod(name="initialize", rest=true)
         public IRubyObject _initialize(IRubyObject[] args) throws Exception {
             byte[] octets = null;
             if(args.length == 1) {
@@ -471,21 +464,25 @@ public class X509Extensions {
             return this;
         }
 
+        @JRubyMethod(name="oid=")
         public IRubyObject set_oid(IRubyObject arg) {
             System.err.println("WARNING: calling ext#oid=");
             return getRuntime().getNil();
         }
 
+        @JRubyMethod(name="value=")
         public IRubyObject set_value(IRubyObject arg) {
             System.err.println("WARNING: calling ext#value=");
             return getRuntime().getNil();
         }
 
+        @JRubyMethod(name="critical=")
         public IRubyObject set_critical(IRubyObject arg) {
             System.err.println("WARNING: calling ext#critical=");
             return getRuntime().getNil();
         }
 
+        @JRubyMethod
         public IRubyObject oid() {
             Object val = ASN1.getSymLookup(getRuntime()).get(oid);
             if(null == val) {
@@ -494,6 +491,7 @@ public class X509Extensions {
             return getRuntime().newString((String)(val));
         }
 
+        @JRubyMethod
         public IRubyObject value() throws Exception {
             if(getRealOid().equals(new DERObjectIdentifier("2.5.29.19"))) { //basicConstraints
                 ASN1Sequence seq2 = (ASN1Sequence)(new ASN1InputStream(getRealValueBytes()).readObject());
@@ -634,10 +632,12 @@ public class X509Extensions {
             }
         }
 
+        @JRubyMethod(name="critical?")
         public IRubyObject critical_p() {
             return critical ? getRuntime().getTrue() : getRuntime().getFalse();
         }
 
+        @JRubyMethod
         public IRubyObject to_der() throws Exception {
             ASN1EncodableVector all = new ASN1EncodableVector();
             all.add(getRealOid());

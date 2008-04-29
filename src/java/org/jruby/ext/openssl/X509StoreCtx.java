@@ -39,13 +39,13 @@ import org.jruby.RubyObject;
 import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
 import org.jruby.RubyTime;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -63,21 +63,7 @@ public class X509StoreCtx extends RubyObject {
     
     public static void createX509StoreCtx(Ruby runtime, RubyModule mX509) {
         RubyClass cX509StoreContext = mX509.defineClassUnder("StoreContext",runtime.getObject(),X509STORECTX_ALLOCATOR);
-        CallbackFactory storectxcb = runtime.callbackFactory(X509StoreCtx.class);
-        cX509StoreContext.defineMethod("initialize",storectxcb.getOptMethod("_initialize"));
-        cX509StoreContext.defineFastMethod("verify",storectxcb.getFastMethod("verify"));
-        cX509StoreContext.defineFastMethod("chain",storectxcb.getFastMethod("chain"));
-        cX509StoreContext.defineFastMethod("error",storectxcb.getFastMethod("error"));
-        cX509StoreContext.defineFastMethod("error=",storectxcb.getFastMethod("set_error",IRubyObject.class));
-        cX509StoreContext.defineFastMethod("error_string",storectxcb.getFastMethod("error_string"));
-        cX509StoreContext.defineFastMethod("error_depth",storectxcb.getFastMethod("error_depth"));
-        cX509StoreContext.defineFastMethod("current_cert",storectxcb.getFastMethod("current_cert"));
-        cX509StoreContext.defineFastMethod("current_crl",storectxcb.getFastMethod("current_crl"));
-        cX509StoreContext.defineFastMethod("cleanup",storectxcb.getFastMethod("cleanup"));
-        cX509StoreContext.defineFastMethod("flags=",storectxcb.getFastMethod("set_flags",IRubyObject.class));
-        cX509StoreContext.defineFastMethod("purpose=",storectxcb.getFastMethod("set_purpose",IRubyObject.class));
-        cX509StoreContext.defineFastMethod("trust=",storectxcb.getFastMethod("set_trust",IRubyObject.class));
-        cX509StoreContext.defineFastMethod("time=",storectxcb.getFastMethod("set_time",IRubyObject.class));
+        cX509StoreContext.defineAnnotatedMethods(X509StoreCtx.class);
     }
 
     private StoreContext ctx;
@@ -95,6 +81,7 @@ public class X509StoreCtx extends RubyObject {
         throw new RaiseException(getRuntime(),cStoreError, msg, true);
     }
 
+    @JRubyMethod(name="initialize", rest=true, frame=true)
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
         IRubyObject store;
         IRubyObject cert = getRuntime().getNil();
@@ -132,12 +119,14 @@ public class X509StoreCtx extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject verify() throws Exception {
         ctx.setExtraData(1,getInstanceVariable("@verify_callback"));
         int result = ctx.verifyCertificate();
         return result != 0 ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @JRubyMethod
     public IRubyObject chain() throws Exception {
         List<X509AuxCertificate> chain = ctx.getChain();
         if(chain == null) {
@@ -150,55 +139,66 @@ public class X509StoreCtx extends RubyObject {
         return getRuntime().newArray(ary);
    }
 
+    @JRubyMethod
     public IRubyObject error() {
         return getRuntime().newFixnum(ctx.getError());
     }
 
+    @JRubyMethod(name="error=")
     public IRubyObject set_error(IRubyObject arg) {
         System.err.println("WARNING: unimplemented method called: StoreContext#set_error");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject error_string() {
         int err = ctx.getError();
         return getRuntime().newString(org.jruby.ext.openssl.x509store.X509Utils.verifyCertificateErrorString(err));
     }
 
+    @JRubyMethod
     public IRubyObject error_depth() {
         System.err.println("WARNING: unimplemented method called: StoreContext#error_depth");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject current_cert() {
         System.err.println("WARNING: unimplemented method called: StoreContext#current_cert");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject current_crl() {
         System.err.println("WARNING: unimplemented method called: StoreContext#current_crl");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject cleanup() {
         System.err.println("WARNING: unimplemented method called: StoreContext#cleanup");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="flags=")
     public IRubyObject set_flags(IRubyObject arg) {
         System.err.println("WARNING: unimplemented method called: StoreContext#set_flags");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="purpose=")
     public IRubyObject set_purpose(IRubyObject arg) {
         System.err.println("WARNING: unimplemented method called: StoreContext#set_purpose");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="trust=")
     public IRubyObject set_trust(IRubyObject arg) {
         System.err.println("WARNING: unimplemented method called: StoreContext#set_trust");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="time=")
     public IRubyObject set_time(IRubyObject arg) {
         ctx.setTime(0,((RubyTime)arg).getJavaDate());
         return arg;

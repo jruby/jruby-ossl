@@ -54,9 +54,9 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -75,18 +75,8 @@ public class X509Name extends RubyObject {
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
         mX509.defineClassUnder("NameError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory namecb = runtime.callbackFactory(X509Name.class);
+        cX509Name.defineAnnotatedMethods(X509Name.class);
 
-        cX509Name.defineMethod("initialize",namecb.getOptMethod("initialize"));
-        cX509Name.defineFastMethod("add_entry",namecb.getFastOptMethod("add_entry"));
-        cX509Name.defineFastMethod("to_s",namecb.getFastOptMethod("_to_s"));
-        cX509Name.defineFastMethod("to_a",namecb.getFastMethod("to_a"));
-        cX509Name.defineFastMethod("cmp",namecb.getFastMethod("cmp",IRubyObject.class));
-        cX509Name.defineFastMethod("<=>",namecb.getFastMethod("cmp",IRubyObject.class));
-        cX509Name.defineFastMethod("eql?",namecb.getFastMethod("eql_p",IRubyObject.class));
-        cX509Name.defineFastMethod("hash",namecb.getFastMethod("hash"));
-        cX509Name.defineFastMethod("to_der",namecb.getFastMethod("to_der"));
-        
         cX509Name.setConstant("COMPAT",runtime.newFixnum(COMPAT));
         cX509Name.setConstant("RFC2253",runtime.newFixnum(RFC2253));
         cX509Name.setConstant("ONELINE",runtime.newFixnum(ONELINE));
@@ -95,13 +85,13 @@ public class X509Name extends RubyObject {
         cX509Name.setConstant("DEFAULT_OBJECT_TYPE",runtime.newFixnum(DERTags.UTF8_STRING));
 
         RubyHash hash = new RubyHash(runtime, runtime.newFixnum(DERTags.UTF8_STRING));
-        hash.op_aset(runtime.newString("C"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        hash.op_aset(runtime.newString("countryName"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        hash.op_aset(runtime.newString("serialNumber"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        hash.op_aset(runtime.newString("dnQualifier"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
-        hash.op_aset(runtime.newString("DC"),runtime.newFixnum(DERTags.IA5_STRING));
-        hash.op_aset(runtime.newString("domainComponent"),runtime.newFixnum(DERTags.IA5_STRING));
-        hash.op_aset(runtime.newString("emailAddress"),runtime.newFixnum(DERTags.IA5_STRING));
+        hash.op_aset(runtime.getCurrentContext(), runtime.newString("C"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
+        hash.op_aset(runtime.getCurrentContext(), runtime.newString("countryName"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
+        hash.op_aset(runtime.getCurrentContext(), runtime.newString("serialNumber"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
+        hash.op_aset(runtime.getCurrentContext(), runtime.newString("dnQualifier"),runtime.newFixnum(DERTags.PRINTABLE_STRING));
+        hash.op_aset(runtime.getCurrentContext(), runtime.newString("DC"),runtime.newFixnum(DERTags.IA5_STRING));
+        hash.op_aset(runtime.getCurrentContext(), runtime.newString("domainComponent"),runtime.newFixnum(DERTags.IA5_STRING));
+        hash.op_aset(runtime.getCurrentContext(), runtime.newString("emailAddress"),runtime.newFixnum(DERTags.IA5_STRING));
         cX509Name.setConstant("OBJECT_TYPE_TEMPLATE", hash);
     }
 
@@ -127,6 +117,7 @@ public class X509Name extends RubyObject {
         types.add(type);
     }
 
+    @JRubyMethod(rest=true, frame=true)
     public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2) == 0) {
             return this;
@@ -224,6 +215,7 @@ public class X509Name extends RubyObject {
         return val2;
     }
 
+    @JRubyMethod(rest=true)
     public IRubyObject add_entry(IRubyObject[] args) {
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,2,3);
         String oid = args[0].toString();
@@ -249,6 +241,7 @@ public class X509Name extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(name="to_s", rest=true)
     public IRubyObject _to_s(IRubyObject[] args) {
         /*
 Should follow parameters like this: 
@@ -305,6 +298,7 @@ else
         return getRuntime().newString(sb.toString());
     }
 
+    @JRubyMethod
     public RubyArray to_a() {
         List<IRubyObject> entries = new ArrayList<IRubyObject>();
         Map<DERObjectIdentifier, String> lookup = ASN1.getSymLookup(getRuntime());
@@ -324,6 +318,7 @@ else
         return getRuntime().newArray(entries);
     }
 
+    @JRubyMethod(name={"cmp","<=>"})
     public IRubyObject cmp(IRubyObject other) {
         if(eql_p(other).isTrue()) {
             return RubyFixnum.zero(getRuntime());
@@ -336,6 +331,7 @@ else
         return new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values));
     }
 
+    @JRubyMethod(name="eql?")
     public IRubyObject eql_p(IRubyObject other) {
         if(!(other instanceof X509Name)) {
             return getRuntime().getFalse();
@@ -346,10 +342,12 @@ else
         return nm.equals(o_nm) ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @JRubyMethod
     public RubyFixnum hash() {
         return getRuntime().newFixnum(new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values)).hashCode());
     }
 
+    @JRubyMethod
     public IRubyObject to_der() throws Exception {
         DERSequence seq = null;
         if(oids.size()>0) {

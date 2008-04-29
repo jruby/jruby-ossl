@@ -55,11 +55,11 @@ import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.RubyTime;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -80,35 +80,7 @@ public class X509Cert extends RubyObject {
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
         mX509.defineClassUnder("CertificateError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory certcb = runtime.callbackFactory(X509Cert.class);
-        cX509Cert.defineMethod("initialize",certcb.getOptMethod("_initialize"));
-        cX509Cert.defineFastMethod("initialize_copy",certcb.getFastMethod("initialize_copy",IRubyObject.class));
-        cX509Cert.defineFastMethod("to_der",certcb.getFastMethod("to_der"));
-        cX509Cert.defineFastMethod("to_pem",certcb.getFastMethod("to_pem"));
-        cX509Cert.defineFastMethod("to_s",certcb.getFastMethod("to_pem"));
-        cX509Cert.defineFastMethod("to_text",certcb.getFastMethod("to_text"));
-        cX509Cert.defineFastMethod("version",certcb.getFastMethod("version"));
-        cX509Cert.defineFastMethod("version=",certcb.getFastMethod("set_version",IRubyObject.class));
-        cX509Cert.defineFastMethod("signature_algorithm",certcb.getFastMethod("signature_algorithm"));
-        cX509Cert.defineFastMethod("serial",certcb.getFastMethod("serial"));
-        cX509Cert.defineFastMethod("serial=",certcb.getFastMethod("set_serial",IRubyObject.class));
-        cX509Cert.defineFastMethod("subject",certcb.getFastMethod("subject"));
-        cX509Cert.defineFastMethod("subject=",certcb.getFastMethod("set_subject",IRubyObject.class));
-        cX509Cert.defineFastMethod("issuer",certcb.getFastMethod("issuer"));
-        cX509Cert.defineFastMethod("issuer=",certcb.getFastMethod("set_issuer",IRubyObject.class));
-        cX509Cert.defineFastMethod("not_before",certcb.getFastMethod("not_before"));
-        cX509Cert.defineFastMethod("not_before=",certcb.getFastMethod("set_not_before",IRubyObject.class));
-        cX509Cert.defineFastMethod("not_after",certcb.getFastMethod("not_after"));
-        cX509Cert.defineFastMethod("not_after=",certcb.getFastMethod("set_not_after",IRubyObject.class));
-        cX509Cert.defineFastMethod("public_key",certcb.getFastMethod("public_key"));
-        cX509Cert.defineFastMethod("public_key=",certcb.getFastMethod("set_public_key",IRubyObject.class));
-        cX509Cert.defineFastMethod("sign",certcb.getFastMethod("sign",IRubyObject.class,IRubyObject.class));
-        cX509Cert.defineFastMethod("verify",certcb.getFastMethod("verify",IRubyObject.class));
-        cX509Cert.defineFastMethod("check_private_key",certcb.getFastMethod("check_private_key",IRubyObject.class));
-        cX509Cert.defineFastMethod("extensions",certcb.getFastMethod("extensions"));
-        cX509Cert.defineFastMethod("extensions=",certcb.getFastMethod("set_extensions",IRubyObject.class));
-        cX509Cert.defineFastMethod("add_extension",certcb.getFastMethod("add_extension",IRubyObject.class));
-        cX509Cert.defineFastMethod("inspect",certcb.getFastMethod("inspect"));
+        cX509Cert.defineAnnotatedMethods(X509Cert.class);
     }
 
     public X509Cert(Ruby runtime, RubyClass type) {
@@ -147,6 +119,7 @@ public class X509Cert extends RubyObject {
         return cr.callMethod(runtime.getCurrentContext(),"new",RubyString.newString(runtime, c.getEncoded()));
     }
 
+    @JRubyMethod(name="initialize",rest=true,frame=true)
     public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
         extensions = new ArrayList<IRubyObject>();
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
@@ -209,6 +182,7 @@ public class X509Cert extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         if(this == obj) {
             return this;
@@ -217,10 +191,12 @@ public class X509Cert extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject to_der() throws Exception {
         return RubyString.newString(getRuntime(), cert.getEncoded());
     }
 
+    @JRubyMethod(name={"to_pem","to_s"})
     public IRubyObject to_pem() throws Exception {
         StringWriter w = new StringWriter();
         PEMInputOutput.writeX509Certificate(w,getAuxCert());
@@ -228,18 +204,22 @@ public class X509Cert extends RubyObject {
         return getRuntime().newString(w.toString());
     }
 
+    @JRubyMethod
     public IRubyObject to_text() {
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject inspect() {
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject version() {
         return version;
     }
 
+    @JRubyMethod(name="version=")
     public IRubyObject set_version(IRubyObject arg) {
         if(!arg.equals(this.version)) {
             changed = true;
@@ -248,14 +228,17 @@ public class X509Cert extends RubyObject {
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject signature_algorithm() {
         return sig_alg;
     }
 
+    @JRubyMethod
     public IRubyObject serial() {
         return serial;
     }
 
+    @JRubyMethod(name="serial=")
     public IRubyObject set_serial(IRubyObject num) {
         if(!num.equals(this.serial)) {
             changed = true;
@@ -265,10 +248,12 @@ public class X509Cert extends RubyObject {
         return num;
     }
 
+    @JRubyMethod
     public IRubyObject subject() {
         return subject;
     }
 
+    @JRubyMethod(name="subject=")
     public IRubyObject set_subject(IRubyObject arg) {
         if(!arg.equals(this.subject)) {
             changed = true;
@@ -278,10 +263,12 @@ public class X509Cert extends RubyObject {
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject issuer() {
         return issuer;
     }
 
+    @JRubyMethod(name="issuer=")
     public IRubyObject set_issuer(IRubyObject arg) {
         if(!arg.equals(this.issuer)) {
             changed = true;
@@ -291,10 +278,12 @@ public class X509Cert extends RubyObject {
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject not_before() {
         return not_before;
     }
 
+    @JRubyMethod(name="not_before=")
     public IRubyObject set_not_before(IRubyObject arg) {
         changed = true;
         not_before = arg.callMethod(getRuntime().getCurrentContext(),"getutc");
@@ -303,10 +292,12 @@ public class X509Cert extends RubyObject {
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject not_after() {
         return not_after;
     }
 
+    @JRubyMethod(name="not_after=")
     public IRubyObject set_not_after(IRubyObject arg) {
         changed = true;
         not_after = arg.callMethod(getRuntime().getCurrentContext(),"getutc");
@@ -315,10 +306,12 @@ public class X509Cert extends RubyObject {
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject public_key() {
         return public_key;
     }
 
+    @JRubyMethod(name="public_key=")
     public IRubyObject set_public_key(IRubyObject arg) {
         if(!arg.equals(this.public_key)) {
             changed = true;
@@ -328,6 +321,7 @@ public class X509Cert extends RubyObject {
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject sign(final IRubyObject key, IRubyObject digest) throws Exception {
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();
@@ -360,6 +354,7 @@ public class X509Cert extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject verify(IRubyObject key) throws Exception {
         if(changed) {
             return getRuntime().getFalse();
@@ -372,20 +367,24 @@ public class X509Cert extends RubyObject {
         }
     }
 
+    @JRubyMethod
     public IRubyObject check_private_key(IRubyObject arg) {
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject extensions() {
         return getRuntime().newArray(extensions);
     }
 
     @SuppressWarnings("unchecked")
+    @JRubyMethod(name="extensions=")
     public IRubyObject set_extensions(IRubyObject arg) {
         extensions = ((RubyArray)arg).getList();
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject add_extension(IRubyObject arg) throws Exception {
         changed = true;
         if(((X509Extensions.Extension)arg).getRealOid().equals(new DERObjectIdentifier("2.5.29.17"))) {
