@@ -45,6 +45,8 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.common.IRubyWarnings;
 import org.jruby.common.IRubyWarnings.ID;
+import org.jruby.anno.JRubyMethod;
+import org.jruby.anno.JRubyModule;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
@@ -72,26 +74,35 @@ public class Cipher extends RubyObject {
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
         mCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory ciphercb = runtime.callbackFactory(Cipher.class);
+        cCipher.defineAnnotatedMethods(Cipher.class);
+        mCipher.defineAnnotatedMethods(CipherModule.class);
+    }
 
-        mCipher.getMetaClass().defineFastMethod("ciphers",ciphercb.getFastSingletonMethod("ciphers"));
-        cCipher.defineMethod("initialize",ciphercb.getMethod("initialize",IRubyObject.class));
-        cCipher.defineFastMethod("initialize_copy",ciphercb.getFastMethod("initialize_copy",IRubyObject.class));
-        cCipher.defineFastMethod("name",ciphercb.getFastMethod("name"));
-        cCipher.defineFastMethod("key_len",ciphercb.getFastMethod("key_len"));
-        cCipher.defineFastMethod("key_len=",ciphercb.getFastMethod("set_key_len",IRubyObject.class));
-        cCipher.defineFastMethod("iv_len",ciphercb.getFastMethod("iv_len"));
-        cCipher.defineFastMethod("block_size",ciphercb.getFastMethod("block_size"));
-        cCipher.defineFastMethod("encrypt",ciphercb.getFastOptMethod("encrypt"));
-        cCipher.defineFastMethod("decrypt",ciphercb.getFastOptMethod("decrypt"));
-        cCipher.defineFastMethod("key=",ciphercb.getFastMethod("set_key",IRubyObject.class));
-        cCipher.defineFastMethod("iv=",ciphercb.getFastMethod("set_iv",IRubyObject.class));
-        cCipher.defineFastMethod("reset",ciphercb.getFastMethod("reset"));
-        cCipher.defineFastMethod("pkcs5_keyivgen",ciphercb.getFastOptMethod("pkcs5_keyivgen"));
-        cCipher.defineFastMethod("update",ciphercb.getFastMethod("update",IRubyObject.class));
-        cCipher.defineFastMethod("<<",ciphercb.getFastMethod("update_deprecated",IRubyObject.class));
-        cCipher.defineFastMethod("final",ciphercb.getFastMethod("_final"));
-        cCipher.defineFastMethod("padding=",ciphercb.getFastMethod("set_padding",IRubyObject.class));
+    @JRubyModule(name="OpenSSL::Cipher")
+    public static class CipherModule {
+        @JRubyMethod(meta = true)
+        public static IRubyObject ciphers(IRubyObject recv) {
+            List<IRubyObject> ciphers = new ArrayList<IRubyObject>();
+            String[] other = {"AES128","AES192","AES256","BLOWFISH", "RC2-40-CBC", "RC2-64-CBC","RC4","RC4-40", "CAST","CAST-CBC"};
+            String[] bases = {"AES-128","AES-192","AES-256","BF", "DES", "DES-EDE","DES-EDE3", "RC2","CAST5"};
+            String[] suffixes = {"","-CBC","-CFB","-CFB1","-CFB8","-ECB","-OFB"};
+            for(int i=0,j=bases.length;i<j;i++) {
+                for(int k=0,l=suffixes.length;k<l;k++) {
+                    String val = bases[i]+suffixes[k];
+                    if(tryCipher(val)) {
+                        ciphers.add(recv.getRuntime().newString(val));
+                        ciphers.add(recv.getRuntime().newString((val).toLowerCase()));
+                    }
+                }
+            }
+            for(int i=0,j=other.length;i<j;i++) {
+                if(tryCipher(other[i])) {
+                    ciphers.add(recv.getRuntime().newString(other[i]));
+                    ciphers.add(recv.getRuntime().newString(other[i].toLowerCase()));
+                }
+            }
+            return recv.getRuntime().newArray(ciphers);
+        }
     }
 
     private static final Set<String> BLOCK_MODES = new HashSet<String>();
@@ -167,28 +178,6 @@ public class Cipher extends RubyObject {
         }))).booleanValue();
     }
 
-    public static IRubyObject ciphers(IRubyObject recv) {
-        List<IRubyObject> ciphers = new ArrayList<IRubyObject>();
-        String[] other = {"AES128","AES192","AES256","BLOWFISH", "RC2-40-CBC", "RC2-64-CBC","RC4","RC4-40", "CAST","CAST-CBC"};
-        String[] bases = {"AES-128","AES-192","AES-256","BF", "DES", "DES-EDE","DES-EDE3", "RC2","CAST5"};
-        String[] suffixes = {"","-CBC","-CFB","-CFB1","-CFB8","-ECB","-OFB"};
-        for(int i=0,j=bases.length;i<j;i++) {
-            for(int k=0,l=suffixes.length;k<l;k++) {
-                String val = bases[i]+suffixes[k];
-                if(tryCipher(val)) {
-                    ciphers.add(recv.getRuntime().newString(val));
-                    ciphers.add(recv.getRuntime().newString((val).toLowerCase()));
-                }
-            }
-        }
-        for(int i=0,j=other.length;i<j;i++) {
-            if(tryCipher(other[i])) {
-                ciphers.add(recv.getRuntime().newString(other[i]));
-                ciphers.add(recv.getRuntime().newString(other[i].toLowerCase()));
-            }
-        }
-        return recv.getRuntime().newArray(ciphers);
-    }
 
     private RubyClass ciphErr;
     public Cipher(Ruby runtime, RubyClass type) {
@@ -231,7 +220,8 @@ public class Cipher extends RubyObject {
         System.out.println("*******************************");
     }
 
-    public IRubyObject initialize(IRubyObject str, Block unusedBlock) {
+    @JRubyMethod(required=1)
+    public IRubyObject initialize(IRubyObject str) {
         name = str.toString();
         String[] values = rubyToJavaCipher(name, padding);
         cryptoBase = values[0];
@@ -280,6 +270,7 @@ public class Cipher extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(required=1)
     public IRubyObject initialize_copy(IRubyObject obj) {
         if(this == obj) {
             return this;
@@ -316,23 +307,28 @@ public class Cipher extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject name() {
         return getRuntime().newString(name);
     }
 
+    @JRubyMethod
     public IRubyObject key_len() {
         return getRuntime().newFixnum(keyLen);
     }
 
+    @JRubyMethod
     public IRubyObject iv_len() {
         return getRuntime().newFixnum(ivLen);
     }
 
+    @JRubyMethod(name="key_len=", required=1)
     public IRubyObject set_key_len(IRubyObject len) {
         this.keyLen = RubyNumeric.fix2int(len);
         return len;
     }
 
+    @JRubyMethod(name="key=", required=1)
     public IRubyObject set_key(IRubyObject key) {
         byte[] keyBytes;
         try {
@@ -355,6 +351,7 @@ public class Cipher extends RubyObject {
         return key;
     }
 
+    @JRubyMethod(name="iv=", required=1)
     public IRubyObject set_iv(IRubyObject iv) {
         byte[] ivBytes;
         try {
@@ -370,6 +367,7 @@ public class Cipher extends RubyObject {
         return iv;
     }
 
+    @JRubyMethod
     public IRubyObject block_size() {
         return getRuntime().newFixnum(ciph.getBlockSize());
     }
@@ -421,16 +419,19 @@ public class Cipher extends RubyObject {
         }
     }
 
+    @JRubyMethod(optional=2)
     public IRubyObject encrypt(IRubyObject[] args) {
         init(args, true);
         return this;
     }
 
+    @JRubyMethod(optional=2)
     public IRubyObject decrypt(IRubyObject[] args) {
         init(args, false);
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject reset() {
         doInitialize();
         return this;
@@ -460,6 +461,7 @@ public class Cipher extends RubyObject {
         return "AES".equalsIgnoreCase(cryptoBase) || "RC2".equalsIgnoreCase(cryptoBase) || "RC4".equalsIgnoreCase(cryptoBase);
     }
 
+    @JRubyMethod(required=1,optional=3)
     public IRubyObject pkcs5_keyivgen(IRubyObject[] args) {
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,4);
         byte[] pass = args[0].convertToString().getBytes();
@@ -527,6 +529,7 @@ public class Cipher extends RubyObject {
         }
     }
 
+    @JRubyMethod
     public IRubyObject update(IRubyObject data) {
         if (DEBUG) System.out.println("*** update ["+data+"]");
 
@@ -554,11 +557,13 @@ public class Cipher extends RubyObject {
         return RubyString.newString(getRuntime(), new ByteList(str,false));
     }
 
+    @JRubyMethod(name="<<")
     public IRubyObject update_deprecated(IRubyObject data) {
         getRuntime().getWarnings().warn(IRubyWarnings.ID.DEPRECATED_METHOD, "" + this.getMetaClass().getRealClass().getName() + "#<< is deprecated; use " + this.getMetaClass().getRealClass().getName() + "#update instead");
         return update(data);
     }
 
+    @JRubyMethod(name="final")
     public IRubyObject _final() {
         if(!ciphInited) {
             doInitialize();
@@ -578,9 +583,10 @@ public class Cipher extends RubyObject {
         return getRuntime().newString(str);
     }
 
+    @JRubyMethod(name="padding=")
     public IRubyObject set_padding(IRubyObject padding) {
         this.padding = padding.toString();
-        initialize(RubyString.newString(getRuntime(), name), Block.NULL_BLOCK);
+        initialize(RubyString.newString(getRuntime(), name));
         return padding;
     }
 

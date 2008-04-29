@@ -39,6 +39,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -67,6 +68,7 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.RubySymbol;
 import org.jruby.RubyTime;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.CallbackFactory;
@@ -250,10 +252,7 @@ public class ASN1 {
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
         mASN1.defineClassUnder("ASN1Error",openSSLError, openSSLError.getAllocator());
 
-        CallbackFactory asncb = runtime.callbackFactory(ASN1.class);
-        mASN1.getMetaClass().defineFastMethod("traverse",asncb.getFastSingletonMethod("traverse",IRubyObject.class));
-        mASN1.getMetaClass().defineFastMethod("decode",asncb.getFastSingletonMethod("decode",IRubyObject.class));
-        mASN1.getMetaClass().defineFastMethod("decode_all",asncb.getFastSingletonMethod("decode_all",IRubyObject.class));
+        mASN1.defineAnnotatedMethods(ASN1.class);
 
         List<IRubyObject> ary = new ArrayList<IRubyObject>();
         mASN1.setConstant("UNIVERSAL_TAG_NAME",runtime.newArray(ary));
@@ -267,52 +266,24 @@ public class ASN1 {
         }
 
         RubyClass cASN1Data = mASN1.defineClassUnder("ASN1Data",runtime.getObject(), ASN1Data.ALLOCATOR);
-        cASN1Data.attr_accessor(new IRubyObject[]{runtime.newString("value"),runtime.newString("tag"),runtime.newString("tag_class")});
-        CallbackFactory asn1datacb = runtime.callbackFactory(ASN1Data.class);
-        cASN1Data.defineMethod("initialize",asn1datacb.getOptMethod("initialize"));
-        cASN1Data.defineFastMethod("to_der",asn1datacb.getFastMethod("to_der"));
+        cASN1Data.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newString("value"),runtime.newString("tag"),runtime.newString("tag_class")});
+        cASN1Data.defineAnnotatedMethods(ASN1Data.class);
 
         RubyClass cASN1Primitive = mASN1.defineClassUnder("Primitive",cASN1Data, ASN1Primitive.ALLOCATOR);
-        cASN1Primitive.attr_accessor(new IRubyObject[]{runtime.newString("tagging")});
-        CallbackFactory primcb = runtime.callbackFactory(ASN1Primitive.class);
-        cASN1Primitive.defineMethod("initialize",primcb.getOptMethod("initialize"));
-        cASN1Primitive.defineFastMethod("to_der",primcb.getFastMethod("to_der"));
+        cASN1Primitive.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newString("tagging")});
+        cASN1Primitive.defineAnnotatedMethods(ASN1Primitive.class);
 
         RubyClass cASN1Constructive = mASN1.defineClassUnder("Constructive",cASN1Data,ASN1Constructive.ALLOCATOR);
         cASN1Constructive.includeModule(runtime.getModule("Enumerable"));
-        cASN1Constructive.attr_accessor(new IRubyObject[]{runtime.newString("tagging")});
-        CallbackFactory concb = runtime.callbackFactory(ASN1Constructive.class);
-        cASN1Constructive.defineMethod("initialize",concb.getOptMethod("initialize"));
-        cASN1Constructive.defineFastMethod("to_der",concb.getFastMethod("to_der"));
-        cASN1Constructive.defineMethod("each",concb.getMethod("each"));
-
-        mASN1.defineFastPublicModuleFunction("Boolean",asncb.getFastOptSingletonMethod("fact_Boolean"));
-        mASN1.defineFastPublicModuleFunction("Integer",asncb.getFastOptSingletonMethod("fact_Integer"));
-        mASN1.defineFastPublicModuleFunction("Enumerated",asncb.getFastOptSingletonMethod("fact_Enumerated"));
-        mASN1.defineFastPublicModuleFunction("BitString",asncb.getFastOptSingletonMethod("fact_BitString"));
-        mASN1.defineFastPublicModuleFunction("OctetString",asncb.getFastOptSingletonMethod("fact_OctetString"));
-        mASN1.defineFastPublicModuleFunction("UTF8String",asncb.getFastOptSingletonMethod("fact_UTF8String"));
-        mASN1.defineFastPublicModuleFunction("NumericString",asncb.getFastOptSingletonMethod("fact_NumericString"));
-        mASN1.defineFastPublicModuleFunction("PrintableString",asncb.getFastOptSingletonMethod("fact_PrintableString"));
-        mASN1.defineFastPublicModuleFunction("T61String",asncb.getFastOptSingletonMethod("fact_T61String"));
-        mASN1.defineFastPublicModuleFunction("VideotexString",asncb.getFastOptSingletonMethod("fact_VideotexString"));
-        mASN1.defineFastPublicModuleFunction("IA5String",asncb.getFastOptSingletonMethod("fact_IA5String"));
-        mASN1.defineFastPublicModuleFunction("GraphicString",asncb.getFastOptSingletonMethod("fact_GraphicString"));
-        mASN1.defineFastPublicModuleFunction("ISO64String",asncb.getFastOptSingletonMethod("fact_ISO64String"));
-        mASN1.defineFastPublicModuleFunction("GeneralString",asncb.getFastOptSingletonMethod("fact_GeneralString"));
-        mASN1.defineFastPublicModuleFunction("UniversalString",asncb.getFastOptSingletonMethod("fact_UniversalString"));
-        mASN1.defineFastPublicModuleFunction("BMPString",asncb.getFastOptSingletonMethod("fact_BMPString"));
-        mASN1.defineFastPublicModuleFunction("Null",asncb.getFastOptSingletonMethod("fact_Null"));
-        mASN1.defineFastPublicModuleFunction("ObjectId",asncb.getFastOptSingletonMethod("fact_ObjectId"));
-        mASN1.defineFastPublicModuleFunction("UTCTime",asncb.getFastOptSingletonMethod("fact_UTCTime"));
-        mASN1.defineFastPublicModuleFunction("GeneralizedTime",asncb.getFastOptSingletonMethod("fact_GeneralizedTime"));
-        mASN1.defineFastPublicModuleFunction("Sequence",asncb.getFastOptSingletonMethod("fact_Sequence"));
-        mASN1.defineFastPublicModuleFunction("Set",asncb.getFastOptSingletonMethod("fact_Set"));
+        cASN1Constructive.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newString("tagging")});
+        cASN1Constructive.defineAnnotatedMethods(ASN1Constructive.class);
 
         mASN1.defineClassUnder("Boolean",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("Integer",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("Enumerated",cASN1Primitive,cASN1Primitive.getAllocator());
+
         RubyClass cASN1BitString = mASN1.defineClassUnder("BitString",cASN1Primitive,cASN1Primitive.getAllocator());
+
         mASN1.defineClassUnder("OctetString",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("UTF8String",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("NumericString",cASN1Primitive,cASN1Primitive.getAllocator());
@@ -326,41 +297,18 @@ public class ASN1 {
         mASN1.defineClassUnder("UniversalString",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("BMPString",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("Null",cASN1Primitive,cASN1Primitive.getAllocator());
+
         RubyClass cASN1ObjectId = mASN1.defineClassUnder("ObjectId",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("UTCTime",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("GeneralizedTime",cASN1Primitive,cASN1Primitive.getAllocator());
         mASN1.defineClassUnder("Sequence",cASN1Constructive,cASN1Constructive.getAllocator());
         mASN1.defineClassUnder("Set",cASN1Constructive,cASN1Constructive.getAllocator());
 
-        cASN1ObjectId.getMetaClass().defineFastMethod("register",asncb.getFastOptSingletonMethod("objectid_register"));
-        cASN1ObjectId.defineFastMethod("sn",asncb.getFastSingletonMethod("objectid_sn"));
-        cASN1ObjectId.defineFastMethod("ln",asncb.getFastSingletonMethod("objectid_ln"));
-        cASN1ObjectId.defineFastMethod("short_name",asncb.getFastSingletonMethod("objectid_sn"));
-        cASN1ObjectId.defineFastMethod("long_name",asncb.getFastSingletonMethod("objectid_ln"));
-        cASN1ObjectId.defineFastMethod("oid",asncb.getFastSingletonMethod("objectid_oid"));
+        cASN1ObjectId.defineAnnotatedMethods(ObjectId.class);
 
-        cASN1BitString.attr_accessor(new IRubyObject[]{runtime.newSymbol("unused_bits")});
+        cASN1BitString.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newSymbol("unused_bits")});
     }
 
-    public static IRubyObject objectid_register(IRubyObject recv, IRubyObject[] args) {
-        DERObjectIdentifier deroi = new DERObjectIdentifier(args[0].toString());
-        getOIDLookup(recv.getRuntime()).put(args[1].toString().toLowerCase(),deroi);
-        getOIDLookup(recv.getRuntime()).put(args[2].toString().toLowerCase(),deroi);
-        getSymLookup(recv.getRuntime()).put(deroi,args[1].toString());
-        return recv.getRuntime().getTrue();
-    }
-
-    public static IRubyObject objectid_sn(IRubyObject self) {
-        return self.getRuntime().newString(getShortNameFor(self.getRuntime(),self.callMethod(self.getRuntime().getCurrentContext(),"value").toString()));
-    }
-
-    public static IRubyObject objectid_ln(IRubyObject self) {
-        return self.getRuntime().newString(getLongNameFor(self.getRuntime(),self.callMethod(self.getRuntime().getCurrentContext(),"value").toString()));
-    }
-
-    public static IRubyObject objectid_oid(IRubyObject self) {
-        return self.getRuntime().newString(getObjectIdentifier(self.getRuntime(),self.callMethod(self.getRuntime().getCurrentContext(),"value").toString()).getId());
-    }
 
     private static String getShortNameFor(Ruby runtime, String nameOrOid) {
         DERObjectIdentifier oid = getObjectIdentifier(runtime,nameOrOid);
@@ -401,101 +349,150 @@ public class ASN1 {
         return val2;
     }
     
+    @JRubyMethod(name="Boolean", module=true, rest=true)
     public static IRubyObject fact_Boolean(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("Boolean").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="Integer", module=true, rest=true)
     public static IRubyObject fact_Integer(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("Integer").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="Enumerated", module=true, rest=true)
     public static IRubyObject fact_Enumerated(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("Enumerated").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="BitString", module=true, rest=true)
     public static IRubyObject fact_BitString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("BitString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="OctetString", module=true, rest=true)
     public static IRubyObject fact_OctetString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("OctetString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="UTF8String", module=true, rest=true)
     public static IRubyObject fact_UTF8String(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("UTF8String").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="NumericString", module=true, rest=true)
     public static IRubyObject fact_NumericString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("NumericString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="PrintableString", module=true, rest=true)
     public static IRubyObject fact_PrintableString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("PrintableString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="T61String", module=true, rest=true)
     public static IRubyObject fact_T61String(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("T61String").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="VideotexString", module=true, rest=true)
     public static IRubyObject fact_VideotexString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("VideotexString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="IA5String", module=true, rest=true)
     public static IRubyObject fact_IA5String(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("IA5String").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="GraphicString", module=true, rest=true)
     public static IRubyObject fact_GraphicString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("GraphicString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="ISO64String", module=true, rest=true)
     public static IRubyObject fact_ISO64String(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("ISO64String").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="GeneralString", module=true, rest=true)
     public static IRubyObject fact_GeneralString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("GeneralString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="UniversalString", module=true, rest=true)
     public static IRubyObject fact_UniversalString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("UniversalString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="BMPString", module=true, rest=true)
     public static IRubyObject fact_BMPString(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("BMPString").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="Nul", module=true, rest=true)
     public static IRubyObject fact_Null(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("Null").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="ObjectId", module=true, rest=true)
     public static IRubyObject fact_ObjectId(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("ObjectId").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="UTCTime", module=true, rest=true)
     public static IRubyObject fact_UTCTime(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("UTCTime").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="GeneralizedTime", module=true, rest=true)
     public static IRubyObject fact_GeneralizedTime(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("GeneralizedTime").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="Sequence", module=true, rest=true)
     public static IRubyObject fact_Sequence(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("Sequence").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(name="Set", module=true, rest=true)
     public static IRubyObject fact_Set(IRubyObject recv, IRubyObject[] args) {
         return ((RubyModule)recv).getClass("Set").callMethod(recv.getRuntime().getCurrentContext(),"new",args);
     }
 
+    @JRubyMethod(meta=true, required=1)
     public static IRubyObject traverse(IRubyObject recv, IRubyObject a) {
         System.err.println("WARNING: unimplemented method called: traverse");
         return null;
     }
 
+    public static class ObjectId {
+        @JRubyMethod(meta=true, rest=true)
+        public static IRubyObject register(IRubyObject recv, IRubyObject[] args) {
+            DERObjectIdentifier deroi = new DERObjectIdentifier(args[0].toString());
+            getOIDLookup(recv.getRuntime()).put(args[1].toString().toLowerCase(),deroi);
+            getOIDLookup(recv.getRuntime()).put(args[2].toString().toLowerCase(),deroi);
+            getSymLookup(recv.getRuntime()).put(deroi,args[1].toString());
+            return recv.getRuntime().getTrue();
+        }
+
+        @JRubyMethod(name={"sn","short_name"})
+        public static IRubyObject sn(IRubyObject self) {
+            return self.getRuntime().newString(getShortNameFor(self.getRuntime(),self.callMethod(self.getRuntime().getCurrentContext(),"value").toString()));
+        }
+
+        @JRubyMethod(name={"ln","long_name"})
+        public static IRubyObject ln(IRubyObject self) {
+            return self.getRuntime().newString(getLongNameFor(self.getRuntime(),self.callMethod(self.getRuntime().getCurrentContext(),"value").toString()));
+        }
+
+        @JRubyMethod
+        public static IRubyObject oid(IRubyObject self) {
+            return self.getRuntime().newString(getObjectIdentifier(self.getRuntime(),self.callMethod(self.getRuntime().getCurrentContext(),"value").toString()).getId());
+        }
+    }
+
     private final static DateFormat dateF = new SimpleDateFormat("yyyyMMddHHmmssz");
-    private static IRubyObject decodeObj(RubyModule asnM,Object v) throws Exception {
+    private static IRubyObject decodeObj(RubyModule asnM,Object v) throws IOException, java.text.ParseException {
         int ix = idForClass(v.getClass());
         String v_name = ix == -1 ? null : (String)(ASN1_INFO[ix][2]);
         ThreadContext tc = asnM.getRuntime().getCurrentContext();
@@ -565,14 +562,22 @@ public class ASN1 {
         return null;
     }
 
-    public static IRubyObject decode(IRubyObject recv, IRubyObject obj) throws Exception {
-        obj = OpenSSLImpl.to_der_if_possible(obj);
-        RubyModule asnM = (RubyModule)recv;
-        ASN1InputStream asis = new ASN1InputStream(obj.convertToString().getBytes());
-        IRubyObject ret = decodeObj(asnM, asis.readObject());
-        return ret;
+    @JRubyMethod(meta = true)
+    public static IRubyObject decode(IRubyObject recv, IRubyObject obj) {
+        try {
+            IRubyObject obj2 = OpenSSLImpl.to_der_if_possible(obj);
+            RubyModule asnM = (RubyModule)recv;
+            ASN1InputStream asis = new ASN1InputStream(obj2.convertToString().getBytes());
+            IRubyObject ret = decodeObj(asnM, asis.readObject());
+            return ret;
+        } catch(IOException e) {
+            throw recv.getRuntime().newIOErrorFromException(e);
+        } catch(Exception e) {
+            throw recv.getRuntime().newArgumentError(e.getMessage());
+        }
     }
 
+    @JRubyMethod(meta=true, required=1)
     public static IRubyObject decode_all(IRubyObject recv, IRubyObject a) {
         System.err.println("WARNING: unimplemented method called: decode_all");
         return null;
@@ -596,11 +601,8 @@ public class ASN1 {
             throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("ASN1"))).getConstant("ASN1Error")), msg, true);
         }
 
-        public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
-            org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args,3,3);
-            IRubyObject value = args[0];
-            IRubyObject tag = args[1];
-            IRubyObject tag_class = args[2];
+        @JRubyMethod
+        public IRubyObject initialize(IRubyObject value, IRubyObject tag, IRubyObject tag_class) {
             if(!(tag_class instanceof RubySymbol)) {
                 asn1Error("invalid tag class");
             }
@@ -636,6 +638,7 @@ public class ASN1 {
             }
         }
 
+        @JRubyMethod
         public IRubyObject to_der() throws Exception {
             return getRuntime().newString(new String(ByteList.plain(toASN1().getDEREncoded())));
         }
@@ -688,8 +691,13 @@ public class ASN1 {
             return this.callMethod(getRuntime().getCurrentContext(),"value").toString();
         }
 
-        public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
-            org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args,1,4);
+        @JRubyMethod
+        public IRubyObject to_der() throws Exception {
+            return super.to_der();
+        }
+
+        @JRubyMethod(required=1, optional=4)
+        public IRubyObject initialize(IRubyObject[] args) {
             IRubyObject value = args[0];
             IRubyObject tag = getRuntime().getNil();
             IRubyObject tagging = getRuntime().getNil();
@@ -810,8 +818,13 @@ public class ASN1 {
             super(runtime,type);
         }
 
-        public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
-            org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,4);
+        @JRubyMethod
+        public IRubyObject to_der() throws Exception {
+            return super.to_der();
+        }
+
+        @JRubyMethod(required=1, optional=3)
+        public IRubyObject initialize(IRubyObject[] args) {
             IRubyObject value = args[0];
             IRubyObject tag = getRuntime().getNil();
             IRubyObject tagging = getRuntime().getNil();
@@ -875,6 +888,7 @@ public class ASN1 {
             return null;
         }
 
+        @JRubyMethod(frame=true)
         public IRubyObject each(Block block) {
             RubyArray arr = (RubyArray)callMethod(getRuntime().getCurrentContext(),"value");
             for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
