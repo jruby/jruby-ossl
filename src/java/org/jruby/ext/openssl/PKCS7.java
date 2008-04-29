@@ -57,8 +57,8 @@ import org.jruby.RubyString;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.StoreContext;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -78,38 +78,10 @@ public class PKCS7 extends RubyObject {
         mPKCS7.defineClassUnder("PKCS7Error",openSSLError,openSSLError.getAllocator());
         RubyClass cPKCS7 = mPKCS7.defineClassUnder("PKCS7",runtime.getObject(),PKCS7_ALLOCATOR);
 
-        cPKCS7.attr_accessor(new IRubyObject[]{runtime.newSymbol("data"),runtime.newSymbol("error_string")});
+        cPKCS7.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newSymbol("data"),runtime.newSymbol("error_string")});
 
-        CallbackFactory p7cb = runtime.callbackFactory(PKCS7.class);
-        mPKCS7.getMetaClass().defineFastMethod("read_smime",p7cb.getFastSingletonMethod("read_smime",IRubyObject.class));
-        mPKCS7.getMetaClass().defineFastMethod("write_smime",p7cb.getFastOptSingletonMethod("write_smime"));
-        mPKCS7.getMetaClass().defineFastMethod("sign",p7cb.getFastOptSingletonMethod("sign"));
-        mPKCS7.getMetaClass().defineFastMethod("encrypt",p7cb.getFastOptSingletonMethod("encrypt"));
-        cPKCS7.defineMethod("initialize",p7cb.getOptMethod("_initialize"));
-        cPKCS7.defineFastMethod("initialize_copy",p7cb.getFastMethod("initialize_copy",IRubyObject.class));
-        cPKCS7.defineFastMethod("type=",p7cb.getFastMethod("set_type",IRubyObject.class));
-        cPKCS7.defineFastMethod("type",p7cb.getFastMethod("get_type"));
-        cPKCS7.defineFastMethod("detached=",p7cb.getFastMethod("set_detached",IRubyObject.class));
-        cPKCS7.defineFastMethod("detached",p7cb.getFastMethod("detached"));
-        cPKCS7.defineFastMethod("detached?",p7cb.getFastMethod("detached_p"));
-        cPKCS7.defineFastMethod("cipher=",p7cb.getFastMethod("set_cipher",IRubyObject.class));
-        cPKCS7.defineFastMethod("add_signer",p7cb.getFastMethod("add_signer",IRubyObject.class));
-        cPKCS7.defineFastMethod("signers",p7cb.getFastMethod("signers"));
-        cPKCS7.defineFastMethod("add_recipient",p7cb.getFastMethod("add_recipient",IRubyObject.class));
-        cPKCS7.defineFastMethod("recipients",p7cb.getFastMethod("recipients"));
-        cPKCS7.defineFastMethod("add_certificate",p7cb.getFastMethod("add_certificate",IRubyObject.class));
-        cPKCS7.defineFastMethod("certificates=",p7cb.getFastMethod("set_certificates",IRubyObject.class));
-        cPKCS7.defineFastMethod("certificates",p7cb.getFastMethod("certificates"));
-        cPKCS7.defineFastMethod("add_crl",p7cb.getFastMethod("add_crl",IRubyObject.class));
-        cPKCS7.defineFastMethod("crls=",p7cb.getFastMethod("set_crls",IRubyObject.class));
-        cPKCS7.defineFastMethod("crls",p7cb.getFastMethod("crls"));
-        cPKCS7.defineFastMethod("add_data",p7cb.getFastMethod("add_data",IRubyObject.class));
-        cPKCS7.defineFastMethod("data=",p7cb.getFastMethod("add_data",IRubyObject.class));
-        cPKCS7.defineFastMethod("verify",p7cb.getFastOptMethod("verify"));
-        cPKCS7.defineFastMethod("decrypt",p7cb.getFastOptMethod("decrypt"));
-        cPKCS7.defineFastMethod("to_pem",p7cb.getFastMethod("to_pem"));
-        cPKCS7.defineFastMethod("to_s",p7cb.getFastMethod("to_pem"));
-        cPKCS7.defineFastMethod("to_der",p7cb.getFastMethod("to_der"));
+        mPKCS7.defineAnnotatedMethods(ModuleMethods.class);
+        cPKCS7.defineAnnotatedMethods(PKCS7.class);
 
         SignerInfo.createSignerInfo(runtime,mPKCS7);
         RecipientInfo.createRecipientInfo(runtime,mPKCS7);
@@ -125,88 +97,93 @@ public class PKCS7 extends RubyObject {
         mPKCS7.setConstant("NOATTR",runtime.newFixnum(256));
         mPKCS7.setConstant("NOSMIMECAP",runtime.newFixnum(512));
     }
-
-    public static IRubyObject read_smime(IRubyObject recv, IRubyObject arg) {
-        System.err.println("WARNING: un-implemented method called PKCS7#read_smime");
-        return recv.getRuntime().getNil();
-    }
-
-    public static IRubyObject write_smime(IRubyObject recv, IRubyObject[] args) {
-        System.err.println("WARNING: un-implemented method called PKCS7#write_smime");
-        return recv.getRuntime().getNil();
-    }
-
-    public static IRubyObject sign(IRubyObject recv, IRubyObject[] args) throws Exception {
-        IRubyObject cert = recv.getRuntime().getNil();
-        IRubyObject key = recv.getRuntime().getNil();
-        IRubyObject data = recv.getRuntime().getNil();
-        IRubyObject certs = recv.getRuntime().getNil();
-        //IRubyObject flags = recv.getRuntime().getNil();
-        org.jruby.runtime.Arity.checkArgumentCount(recv.getRuntime(),args,3,5);
-        switch(args.length) {
-        case 5:
-            //flags = args[4];
-        case 4:
-            certs = args[3];
-        case 3:
-            cert = args[0];
-            key = args[1];
-            data = args[2];
+    public static class ModuleMethods {
+        @JRubyMethod(meta=true)
+        public static IRubyObject read_smime(IRubyObject recv, IRubyObject arg) {
+            System.err.println("WARNING: un-implemented method called PKCS7#read_smime");
+            return recv.getRuntime().getNil();
         }
 
-        X509AuxCertificate x509 = ((X509Cert)cert).getAuxCert();
-        PrivateKey pkey = ((PKey)key).getPrivateKey();
-        List<X509AuxCertificate> x509s = null;
-        if(!certs.isNil()) {
-            x509s = new ArrayList<X509AuxCertificate>();
-            for(Iterator iter = ((RubyArray)certs).getList().iterator();iter.hasNext();) {
-                x509s.add(((X509Cert)iter.next()).getAuxCert());
+        @JRubyMethod(meta=true, rest=true)
+        public static IRubyObject write_smime(IRubyObject recv, IRubyObject[] args) {
+            System.err.println("WARNING: un-implemented method called PKCS7#write_smime");
+            return recv.getRuntime().getNil();
+        }
+
+        @JRubyMethod(meta=true, rest=true)
+        public static IRubyObject sign(IRubyObject recv, IRubyObject[] args) throws Exception {
+            IRubyObject cert = recv.getRuntime().getNil();
+            IRubyObject key = recv.getRuntime().getNil();
+            IRubyObject data = recv.getRuntime().getNil();
+            IRubyObject certs = recv.getRuntime().getNil();
+            //IRubyObject flags = recv.getRuntime().getNil();
+            org.jruby.runtime.Arity.checkArgumentCount(recv.getRuntime(),args,3,5);
+            switch(args.length) {
+            case 5:
+                //flags = args[4];
+            case 4:
+                certs = args[3];
+            case 3:
+                cert = args[0];
+                key = args[1];
+                data = args[2];
             }
-            x509s.add(x509);
-        }
 
-        final CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
-
-        gen.addSigner(pkey,x509,"1.3.14.3.2.26"); //SHA1 OID
-        if(x509s != null) {
-            CertStore store = CertStore.getInstance("Collection", new CollectionCertStoreParameters(x509s), OpenSSLReal.PROVIDER);
-            gen.addCertificatesAndCRLs(store);
-        }
-
-        final CMSSignedData[] result = new CMSSignedData[1];
-        final byte[] bdata = data.convertToString().getBytes();
-        OpenSSLReal.doWithBCProvider(new Runnable() {
-                public void run() {
-                    try {
-                        result[0] = gen.generate(new CMSProcessableByteArray(bdata), "BC");
-                    } catch(GeneralSecurityException e) {
-                    } catch(CMSException e) {
-                    }
+            X509AuxCertificate x509 = ((X509Cert)cert).getAuxCert();
+            PrivateKey pkey = ((PKey)key).getPrivateKey();
+            List<X509AuxCertificate> x509s = null;
+            if(!certs.isNil()) {
+                x509s = new ArrayList<X509AuxCertificate>();
+                for(Iterator iter = ((RubyArray)certs).getList().iterator();iter.hasNext();) {
+                    x509s.add(((X509Cert)iter.next()).getAuxCert());
                 }
-            });
+                x509s.add(x509);
+            }
 
-        CMSSignedData sdata = result[0];
+            final CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
+
+            gen.addSigner(pkey,x509,"1.3.14.3.2.26"); //SHA1 OID
+            if(x509s != null) {
+                CertStore store = CertStore.getInstance("Collection", new CollectionCertStoreParameters(x509s), OpenSSLReal.PROVIDER);
+                gen.addCertificatesAndCRLs(store);
+            }
+
+            final CMSSignedData[] result = new CMSSignedData[1];
+            final byte[] bdata = data.convertToString().getBytes();
+            OpenSSLReal.doWithBCProvider(new Runnable() {
+                    public void run() {
+                        try {
+                            result[0] = gen.generate(new CMSProcessableByteArray(bdata), "BC");
+                        } catch(GeneralSecurityException e) {
+                        } catch(CMSException e) {
+                        }
+                    }
+                });
+
+            CMSSignedData sdata = result[0];
         
-        PKCS7 ret = new PKCS7(recv.getRuntime(),((RubyClass)((RubyModule)(recv.getRuntime().getModule("OpenSSL").getConstant("PKCS7"))).getConstant("PKCS7")));
-        ret.setInstanceVariable("@data",recv.getRuntime().getNil());
-        ret.setInstanceVariable("@error_string",recv.getRuntime().getNil());
-        ret.signedData = sdata;
+            PKCS7 ret = new PKCS7(recv.getRuntime(),((RubyClass)((RubyModule)(recv.getRuntime().getModule("OpenSSL").getConstant("PKCS7"))).getConstant("PKCS7")));
+            ret.setInstanceVariable("@data",recv.getRuntime().getNil());
+            ret.setInstanceVariable("@error_string",recv.getRuntime().getNil());
+            ret.signedData = sdata;
 
-        return ret;
+            return ret;
+        }
+
+        @JRubyMethod(meta=true, rest=true)
+        public static IRubyObject encrypt(IRubyObject recv, IRubyObject[] args) {
+            System.err.println("WARNING: un-implemented method called PKCS7#encrypt");
+            return recv.getRuntime().getNil();
+        }
     }
-
-    public static IRubyObject encrypt(IRubyObject recv, IRubyObject[] args) {
-        System.err.println("WARNING: un-implemented method called PKCS7#encrypt");
-        return recv.getRuntime().getNil();
-    }
-
     public PKCS7(Ruby runtime, RubyClass type) {
         super(runtime,type);
     }
 
     private CMSSignedData signedData;
 
-    public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
+    @JRubyMethod(name="initialize", rest=true)
+    public IRubyObject _initialize(IRubyObject[] args) throws Exception {
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             return this;
         }
@@ -221,6 +198,7 @@ public class PKCS7 extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#init_copy");
         if(this == obj) {
@@ -230,66 +208,79 @@ public class PKCS7 extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(name="type=")
     public IRubyObject set_type(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#type=");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="type")
     public IRubyObject get_type() {
         System.err.println("WARNING: un.implemented method called PKCS7#type");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="detached=")
     public IRubyObject set_detached(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#detached=");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject detached() {
         System.err.println("WARNING: un.implemented method called PKCS7#detached");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="detached?")
     public IRubyObject detached_p() {
         System.err.println("WARNING: un.implemented method called PKCS7#detached?");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="cipher=")
     public IRubyObject set_cipher(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#cipher=");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject add_signer(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#add_signer");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject signers() {
         System.err.println("WARNING: un.implemented method called PKCS7#signers");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject add_recipient(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#add_recipient");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject recipients() {
         System.err.println("WARNING: un.implemented method called PKCS7#recipients");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject add_certificate(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#add_certificate");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="certificates=")
     public IRubyObject set_certificates(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#certificates=");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject certificates() throws Exception {
         final CertStore[] result = new CertStore[1];
         OpenSSLReal.doWithBCProvider(new Runnable() {
@@ -310,26 +301,31 @@ public class PKCS7 extends RubyObject {
         return getRuntime().newArray(certs);
     }
 
+    @JRubyMethod
     public IRubyObject add_crl(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#add_crl");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="crls=")
     public IRubyObject set_crls(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#crls=");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject crls() {
         System.err.println("WARNING: un.implemented method called PKCS7#crls");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name={"add_data", "data="})
     public IRubyObject add_data(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#add_data");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(rest=true)
     public IRubyObject verify(IRubyObject[] args) throws Exception {
         IRubyObject certs;
         //IRubyObject store;
@@ -416,11 +412,13 @@ public class PKCS7 extends RubyObject {
         return (verified != 0) ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @JRubyMethod(rest=true)
     public IRubyObject decrypt(IRubyObject[] args) {
         System.err.println("WARNING: un.implemented method called PKCS7#decrypt");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name={"to_pem","to_s"})
     public IRubyObject to_pem() throws Exception {
         StringWriter w = new StringWriter();
         PEMInputOutput.writePKCS7(w,signedData);
@@ -428,6 +426,7 @@ public class PKCS7 extends RubyObject {
         return getRuntime().newString(w.toString());
     }
 
+    @JRubyMethod
     public IRubyObject to_der() throws Exception {
         return RubyString.newString(getRuntime(), signedData.getEncoded());
     }
@@ -443,33 +442,32 @@ public class PKCS7 extends RubyObject {
             RubyClass cPKCS7Signer = mPKCS7.defineClassUnder("SignerInfo",runtime.getObject(),SIGNERINFO_ALLOCATOR);
             mPKCS7.defineConstant("Signer",cPKCS7Signer);
 
-            CallbackFactory p7scb = runtime.callbackFactory(SignerInfo.class);
-            cPKCS7Signer.defineFastMethod("initialize",p7scb.getFastMethod("initialize",IRubyObject.class,IRubyObject.class,IRubyObject.class));
-            cPKCS7Signer.defineFastMethod("issuer",p7scb.getFastMethod("issuer"));
-            cPKCS7Signer.defineFastMethod("name",p7scb.getFastMethod("issuer"));
-            cPKCS7Signer.defineFastMethod("serial",p7scb.getFastMethod("serial"));
-            cPKCS7Signer.defineFastMethod("signed_time",p7scb.getFastMethod("signed_time"));
+            cPKCS7Signer.defineAnnotatedMethods(SignerInfo.class);
         }
 
         public SignerInfo(Ruby runtime, RubyClass type) {
             super(runtime,type);
         }
 
+        @JRubyMethod
         public IRubyObject initialize(IRubyObject arg1, IRubyObject arg2, IRubyObject arg3) {
             System.err.println("WARNING: un-implemented method called SignerInfo#initialize");
             return this;
         }
 
+        @JRubyMethod(name={"issuer","name"})
         public IRubyObject issuer() {
             System.err.println("WARNING: un-implemented method called SignerInfo#issuer");
             return getRuntime().getNil();
         }
 
+        @JRubyMethod
         public IRubyObject serial() {
             System.err.println("WARNING: un-implemented method called SignerInfo#serial");
             return getRuntime().getNil();
         }
 
+        @JRubyMethod
         public IRubyObject signed_time() {
             System.err.println("WARNING: un-implemented method called SignerInfo#signed_time");
             return getRuntime().getNil();
@@ -486,32 +484,32 @@ public class PKCS7 extends RubyObject {
         public static void createRecipientInfo(Ruby runtime, RubyModule mPKCS7) {
             RubyClass cPKCS7Recipient = mPKCS7.defineClassUnder("RecipientInfo",runtime.getObject(),RECIPIENTINFO_ALLOCATOR);
 
-            CallbackFactory p7rcb = runtime.callbackFactory(RecipientInfo.class);
-            cPKCS7Recipient.defineFastMethod("initialize",p7rcb.getFastMethod("initialize",IRubyObject.class));
-            cPKCS7Recipient.defineFastMethod("issuer",p7rcb.getFastMethod("issuer"));
-            cPKCS7Recipient.defineFastMethod("serial",p7rcb.getFastMethod("serial"));
-            cPKCS7Recipient.defineFastMethod("enc_key",p7rcb.getFastMethod("enc_key"));
+            cPKCS7Recipient.defineAnnotatedMethods(RecipientInfo.class);
         }
 
         public RecipientInfo(Ruby runtime, RubyClass type) {
             super(runtime,type);
         }
 
+        @JRubyMethod
         public IRubyObject initialize(IRubyObject arg) {
             System.err.println("WARNING: un-implemented method called RecipientInfo#initialize");
             return this;
         }
 
+        @JRubyMethod
         public IRubyObject issuer() {
             System.err.println("WARNING: un-implemented method called RecipientInfo#issuer");
             return getRuntime().getNil();
         }
 
+        @JRubyMethod
         public IRubyObject serial() {
             System.err.println("WARNING: un-implemented method called RecipientInfo#serial");
             return getRuntime().getNil();
         }
 
+        @JRubyMethod
         public IRubyObject enc_key() {
             System.err.println("WARNING: un-implemented method called RecipientInfo#enc_key");
             return getRuntime().getNil();

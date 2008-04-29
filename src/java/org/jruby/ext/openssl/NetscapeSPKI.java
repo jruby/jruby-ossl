@@ -40,8 +40,8 @@ import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jvyamlb.util.Base64Coder;
@@ -62,18 +62,7 @@ public class NetscapeSPKI extends RubyObject {
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
         mNetscape.defineClassUnder("SPKIError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory spkicb = runtime.callbackFactory(NetscapeSPKI.class);
-        cSPKI.defineMethod("initialize",spkicb.getOptMethod("_initialize"));
-        cSPKI.defineFastMethod("to_der",spkicb.getFastMethod("to_der"));
-        cSPKI.defineFastMethod("to_pem",spkicb.getFastMethod("to_pem"));
-        cSPKI.defineFastMethod("to_s",spkicb.getFastMethod("to_pem"));
-        cSPKI.defineFastMethod("to_text",spkicb.getFastMethod("to_text"));
-        cSPKI.defineFastMethod("public_key",spkicb.getFastMethod("public_key"));
-        cSPKI.defineFastMethod("public_key=",spkicb.getFastMethod("set_public_key",IRubyObject.class));
-        cSPKI.defineFastMethod("sign",spkicb.getFastMethod("sign",IRubyObject.class,IRubyObject.class));
-        cSPKI.defineFastMethod("verify",spkicb.getFastMethod("verify",IRubyObject.class));
-        cSPKI.defineFastMethod("challenge",spkicb.getFastMethod("challenge"));
-        cSPKI.defineFastMethod("challenge=",spkicb.getFastMethod("set_challenge",IRubyObject.class));
+        cSPKI.defineAnnotatedMethods(NetscapeSPKI.class);
     }
 
     public NetscapeSPKI(Ruby runtime, RubyClass type) {
@@ -85,7 +74,8 @@ public class NetscapeSPKI extends RubyObject {
 
     private NetscapeCertRequest cert;
 
-    public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
+    @JRubyMethod(name="initialize", rest=true)
+    public IRubyObject _initialize(IRubyObject[] args) throws Exception {
         if(args.length > 0) {
             byte[] b = args[0].convertToString().getBytes();
             try {
@@ -123,6 +113,7 @@ public class NetscapeSPKI extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject to_der() throws Exception {
         DERSequence b = (DERSequence)cert.toASN1Object();
         DERObjectIdentifier encType = null;
@@ -153,24 +144,29 @@ public class NetscapeSPKI extends RubyObject {
         return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
     }
 
+    @JRubyMethod(name={"to_pem","to_s"})
     public IRubyObject to_pem() throws Exception {
         return getRuntime().newString(Base64Coder.encode(to_der().toString()));
     }
 
+    @JRubyMethod
     public IRubyObject to_text() {
         System.err.println("WARNING: calling unimplemented method: to_text");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject public_key() {
         return this.public_key;
     }
 
+    @JRubyMethod(name="public_key=")
     public IRubyObject set_public_key(IRubyObject arg) {
         this.public_key = arg;
         return arg;
     }
 
+    @JRubyMethod
     public IRubyObject sign(final IRubyObject key, IRubyObject digest) throws Exception {
         String keyAlg = ((PKey)key).getAlgorithm();
         String digAlg = ((Digest)digest).getAlgorithm();
@@ -187,6 +183,7 @@ public class NetscapeSPKI extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject verify(final IRubyObject pkey) throws Exception {
         cert.setPublicKey(((PKey)pkey).getPublicKey());
 
@@ -202,10 +199,12 @@ public class NetscapeSPKI extends RubyObject {
         return result[0] ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @JRubyMethod
     public IRubyObject challenge() {
         return this.challenge;
     }
 
+    @JRubyMethod(name="challenge=")
     public IRubyObject set_challenge(IRubyObject arg) {
         this.challenge = arg;
         return arg;
