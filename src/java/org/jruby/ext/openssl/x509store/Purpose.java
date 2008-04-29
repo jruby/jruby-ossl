@@ -39,17 +39,25 @@ import org.bouncycastle.asn1.DERBitString;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Purpose {
+    public static interface CheckPurposeFunction extends Function3 {
+        public static final CheckPurposeFunction EMPTY = new CheckPurposeFunction(){
+                public int call(Object arg0, Object arg1, Object arg2) {
+                    return -1;
+                }
+            };
+    }
+
     public int purpose;
     public int trust;		/* Default trust ID */
     public int flags;
-    public Function3 checkPurpose;
+    public CheckPurposeFunction checkPurpose;
     public String name;
     public String sname;
     public Object userData;
 
     public Purpose() {}
 
-    public Purpose(int p, int t, int f, Function3 cp, String n, String s, Object u) {
+    public Purpose(int p, int t, int f, CheckPurposeFunction cp, String n, String s, Object u) {
         this.purpose = p; this.trust = t;
         this.flags = f; this.checkPurpose = cp;
         this.name = n; this.sname = s;
@@ -137,7 +145,7 @@ public class Purpose {
     /**
      * c: X509_PURPOSE_add
      */
-    public static int add(int id, int trust, int flags, Function3 ck, String name, String sname, Object arg) {
+    public static int add(int id, int trust, int flags, CheckPurposeFunction ck, String name, String sname, Object arg) {
         flags &= ~X509Utils.X509_PURPOSE_DYNAMIC;
         flags |= X509Utils.X509_PURPOSE_DYNAMIC_NAME;
         int idx = getByID(id);
@@ -278,7 +286,7 @@ public class Purpose {
     /**
      * c: check_purpose_ssl_client
      */
-     public final static Function3 checkPurposeSSLClient = new Function3() {
+     public final static CheckPurposeFunction checkPurposeSSLClient = new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
@@ -304,7 +312,7 @@ public class Purpose {
     /**
      * c: check_purpose_ssl_server
      */
-    public final static Function3 checkPurposeSSLServer =  new Function3() {
+    public final static CheckPurposeFunction checkPurposeSSLServer =  new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
@@ -332,7 +340,7 @@ public class Purpose {
     /**
      * c: check_purpose_ns_ssl_server
      */
-    public final static Function3 checkPurposeNSSSLServer = new Function3() {
+    public final static CheckPurposeFunction checkPurposeNSSSLServer = new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 Purpose xp = (Purpose)_xp;
                 X509AuxCertificate x = (X509AuxCertificate)_x;
@@ -351,7 +359,7 @@ public class Purpose {
     /**
      * c: check_purpose_smime_sign
      */
-    public final static Function3 checkPurposeSMIMESign = new Function3() {
+    public final static CheckPurposeFunction checkPurposeSMIMESign = new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
@@ -369,7 +377,7 @@ public class Purpose {
     /**
      * c: check_purpose_smime_encrypt
      */
-    public final static Function3 checkPurposeSMIMEEncrypt = new Function3() {
+    public final static CheckPurposeFunction checkPurposeSMIMEEncrypt = new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
@@ -387,7 +395,7 @@ public class Purpose {
     /**
      * c: check_purpose_crl_sign
      */
-    public final static Function3 checkPurposeCRLSign = new Function3() {
+    public final static CheckPurposeFunction checkPurposeCRLSign = new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
@@ -409,7 +417,7 @@ public class Purpose {
     /**
      * c: no_check
      */
-    public final static Function3 noCheck = new Function3() {
+    public final static CheckPurposeFunction noCheck = new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) {
                 return 1;
             }
@@ -418,7 +426,7 @@ public class Purpose {
     /**
      * c: ocsp_helper
      */
-    public final static Function3 oscpHelper = new Function3() {
+    public final static CheckPurposeFunction oscpHelper = new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 if(((Integer)_ca).intValue() != 0) {
                     return checkCA((X509AuxCertificate)_x);

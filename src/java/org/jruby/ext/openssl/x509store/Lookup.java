@@ -338,7 +338,7 @@ public class Lookup {
     /**
      * c: by_file_ctrl
      */
-    private static class ByFile implements Function5 {
+    private static class ByFile implements LookupMethod.ControlFunction {
         public int call(Object _ctx, Object _cmd, Object _argp, Object _argl, Object _ret) throws Exception {
             Lookup ctx = (Lookup)_ctx;
             int cmd = ((Integer)_cmd).intValue();
@@ -389,7 +389,7 @@ public class Lookup {
     /**
      * c: new_dir
      */
-    private static class NewLookupDir implements Function1 {
+    private static class NewLookupDir implements LookupMethod.NewItemFunction {
         public int call(Object _lu) {
             Lookup lu = (Lookup)_lu;
             LookupDir a = new LookupDir();
@@ -404,7 +404,7 @@ public class Lookup {
     /**
      * c: free_dir
      */
-    private static class FreeLookupDir implements Function1 {
+    private static class FreeLookupDir implements LookupMethod.FreeFunction {
         public int call(Object _lu) {
             Lookup lu = (Lookup)_lu;
             LookupDir a = (LookupDir)lu.methodData;
@@ -419,7 +419,7 @@ public class Lookup {
     /**
      * c: dir_ctrl
      */
-    private static class LookupDirControl implements Function5 {
+    private static class LookupDirControl implements LookupMethod.ControlFunction {
         public int call(Object _ctx, Object _cmd, Object _argp, Object _argl, Object _retp) {
             Lookup ctx = (Lookup)_ctx;
             int cmd = ((Integer)_cmd).intValue();
@@ -480,7 +480,7 @@ public class Lookup {
     /**
      * c: get_cert_by_subject
      */
-    private static class GetCertificateBySubject implements Function4 {
+    private static class GetCertificateBySubject implements LookupMethod.BySubjectFunction {
         public int call(Object _xl, Object _type, Object _name, Object _ret) throws Exception {
             Lookup x1 = (Lookup)_xl;
             int type = ((Integer)_type).intValue();

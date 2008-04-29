@@ -45,15 +45,79 @@ public class Store implements X509TrustManager {
     public List<Lookup> certificateMethods;
     public VerifyParameter param;
 
-    public Function1 verify;
-    public Function2 verifyCallback;
-    public Function3 getIssuer;
-    public Function3 checkIssued;
-    public Function1 checkRevocation;
-    public Function3 getCRL;
-    public Function2 checkCRL;
-    public Function3 certificateCRL;
-    public Function1 cleanup;
+    public static interface VerifyFunction extends Function1 {
+        public static final VerifyFunction EMPTY = new VerifyFunction(){
+                public int call(Object arg0) {
+                    return -1;
+                }
+            };
+    }
+    public static interface VerifyCallbackFunction extends Function2 {
+        public static final VerifyCallbackFunction EMPTY = new VerifyCallbackFunction(){
+                public int call(Object arg0, Object arg1) {
+                    return -1;
+                }
+            };
+    }
+    public static interface GetIssuerFunction extends Function3 {
+        public static final GetIssuerFunction EMPTY = new GetIssuerFunction(){
+                public int call(Object arg0, Object arg1, Object arg2) {
+                    return -1;
+                }
+            };
+    }
+    public static interface CheckIssuedFunction extends Function3 {
+        public static final CheckIssuedFunction EMPTY = new CheckIssuedFunction(){
+                public int call(Object arg0, Object arg1, Object arg2) {
+                    return -1;
+                }
+            };
+    }
+    public static interface CheckRevocationFunction extends Function1 {
+        public static final CheckRevocationFunction EMPTY = new CheckRevocationFunction(){
+                public int call(Object arg0) {
+                    return -1;
+                }
+            };
+    }
+    public static interface GetCRLFunction extends Function3 {
+        public static final GetCRLFunction EMPTY = new GetCRLFunction(){
+                public int call(Object arg0, Object arg1, Object arg2) {
+                    return -1;
+                }
+            };
+    }
+    public static interface CheckCRLFunction extends Function2 {
+        public static final CheckCRLFunction EMPTY = new CheckCRLFunction(){
+                public int call(Object arg0, Object arg1) {
+                    return -1;
+                }
+            };
+    }
+    public static interface CertificateCRLFunction extends Function3 {
+        public static final CertificateCRLFunction EMPTY = new CertificateCRLFunction(){
+                public int call(Object arg0, Object arg1, Object arg2) {
+                    return -1;
+                }
+            };
+    }
+    public static interface CleanupFunction extends Function1 {
+        public static final CleanupFunction EMPTY = new CleanupFunction(){
+                public int call(Object arg0) {
+                    return -1;
+                }
+            };
+    }
+
+    public VerifyFunction verify;
+    public VerifyCallbackFunction verifyCallback;
+    public GetIssuerFunction getIssuer;
+    public CheckIssuedFunction checkIssued;
+    public CheckRevocationFunction checkRevocation;
+    public GetCRLFunction getCRL;
+    public CheckCRLFunction checkCRL;
+    public CertificateCRLFunction certificateCRL;
+    public CleanupFunction cleanup;
 
     public List<Object> extraData;
     public int references;
@@ -66,18 +130,18 @@ public class Store implements X509TrustManager {
         cache = 1;
         certificateMethods = new ArrayList<Lookup>();
 
-        verify = Function1.EMPTY;
-        verifyCallback = Function2.EMPTY;
+        verify = VerifyFunction.EMPTY;
+        verifyCallback = VerifyCallbackFunction.EMPTY;
 
         param = new VerifyParameter();
         
-        getIssuer = Function3.EMPTY;
-        checkIssued = Function3.EMPTY;
-        checkRevocation = Function1.EMPTY;
-        getCRL = Function3.EMPTY;
-        checkCRL = Function2.EMPTY;
-        certificateCRL = Function3.EMPTY;
-        cleanup = Function1.EMPTY;
+        getIssuer = GetIssuerFunction.EMPTY;
+        checkIssued = CheckIssuedFunction.EMPTY;
+        checkRevocation = CheckRevocationFunction.EMPTY;
+        getCRL = GetCRLFunction.EMPTY;
+        checkCRL = CheckCRLFunction.EMPTY;
+        certificateCRL = CertificateCRLFunction.EMPTY;
+        cleanup = CleanupFunction.EMPTY;
 
         references = 1;
         extraData = new ArrayList<Object>();
@@ -89,14 +153,14 @@ public class Store implements X509TrustManager {
     /**
      * c: X509_STORE_set_verify_func
      */
-    public void setVerifyFunction(Function1 func) {
+    public void setVerifyFunction(VerifyFunction func) {
         verify = func;
     }
 
     /**
      * c: X509_STORE_set_verify_cb_func
      */
-    public void setVerifyCallbackFunction(Function2 func) {
+    public void setVerifyCallbackFunction(VerifyCallbackFunction func) {
         verifyCallback = func;
     }
 

@@ -35,40 +35,50 @@ package org.jruby.ext.openssl.x509store;
 public class LookupMethod {
     public String name;
 
+    public static interface NewItemFunction extends Function1 {}
+    public static interface FreeFunction extends Function1 {}
+    public static interface InitFunction extends Function1 {}
+    public static interface ShutdownFunction extends Function1 {}
+    public static interface ControlFunction extends Function5 {}
+    public static interface BySubjectFunction extends Function4 {}
+    public static interface ByIssuerSerialNumberFunction extends Function5 {}
+    public static interface ByFingerprintFunction extends Function4 {}
+    public static interface ByAliasFunction extends Function4 {}
+
     /**
      * c: new_item
      */
-    public Function1 newItem;
+    public NewItemFunction newItem;
     /**
      * c: free
      */
-    public Function1 free;
+    public FreeFunction free;
     /**
      * c: init
      */
-    public Function1 init;
+    public InitFunction init;
     /**
      * c: shutdown
      */
-    public Function1 shutdown;
+    public ShutdownFunction shutdown;
     /**
      * c: ctrl
      */
-    public Function5 control;
+    public ControlFunction control;
     /**
      * c: get_by_subject
      */
-    public Function4 getBySubject;
+    public BySubjectFunction getBySubject;
     /**
      * c: get_by_issuer_serial
      */
-    public Function5 getByIssuerSerialNumber;
+    public ByIssuerSerialNumberFunction getByIssuerSerialNumber;
     /**
      * c: get_by_fingerprint
      */
-    public Function4 getByFingerprint;
+    public ByFingerprintFunction getByFingerprint;
     /**
      * c: get_by_alias
      */
-    public Function4 getByAlias;
+    public ByAliasFunction getByAlias;
 }// X509_LOOKUP_METHOD

@@ -63,16 +63,24 @@ public class StoreContext {
 
     public List<X509AuxCertificate> otherContext;
 
-    public Function1 verify;
-    public Function2 verifyCallback;
-    public Function3 getIssuer;
-    public Function3 checkIssued;
-    public Function1 checkRevocation;
-    public Function3 getCRL;
-    public Function2 checkCRL;
-    public Function3 certificateCRL;
-    public Function1 checkPolicy;
-    public Function1 cleanup;
+    public static interface CheckPolicyFunction extends Function1 {
+        public static final CheckPolicyFunction EMPTY = new CheckPolicyFunction(){
+                public int call(Object arg0) {
+                    return -1;
+                }
+            };
+    }
+
+    public Store.VerifyFunction verify;
+    public Store.VerifyCallbackFunction verifyCallback;
+    public Store.GetIssuerFunction getIssuer;
+    public Store.CheckIssuedFunction checkIssued;
+    public Store.CheckRevocationFunction checkRevocation;
+    public Store.GetCRLFunction getCRL;
+    public Store.CheckCRLFunction checkCRL;
+    public Store.CertificateCRLFunction certificateCRL;
+    public CheckPolicyFunction checkPolicy;
+    public Store.CleanupFunction cleanup;
 
     public boolean isValid;
     public int lastUntrusted;
@@ -211,7 +219,7 @@ public class StoreContext {
             verifyCallback = store.verifyCallback;
             cleanup = store.cleanup;
         } else {
-            cleanup = Function1.EMPTY;
+            cleanup = Store.CleanupFunction.EMPTY;
         }
 
         if(ret != 0) {
@@ -223,53 +231,53 @@ public class StoreContext {
             return 0;
         }
 
-        if(store != null && store.checkIssued != null && store.checkIssued != Function3.EMPTY) {
+        if(store != null && store.checkIssued != null && store.checkIssued != Store.CheckIssuedFunction.EMPTY) {
             this.checkIssued = store.checkIssued;
         } else {
             this.checkIssued = defaultCheckIssued;
         }
 
-        if(store != null && store.getIssuer != null && store.getIssuer != Function3.EMPTY) {
+        if(store != null && store.getIssuer != null && store.getIssuer != Store.GetIssuerFunction.EMPTY) {
             this.getIssuer = store.getIssuer;
         } else {
-            this.getIssuer = new Function3() {
+            this.getIssuer = new Store.GetIssuerFunction() {
                     public int call(Object arg1, Object arg2, Object arg3) throws Exception {
                         return ((StoreContext)arg2).getFirstIssuer((X509AuxCertificate[])arg1,(X509AuxCertificate)arg3);
                     }
                 };
         }
 
-        if(store != null && store.verifyCallback != null && store.verifyCallback != Function2.EMPTY) {
+        if(store != null && store.verifyCallback != null && store.verifyCallback != Store.VerifyCallbackFunction.EMPTY) {
             this.verifyCallback = store.verifyCallback;
         } else {
             this.verifyCallback = NullCallback;
         }
 
-        if(store != null && store.verify != null && store.verify != Function1.EMPTY) {
+        if(store != null && store.verify != null && store.verify != Store.VerifyFunction.EMPTY) {
             this.verify = store.verify;
         } else {
             this.verify = internalVerify;
         }
 
-        if(store != null && store.checkRevocation != null && store.checkRevocation != Function1.EMPTY) {
+        if(store != null && store.checkRevocation != null && store.checkRevocation != Store.CheckRevocationFunction.EMPTY) {
             this.checkRevocation = store.checkRevocation;
         } else {
             this.checkRevocation = defaultCheckRevocation;
         }
 
-        if(store != null && store.getCRL != null && store.getCRL != Function3.EMPTY) {
+        if(store != null && store.getCRL != null && store.getCRL != Store.GetCRLFunction.EMPTY) {
             this.getCRL = store.getCRL;
         } else {
             this.getCRL = defaultGetCRL;
         }
 
-        if(store != null && store.checkCRL != null && store.checkCRL != Function2.EMPTY) {
+        if(store != null && store.checkCRL != null && store.checkCRL != Store.CheckCRLFunction.EMPTY) {
             this.checkCRL = store.checkCRL;
         } else {
             this.checkCRL = defaultCheckCRL;
         }
 
-        if(store != null && store.certificateCRL != null && store.certificateCRL != Function3.EMPTY) {
+        if(store != null && store.certificateCRL != null && store.certificateCRL != Store.CertificateCRLFunction.EMPTY) {
             this.certificateCRL = store.certificateCRL;
         } else {
             this.certificateCRL = defaultCertificateCRL;
@@ -295,7 +303,7 @@ public class StoreContext {
      * c: X509_STORE_CTX_cleanup
      */
     public void cleanup() throws Exception {
-        if(cleanup != null && cleanup != Function1.EMPTY) {
+        if(cleanup != null && cleanup != Store.CleanupFunction.EMPTY) {
             cleanup.call(this);
         }
         param = null;
@@ -416,9 +424,9 @@ public class StoreContext {
         this.param = new VerifyParameter();
         this.param.flags |= X509Utils.X509_VP_FLAG_DEFAULT | X509Utils.X509_VP_FLAG_ONCE;
         this.param.inherit(VerifyParameter.lookup("default"));
-        this.cleanup = Function1.EMPTY;
+        this.cleanup = Store.CleanupFunction.EMPTY;
         this.checkIssued = defaultCheckIssued;
-        this.getIssuer = new Function3() {
+        this.getIssuer = new Store.GetIssuerFunction() {
                 public int call(Object arg1, Object arg2, Object arg3) throws Exception {
                     return ((StoreContext)arg2).getFirstIssuer((X509AuxCertificate[])arg1,(X509AuxCertificate)arg3);
                 }
@@ -444,34 +452,34 @@ public class StoreContext {
                 param.inherit(VerifyParameter.lookup("default"));
                 this.verifyCallback = ctx.verifyCallback;
                 this.cleanup = ctx.cleanup;
-                if(ctx.checkIssued != null && ctx.checkIssued != Function3.EMPTY) {
+                if(ctx.checkIssued != null && ctx.checkIssued != Store.CheckIssuedFunction.EMPTY) {
                     this.checkIssued = ctx.checkIssued;
                 }
-                if(ctx.getIssuer != null && ctx.getIssuer != Function3.EMPTY) {
+                if(ctx.getIssuer != null && ctx.getIssuer != Store.GetIssuerFunction.EMPTY) {
                     this.getIssuer = ctx.getIssuer;
                 }
 
-                if(ctx.verifyCallback != null && ctx.verifyCallback != Function2.EMPTY) {
+                if(ctx.verifyCallback != null && ctx.verifyCallback != Store.VerifyCallbackFunction.EMPTY) {
                     this.verifyCallback = ctx.verifyCallback;
                 }
 
-                if(ctx.verify != null && ctx.verify != Function1.EMPTY) {
+                if(ctx.verify != null && ctx.verify != Store.VerifyFunction.EMPTY) {
                     this.verify = ctx.verify;
                 }
 
-                if(ctx.checkRevocation != null && ctx.checkRevocation != Function1.EMPTY) {
+                if(ctx.checkRevocation != null && ctx.checkRevocation != Store.CheckRevocationFunction.EMPTY) {
                     this.checkRevocation = ctx.checkRevocation;
                 }
 
-                if(ctx.getCRL != null && ctx.getCRL != Function3.EMPTY) {
+                if(ctx.getCRL != null && ctx.getCRL != Store.GetCRLFunction.EMPTY) {
                     this.getCRL = ctx.getCRL;
                 }
 
-                if(ctx.checkCRL != null && ctx.checkCRL != Function2.EMPTY) {
+                if(ctx.checkCRL != null && ctx.checkCRL != Store.CheckCRLFunction.EMPTY) {
                     this.checkCRL = ctx.checkCRL;
                 }
 
-                if(ctx.certificateCRL != null && ctx.certificateCRL != Function3.EMPTY) {
+                if(ctx.certificateCRL != null && ctx.certificateCRL != Store.CertificateCRLFunction.EMPTY) {
                     this.certificateCRL = ctx.certificateCRL;
                 }
             }
@@ -549,7 +557,7 @@ public class StoreContext {
     /**
      * c: X509_STORE_CTX_set_verify_cb
      */
-    public void setVerifyCallback(Function2 verifyCallback) {
+    public void setVerifyCallback(Store.VerifyCallbackFunction verifyCallback) {
         this.verifyCallback = verifyCallback;
     } 
 
@@ -630,7 +638,7 @@ public class StoreContext {
         int bad_chain = 0;
         int depth,i,ok=0;
         int num;
-        Function2 cb;
+        Store.VerifyCallbackFunction cb;
         List<X509AuxCertificate> sktmp = null;
         if(certificate == null) {
             X509Error.addError(X509Utils.X509_R_NO_CERT_SET_FOR_US_TO_VERIFY);
@@ -767,7 +775,7 @@ public class StoreContext {
             return ok;
         }
 
-        if(verify != null && verify != Function1.EMPTY) {
+        if(verify != null && verify != Store.VerifyFunction.EMPTY) {
             ok = verify.call(this);
         } else {
             ok = internalVerify.call(this);
@@ -815,7 +823,7 @@ public class StoreContext {
     public int checkChainExtensions() throws Exception {
         int ok=0, must_be_ca;
         X509AuxCertificate x;
-        Function2 cb;
+        Store.VerifyCallbackFunction cb;
         int proxy_path_length = 0;
         int allow_proxy_certs = (param.flags & X509Utils.V_FLAG_ALLOW_PROXY_CERTS) != 0 ? 1 : 0;
         cb = verifyCallback;
@@ -938,7 +946,7 @@ public class StoreContext {
     public int checkTrust() throws Exception {
         int i,ok;
         X509AuxCertificate x;
-        Function2 cb;
+        Store.VerifyCallbackFunction cb;
         cb = verifyCallback;
         i = chain.size()-1;
         x = chain.get(i);
@@ -1068,7 +1076,7 @@ public class StoreContext {
     /**
      * c: get_issuer_sk
      */
-    public final static Function3 getIssuerStack = new Function3() { 
+    public final static Store.GetIssuerFunction getIssuerStack = new Store.GetIssuerFunction() { 
             public int call(Object a1, Object a2, Object a3) throws Exception {
                 X509AuxCertificate[] issuer = (X509AuxCertificate[])a1;
                 StoreContext ctx = (StoreContext)a2;
@@ -1085,7 +1093,7 @@ public class StoreContext {
     /**
      * c: check_issued
      */
-    public final static Function3 defaultCheckIssued = new Function3() { 
+    public final static Store.CheckIssuedFunction defaultCheckIssued = new Store.CheckIssuedFunction() { 
             public int call(Object a1, Object a2, Object a3) throws Exception {
                 StoreContext ctx = (StoreContext)a1;
                 X509AuxCertificate x = (X509AuxCertificate)a2;
@@ -1107,7 +1115,7 @@ public class StoreContext {
     /**
      * c: null_callback
      */
-    public final static Function2 NullCallback = new Function2() { 
+    public final static Store.VerifyCallbackFunction NullCallback = new Store.VerifyCallbackFunction() { 
             public int call(Object a1, Object a2) {
                 return ((Integer)a1).intValue();
             }
@@ -1116,10 +1124,10 @@ public class StoreContext {
     /**
      * c: internal_verify
      */
-    public final static Function1 internalVerify = new Function1() { 
+    public final static Store.VerifyFunction internalVerify = new Store.VerifyFunction() { 
             public int call(Object a1) throws Exception {
                 StoreContext ctx = (StoreContext)a1;
-                Function2 cb = ctx.verifyCallback;
+                Store.VerifyCallbackFunction cb = ctx.verifyCallback;
                 int n = ctx.chain.size();
                 ctx.errorDepth = n-1;
                 n--;
@@ -1186,7 +1194,7 @@ public class StoreContext {
     /**
      * c: check_revocation
      */
-    public final static Function1 defaultCheckRevocation = new Function1() { 
+    public final static Store.CheckRevocationFunction defaultCheckRevocation = new Store.CheckRevocationFunction() { 
             public int call(Object a1) throws Exception {
                 StoreContext ctx = (StoreContext)a1;
                 int last,ok=0;
@@ -1212,7 +1220,7 @@ public class StoreContext {
     /**
      * c: get_crl
      */
-    public final static Function3 defaultGetCRL = new Function3() { 
+    public final static Store.GetCRLFunction defaultGetCRL = new Store.GetCRLFunction() { 
             public int call(Object a1, Object a2, Object a3) throws Exception {
                 StoreContext ctx = (StoreContext)a1;
                 X509CRL[] pcrl = (X509CRL[])a2;
@@ -1241,7 +1249,7 @@ public class StoreContext {
     /**
      * c: check_crl
      */
-    public final static Function2 defaultCheckCRL = new Function2() { 
+    public final static Store.CheckCRLFunction defaultCheckCRL = new Store.CheckCRLFunction() { 
             public int call(Object a1, Object a2) throws Exception {
                 StoreContext ctx = (StoreContext)a1;
                 final X509CRL crl = (X509CRL)a2;
@@ -1311,7 +1319,7 @@ public class StoreContext {
     /**
      * c: cert_crl
      */
-    public final static Function3 defaultCertificateCRL = new Function3() { 
+    public final static Store.CertificateCRLFunction defaultCertificateCRL = new Store.CertificateCRLFunction() { 
             public int call(Object a1, Object a2, Object a3) throws Exception {
                 StoreContext ctx = (StoreContext)a1;
                 X509CRL crl = (X509CRL)a2;
@@ -1342,7 +1350,7 @@ public class StoreContext {
     /**
      * c: check_policy
      */
-    public final static Function1 defaultCheckPolicy = new Function1() { 
+    public final static CheckPolicyFunction defaultCheckPolicy = new CheckPolicyFunction() { 
             public int call(Object a1) throws Exception {
                 return 1;
             }
