@@ -36,7 +36,7 @@ import org.jruby.RubyModule;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
@@ -57,22 +57,7 @@ public class Digest extends RubyObject {
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
         mDigest.defineClassUnder("DigestError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory digestcb = runtime.callbackFactory(Digest.class);
-
-        cDigest.getMetaClass().defineFastMethod("digest",digestcb.getFastSingletonMethod("s_digest",IRubyObject.class,IRubyObject.class));
-        cDigest.getMetaClass().defineFastMethod("hexdigest",digestcb.getFastSingletonMethod("s_hexdigest",IRubyObject.class,IRubyObject.class));
-        cDigest.defineMethod("initialize",digestcb.getOptMethod("initialize"));
-        cDigest.defineFastMethod("initialize_copy",digestcb.getFastMethod("initialize_copy",IRubyObject.class));
-        cDigest.defineFastMethod("update",digestcb.getFastMethod("update",IRubyObject.class));
-        cDigest.defineFastMethod("<<",digestcb.getFastMethod("update",IRubyObject.class));
-        cDigest.defineFastMethod("digest",digestcb.getFastMethod("digest"));
-        cDigest.defineFastMethod("hexdigest",digestcb.getFastMethod("hexdigest"));
-        cDigest.defineFastMethod("inspect",digestcb.getFastMethod("hexdigest"));
-        cDigest.defineFastMethod("to_s",digestcb.getFastMethod("hexdigest"));
-        cDigest.defineFastMethod("==",digestcb.getFastMethod("eq",IRubyObject.class));
-        cDigest.defineFastMethod("reset",digestcb.getFastMethod("reset"));
-        cDigest.defineFastMethod("name",digestcb.getFastMethod("name"));
-        cDigest.defineFastMethod("size",digestcb.getFastMethod("size"));
+        cDigest.defineAnnotatedMethods(Digest.class);
     }
 
     private static MessageDigest getDigest(final String name, final IRubyObject recv) {
@@ -101,12 +86,14 @@ public class Digest extends RubyObject {
         return inp;
     }
 
+    @JRubyMethod(name="digest", meta=true)
     public static IRubyObject s_digest(IRubyObject recv, IRubyObject str, IRubyObject data) {
         String name = str.toString();
         MessageDigest md = getDigest(name, recv);
         return RubyString.newString(recv.getRuntime(), md.digest(data.convertToString().getBytes()));
     }
 
+    @JRubyMethod(name="hexdigest", meta=true)
     public static IRubyObject s_hexdigest(IRubyObject recv, IRubyObject str, IRubyObject data) {
         String name = str.toString();
         MessageDigest md = getDigest(name, recv);
@@ -132,7 +119,8 @@ public class Digest extends RubyObject {
         return name;
     }
 
-    public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
+    @JRubyMethod(rest=true)
+    public IRubyObject initialize(IRubyObject[] args) {
         IRubyObject type;
         IRubyObject data = getRuntime().getNil();
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2) {
@@ -148,6 +136,7 @@ public class Digest extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         if(this == obj) {
             return this;
@@ -160,36 +149,43 @@ public class Digest extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(name={"update","<<"})
     public IRubyObject update(IRubyObject obj) {
         data.append(obj);
         md.update(obj.convertToString().getBytes());
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject reset() {
         md.reset();
         data = new StringBuffer();
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject digest() {
         md.reset();
         return RubyString.newString(getRuntime(), md.digest(ByteList.plain(data)));
     }
 
+    @JRubyMethod
     public IRubyObject name() {
         return getRuntime().newString(name);
     }
 
+    @JRubyMethod
     public IRubyObject size() {
         return getRuntime().newFixnum(md.getDigestLength());
     }
 
+    @JRubyMethod(name={"hexdigest","inspect","to_s"})
     public IRubyObject hexdigest() {
         md.reset();
         return RubyString.newString(getRuntime(), ByteList.plain(Utils.toHex(md.digest(ByteList.plain(data)))));
     }
 
+    @JRubyMethod(name="==")
     public IRubyObject eq(IRubyObject oth) {
         boolean ret = this == oth;
         if(!ret && oth instanceof Digest) {

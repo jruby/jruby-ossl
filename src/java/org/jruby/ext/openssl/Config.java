@@ -30,7 +30,7 @@ package org.jruby.ext.openssl;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
-import org.jruby.runtime.CallbackFactory;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.builtin.IRubyObject;
 
 /**
@@ -39,10 +39,10 @@ import org.jruby.runtime.builtin.IRubyObject;
 public class Config {
     public static void createConfig(Ruby runtime, RubyModule ossl) {
         RubyClass cConfig = ossl.defineClassUnder("Config", runtime.getObject(), runtime.getObject().getAllocator());
-        CallbackFactory confcb = runtime.callbackFactory(Config.class);
-        cConfig.getMetaClass().defineFastMethod("parse",confcb.getFastOptSingletonMethod("parse"));
+        cConfig.defineAnnotatedMethods(Config.class);
     }
 
+    @JRubyMethod(meta=true, rest=true)
     public static IRubyObject parse(IRubyObject recv, IRubyObject[] args) {
         throw recv.getRuntime().newNotImplementedError("should be implemented. TODO: this");
     }
