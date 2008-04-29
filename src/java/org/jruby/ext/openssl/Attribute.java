@@ -36,8 +36,8 @@ import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -57,14 +57,7 @@ public class Attribute extends RubyObject {
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
         mX509.defineClassUnder("AttributeError",openSSLError, openSSLError.getAllocator());
 
-        CallbackFactory attrcb = runtime.callbackFactory(Attribute.class);
-
-        cAttribute.defineMethod("initialize",attrcb.getOptMethod("_initialize"));
-        cAttribute.defineFastMethod("to_der",attrcb.getFastMethod("to_der"));
-        cAttribute.defineFastMethod("oid",attrcb.getFastMethod("oid"));
-        cAttribute.defineFastMethod("oid=",attrcb.getFastMethod("set_oid",IRubyObject.class));
-        cAttribute.defineFastMethod("value",attrcb.getFastMethod("value"));
-        cAttribute.defineFastMethod("value=",attrcb.getFastMethod("set_value",IRubyObject.class));
+        cAttribute.defineAnnotatedMethods(Attribute.class);
     }
 
     public Attribute(Ruby runtime, RubyClass type) {
@@ -96,7 +89,8 @@ public class Attribute extends RubyObject {
         return new DERSequence(v1);
     }
 
-    public IRubyObject _initialize(IRubyObject[] str, Block unusedBlock) throws Exception {
+    @JRubyMethod(name="initialize", required=1, optional=1)
+    public IRubyObject _initialize(IRubyObject[] str) throws Exception {
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),str,1,2) == 1) {
             IRubyObject _oid = OpenSSLImpl.to_der_if_possible(str[0]);
             set_oid(_oid);
@@ -107,24 +101,29 @@ public class Attribute extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject to_der() {
         System.err.println("WARNING: unimplemented method called: attr#to_der");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject oid() {
         return oid;
     }
 
+    @JRubyMethod(name="oid=")
     public IRubyObject set_oid(IRubyObject val) {
         this.oid = val;
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject value() {
         return value;
     }
 
+    @JRubyMethod(name="value=")
     public IRubyObject set_value(IRubyObject val) throws Exception {
         IRubyObject tmp = OpenSSLImpl.to_der_if_possible(val);
         this.value = ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),tmp);

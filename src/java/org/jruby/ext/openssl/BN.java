@@ -39,10 +39,10 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ClassIndex;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -85,66 +85,8 @@ public class BN extends RubyObject {
         ossl.defineClassUnder("BNError", openSSLError, openSSLError.getAllocator());
 
         RubyClass bn = ossl.defineClassUnder("BN", runtime.getObject(), BN_ALLOCATOR);
-        CallbackFactory cf = runtime.callbackFactory(BN.class);
 
-        bn.defineMethod("initialize", cf.getOptMethod("bn_initialize"));
-        bn.defineFastMethod("copy", cf.getFastMethod("bn_copy", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("to_s", cf.getFastOptMethod("bn_to_s"));
-        bn.defineFastMethod("to_i", cf.getFastMethod("bn_to_i"));
-        bn.defineFastMethod("to_bn", cf.getFastMethod("bn_to_bn"));
-        bn.defineFastMethod("coerce", cf.getFastMethod("bn_coerce", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("zero?", cf.getFastMethod("bn_is_zero"));
-        bn.defineFastMethod("one?", cf.getFastMethod("bn_is_one"));
-        bn.defineFastMethod("odd?", cf.getFastMethod("bn_is_odd"));
-        bn.defineFastMethod("cmp", cf.getFastMethod("bn_cmp", RubyKernel.IRUBY_OBJECT));
-        bn.defineAlias("<=>", "cmp");
-        bn.defineFastMethod("ucmp", cf.getFastMethod("bn_ucmp", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("eql?", cf.getFastMethod("bn_eql", RubyKernel.IRUBY_OBJECT));
-        bn.defineAlias("==", "eql?");
-        bn.defineAlias("===", "eql?");
-        
-        bn.defineFastMethod("sqr", cf.getFastMethod("bn_sqr"));
-        bn.defineFastMethod("+", cf.getFastMethod("bn_add", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("-", cf.getFastMethod("bn_sub", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("*", cf.getFastMethod("bn_mul", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("%", cf.getFastMethod("bn_mod", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("/", cf.getFastMethod("bn_div", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("**", cf.getFastMethod("bn_exp", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("gcd", cf.getFastMethod("bn_gcd", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("mod_sqr", cf.getFastMethod("bn_mod_sqr", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("mod_inverse", cf.getFastMethod("bn_mod_inverse", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("mod_add", cf.getFastMethod("bn_mod_add", RubyKernel.IRUBY_OBJECT, RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("mod_sub", cf.getFastMethod("bn_mod_sub", RubyKernel.IRUBY_OBJECT, RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("mod_mul", cf.getFastMethod("bn_mod_mul", RubyKernel.IRUBY_OBJECT, RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("mod_exp", cf.getFastMethod("bn_mod_exp", RubyKernel.IRUBY_OBJECT, RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("set_bit!", cf.getFastMethod("bn_set_bit", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("clear_bit!", cf.getFastMethod("bn_clear_bit", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("mask_bits!", cf.getFastMethod("bn_mask_bits", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("bit_set?", cf.getFastMethod("bn_is_bit_set", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("<<", cf.getFastMethod("bn_lshift", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod(">>", cf.getFastMethod("bn_rshift", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("num_bits", cf.getFastMethod("bn_num_bits"));
-        bn.defineFastMethod("num_bytes", cf.getFastMethod("bn_num_bytes"));
-        bn.defineFastMethod("prime?", cf.getFastOptMethod("bn_is_prime"));
-        // TODO: faster test for fasttest? need to research...
-        bn.defineFastMethod("prime_fasttest?", cf.getFastOptMethod("bn_is_prime"));
-
-        RubyClass  meta = bn.getMetaClass();
-        
-        meta.defineFastMethod("rand", cf.getFastOptSingletonMethod("bn_rand"));
-        meta.defineFastMethod("pseudo_rand", cf.getFastOptSingletonMethod("bn_pseudo_rand"));
-        meta.defineFastMethod("rand_range", cf.getFastSingletonMethod("bn_rand_range", RubyKernel.IRUBY_OBJECT));
-        meta.defineFastMethod("pseudo_rand_range", cf.getFastSingletonMethod("bn_pseudo_rand_range", RubyKernel.IRUBY_OBJECT));
-        meta.defineFastMethod("generate_prime", cf.getFastOptSingletonMethod("bn_generate_prime"));
-        
-        // non-standard (not defined in MRI's OpenSSL::BN):
-
-        bn.defineFastMethod("~", cf.getFastMethod("bn_not"));
-        bn.defineFastMethod("&", cf.getFastMethod("bn_and", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("|", cf.getFastMethod("bn_or", RubyKernel.IRUBY_OBJECT));
-        bn.defineFastMethod("^", cf.getFastMethod("bn_xor", RubyKernel.IRUBY_OBJECT));
-        // could be used to speed up Net::SSH's DH#valid? method
-        bn.defineFastMethod("num_bits_set", cf.getFastMethod("bn_num_bits_set"));
+        bn.defineAnnotatedMethods(BN.class);
     }
 
     private volatile BigInteger value;
@@ -176,7 +118,8 @@ public class BN extends RubyObject {
         return this;
     }
 
-    public synchronized IRubyObject bn_initialize(IRubyObject[] args, Block unusedBlock) {
+    @JRubyMethod(name="initialize", required=1, optional=1)
+    public synchronized IRubyObject bn_initialize(IRubyObject[] args) {
         Ruby runtime = getRuntime();
         if (this.value != BigInteger.ZERO) { // already initialized
             throw newBNError(runtime, "illegal initialization");
@@ -211,6 +154,7 @@ public class BN extends RubyObject {
         return this;
     }
     
+    @JRubyMethod(name="copy")
     public synchronized IRubyObject bn_copy(IRubyObject other) {
         if (this != other) {
             this.value = getBigInteger(other);
@@ -218,6 +162,7 @@ public class BN extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(name="to_s", rest=true)
     public IRubyObject bn_to_s(IRubyObject[] args) {
         Ruby runtime = getRuntime();
         int argc = Arity.checkArgumentCount(runtime, args, 0, 1);
@@ -245,16 +190,19 @@ public class BN extends RubyObject {
         }
     }
 
+    @JRubyMethod(name="to_i")
     public IRubyObject bn_to_i() {
         Ruby runtime = getRuntime();
         // FIXME: s/b faster way to convert than going through RubyString
         return RubyNumeric.str2inum(runtime, runtime.newString(value.toString()), 10, true);
     }
 
+    @JRubyMethod(name="to_bn")
     public IRubyObject bn_to_bn() {
         return this;
     }
 
+    @JRubyMethod(name="coerce")
     // FIXME: is this right? don't see how it would be useful...
     public IRubyObject bn_coerce(IRubyObject other) {
         Ruby runtime = getRuntime();
@@ -278,51 +226,63 @@ public class BN extends RubyObject {
         return runtime.newArray(other, self);
     }
     
+    @JRubyMethod(name="zero?")
     public IRubyObject bn_is_zero() {
         return getRuntime().newBoolean(value.equals(BigInteger.ZERO));
     }
 
+    @JRubyMethod(name="one?")
     public IRubyObject bn_is_one() {
         return getRuntime().newBoolean(value.equals(BigInteger.ONE));
     }
 
+    @JRubyMethod(name="odd?")
     public IRubyObject bn_is_odd() {
         return getRuntime().newBoolean(value.testBit(0));
     }
     
+    @JRubyMethod(name={"cmp", "<=>"})
     public IRubyObject bn_cmp(IRubyObject other) {
         return getRuntime().newFixnum(value.compareTo(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="ucmp")
     public IRubyObject bn_ucmp(IRubyObject other) {
         return getRuntime().newFixnum(value.abs().compareTo(getBigInteger(other).abs()));
     }
     
+    @JRubyMethod(name={"eql?", "==", "==="})
     public IRubyObject bn_eql(IRubyObject other) {
         return getRuntime().newBoolean(value.equals(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="sqr")
     public IRubyObject bn_sqr() {
         // TODO: check whether mult n * n is faster
         return newBN(getRuntime(), value.pow(2));
     }
 
+    @JRubyMethod(name="~")
     public IRubyObject bn_not() {
         return newBN(getRuntime(), value.not());
     }
 
+    @JRubyMethod(name="+")
     public IRubyObject bn_add(IRubyObject other) {
         return newBN(getRuntime(), value.add(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="-")
     public IRubyObject bn_sub(IRubyObject other) {
         return newBN(getRuntime(), value.subtract(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="*")
     public IRubyObject bn_mul(IRubyObject other) {
         return newBN(getRuntime(), value.multiply(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="%")
     public IRubyObject bn_mod(IRubyObject other) {
         try {
             return newBN(getRuntime(), value.mod(getBigInteger(other)));
@@ -331,6 +291,7 @@ public class BN extends RubyObject {
         }
     }
 
+    @JRubyMethod(name="/")
     public IRubyObject bn_div(IRubyObject other) {
         Ruby runtime = getRuntime();
         try {
@@ -341,18 +302,22 @@ public class BN extends RubyObject {
         }
     }
     
+    @JRubyMethod(name="&")
     public IRubyObject bn_and(IRubyObject other) {
         return newBN(getRuntime(), value.and(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="|")
     public IRubyObject bn_or(IRubyObject other) {
         return newBN(getRuntime(), value.or(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="^")
     public IRubyObject bn_xor(IRubyObject other) {
         return newBN(getRuntime(), value.xor(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="**")
     public IRubyObject bn_exp(IRubyObject other) {
         // somewhat strangely, BigInteger takes int rather than BigInteger
         // as the argument to pow.  so we'll have to narrow the value, and
@@ -393,10 +358,12 @@ public class BN extends RubyObject {
         }
     }
 
+    @JRubyMethod(name="gcd")
     public IRubyObject bn_gcd(IRubyObject other) {
         return newBN(getRuntime(), value.gcd(getBigInteger(other)));
     }
 
+    @JRubyMethod(name="mod_sqr")
     public IRubyObject bn_mod_sqr(IRubyObject other) {
         try {
             return newBN(getRuntime(), value.modPow(TWO, getBigInteger(other)));
@@ -405,6 +372,7 @@ public class BN extends RubyObject {
         }
     }
     
+    @JRubyMethod(name="mod_inverse")
     public IRubyObject bn_mod_inverse(IRubyObject other) {
         try {
             return newBN(getRuntime(), value.modInverse(getBigInteger(other)));
@@ -412,7 +380,8 @@ public class BN extends RubyObject {
             throw getRuntime().newZeroDivisionError();
         }
     }
-    
+
+    @JRubyMethod(name="mod_add")    
     public IRubyObject bn_mod_add(IRubyObject other, IRubyObject mod) {
         try {
             return newBN(getRuntime(), value.add(getBigInteger(other)).mod(getBigInteger(mod)));
@@ -421,6 +390,7 @@ public class BN extends RubyObject {
         }
     }
 
+    @JRubyMethod(name="mod_sub")
     public IRubyObject bn_mod_sub(IRubyObject other, IRubyObject mod) {
         try {
             return newBN(getRuntime(), value.subtract(getBigInteger(other)).mod(getBigInteger(mod)));
@@ -429,6 +399,7 @@ public class BN extends RubyObject {
         }
     }
 
+    @JRubyMethod(name="mod_mul")
     public IRubyObject bn_mod_mul(IRubyObject other, IRubyObject mod) {
         try {
             return newBN(getRuntime(), value.multiply(getBigInteger(other)).mod(getBigInteger(mod)));
@@ -437,6 +408,7 @@ public class BN extends RubyObject {
         }
     }
 
+    @JRubyMethod(name="mod_exp")
     public IRubyObject bn_mod_exp(IRubyObject other, IRubyObject mod) {
         try {
             return newBN(getRuntime(), value.modPow(getBigInteger(other), getBigInteger(mod)));
@@ -445,6 +417,7 @@ public class BN extends RubyObject {
         }
     }
     
+    @JRubyMethod(name="set_bit!")
     public synchronized IRubyObject bn_set_bit(IRubyObject n) {
         // evil mutable BN
         int pos = RubyNumeric.num2int(n);
@@ -467,6 +440,7 @@ public class BN extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(name="clear_bit!")
     public synchronized IRubyObject bn_clear_bit(IRubyObject n) {
         // evil mutable BN
         int pos = RubyNumeric.num2int(n);
@@ -486,6 +460,7 @@ public class BN extends RubyObject {
     /**
      * Truncates value to n bits 
      */
+    @JRubyMethod(name="mask_bits!")
     public synchronized IRubyObject bn_mask_bits(IRubyObject n) {
         // evil mutable BN
 
@@ -507,6 +482,7 @@ public class BN extends RubyObject {
         return this;
     }
     
+    @JRubyMethod(name="bit_set?")
     public IRubyObject bn_is_bit_set(IRubyObject n) {
         int pos = RubyNumeric.num2int(n);
         BigInteger val = this.value;
@@ -521,6 +497,7 @@ public class BN extends RubyObject {
         }
     }
 
+    @JRubyMethod(name="<<")
     public IRubyObject bn_lshift(IRubyObject n) {
         int nbits = RubyNumeric.num2int(n);
         BigInteger val = this.value;
@@ -531,6 +508,7 @@ public class BN extends RubyObject {
         }
     }
 
+    @JRubyMethod(name=">>")
     public IRubyObject bn_rshift(IRubyObject n) {
         int nbits = RubyNumeric.num2int(n);
         BigInteger val = this.value;
@@ -541,20 +519,24 @@ public class BN extends RubyObject {
         }
     }
     
+    @JRubyMethod(name="num_bits")
     public IRubyObject bn_num_bits() {
         return getRuntime().newFixnum(this.value.abs().bitLength());
     }
 
+    @JRubyMethod(name="num_bytes")
     public IRubyObject bn_num_bytes() {
         return getRuntime().newFixnum((this.value.abs().bitLength() + 7) / 8);
     }
     
+    @JRubyMethod(name="num_bits_set")
     public IRubyObject bn_num_bits_set() {
         return getRuntime().newFixnum(this.value.abs().bitCount());
     }
 
     // note that there is a bug in the MRI version, in argument handling,
     // so apparently no one ever calls this...
+    @JRubyMethod(name="prime?", rest=true)
     public IRubyObject bn_is_prime(IRubyObject[] args) {
         Ruby runtime = getRuntime();
         int argc = Arity.checkArgumentCount(runtime, args, 0, 1);
@@ -566,6 +548,7 @@ public class BN extends RubyObject {
     
     // FIXME? BigInteger doesn't supply this, so right now this is (essentially)
     // the same as bn_is_prime
+    @JRubyMethod(name="prime_fasttest?", rest=true)
     public IRubyObject bn_is_prime_fasttest(IRubyObject[] args) {
         Ruby runtime = getRuntime();
         int argc = Arity.checkArgumentCount(runtime, args, 0, 2);
@@ -575,6 +558,7 @@ public class BN extends RubyObject {
         return runtime.newBoolean(this.value.isProbablePrime(certainty));
     }
     
+    @JRubyMethod(name="generate_prime", meta=true, rest=true)
     public static IRubyObject bn_generate_prime(IRubyObject recv, IRubyObject[] args) {
         Ruby runtime = recv.getRuntime();
         int argc = Arity.checkArgumentCount(runtime, args, 1, 4);
@@ -636,10 +620,12 @@ public class BN extends RubyObject {
         return generatePrime(bits, safe, null, null);
     }
     
+    @JRubyMethod(name="rand", meta=true, rest=true)
     public static IRubyObject bn_rand(IRubyObject recv, IRubyObject[] args) {
         return getRandomBN(recv.getRuntime(), args, getSecureRandom()); 
     }
     
+    @JRubyMethod(name="pseudo_rand", meta=true, rest=true)
     public static IRubyObject bn_pseudo_rand(IRubyObject recv, IRubyObject[] args) {
         return getRandomBN(recv.getRuntime(), args, getRandom()); 
     }
@@ -713,10 +699,12 @@ public class BN extends RubyObject {
         return new BigInteger(1, buf);
     }
     
+    @JRubyMethod(name="rand_range", meta=true)
     public static IRubyObject bn_rand_range(IRubyObject recv, IRubyObject arg) {
         return getRandomBNInRange(recv.getRuntime(), getBigInteger(arg), getSecureRandom()); 
     }
     
+    @JRubyMethod(name="pseudo_rand_range", meta=true)
     public static IRubyObject bn_pseudo_rand_range(IRubyObject recv, IRubyObject arg) {
         return getRandomBNInRange(recv.getRuntime(), getBigInteger(arg), getRandom()); 
     }
