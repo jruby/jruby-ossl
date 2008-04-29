@@ -34,7 +34,7 @@ import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
-import org.jruby.runtime.CallbackFactory;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
 
@@ -51,34 +51,32 @@ public class Random {
         RubyClass osslError = (RubyClass)ossl.getConstant("OpenSSLError");
         rand.defineClassUnder("RandomError",osslError,osslError.getAllocator());
 
-        CallbackFactory randcb = runtime.callbackFactory(Random.class);
-        rand.getMetaClass().defineFastMethod("seed",randcb.getFastSingletonMethod("seed", IRubyObject.class));
-        rand.getMetaClass().defineFastMethod("load_random_file",randcb.getFastSingletonMethod("load_random_file", IRubyObject.class));
-        rand.getMetaClass().defineFastMethod("write_random_file",randcb.getFastSingletonMethod("write_random_file", IRubyObject.class));
-        rand.getMetaClass().defineFastMethod("random_bytes",randcb.getFastSingletonMethod("random_bytes", IRubyObject.class));
-        rand.getMetaClass().defineFastMethod("pseudo_bytes",randcb.getFastSingletonMethod("pseudo_bytes", IRubyObject.class));
-        rand.getMetaClass().defineFastMethod("egd",randcb.getFastSingletonMethod("egd", IRubyObject.class));
-        rand.getMetaClass().defineFastMethod("egd_bytes",randcb.getFastSingletonMethod("egd_bytes", IRubyObject.class, IRubyObject.class));
+        rand.defineAnnotatedMethods(Random.class);
 
         RandomHolder holder = new RandomHolder();
         holder.randomizers = new java.util.Random[]{new java.util.Random(), new SecureRandom()};
         rand.dataWrapStruct(holder);
     }
 
+    @JRubyMethod(meta=true)
     public static IRubyObject seed(IRubyObject recv, IRubyObject arg) {
         return recv.getRuntime().getNil();
     }
+    @JRubyMethod(meta=true)
     public static IRubyObject load_random_file(IRubyObject recv, IRubyObject arg) {
         return recv.getRuntime().getNil();
     }
+    @JRubyMethod(meta=true)
     public static IRubyObject write_random_file(IRubyObject recv, IRubyObject arg) {
         return recv.getRuntime().getNil();
     }
 
+    @JRubyMethod(meta=true)
     public static IRubyObject random_bytes(IRubyObject recv, IRubyObject arg) {
         return generate(recv, arg, 1);
     }
 
+    @JRubyMethod(meta=true)
     public static IRubyObject pseudo_bytes(IRubyObject recv, IRubyObject arg) {
         return generate(recv, arg, 0);
     }
@@ -91,9 +89,11 @@ public class Random {
         return RubyString.newString(recv.getRuntime(), new ByteList(buf,false));
     }
 
+    @JRubyMethod(meta=true)
     public static IRubyObject egd(IRubyObject recv, IRubyObject arg) {
         return recv.getRuntime().getNil();
     }
+    @JRubyMethod(meta=true)
     public static IRubyObject egd_bytes(IRubyObject recv, IRubyObject arg1, IRubyObject arg2) {
         return recv.getRuntime().getNil();
     }

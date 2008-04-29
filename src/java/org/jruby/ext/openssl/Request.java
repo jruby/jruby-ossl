@@ -47,9 +47,9 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -69,26 +69,7 @@ public class Request extends RubyObject {
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
         mX509.defineClassUnder("RequestError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory reqcb = runtime.callbackFactory(Request.class);
-
-        cRequest.defineMethod("initialize",reqcb.getOptMethod("_initialize"));
-        cRequest.defineFastMethod("initialize_copy",reqcb.getFastMethod("initialize_copy",IRubyObject.class));
-        cRequest.defineFastMethod("to_pem",reqcb.getFastMethod("to_pem"));
-        cRequest.defineFastMethod("to_der",reqcb.getFastMethod("to_der"));
-        cRequest.defineFastMethod("to_s",reqcb.getFastMethod("to_pem"));
-        cRequest.defineFastMethod("to_text",reqcb.getFastMethod("to_text"));
-        cRequest.defineFastMethod("version",reqcb.getFastMethod("version"));
-        cRequest.defineFastMethod("version=",reqcb.getFastMethod("set_version",IRubyObject.class));
-        cRequest.defineFastMethod("subject",reqcb.getFastMethod("subject"));
-        cRequest.defineFastMethod("subject=",reqcb.getFastMethod("set_subject",IRubyObject.class));
-        cRequest.defineFastMethod("signature_algorithm",reqcb.getFastMethod("signature_algorithm"));
-        cRequest.defineFastMethod("public_key",reqcb.getFastMethod("public_key"));
-        cRequest.defineFastMethod("public_key=",reqcb.getFastMethod("set_public_key",IRubyObject.class));
-        cRequest.defineFastMethod("sign",reqcb.getFastMethod("sign",IRubyObject.class,IRubyObject.class));
-        cRequest.defineFastMethod("verify",reqcb.getFastMethod("verify",IRubyObject.class));
-        cRequest.defineFastMethod("attributes",reqcb.getFastMethod("attributes"));
-        cRequest.defineFastMethod("attributes=",reqcb.getFastMethod("set_attributes",IRubyObject.class));
-        cRequest.defineFastMethod("add_attribute",reqcb.getFastMethod("add_attribute",IRubyObject.class));
+        cRequest.defineAnnotatedMethods(Request.class);
     }
 
     private IRubyObject version;
@@ -105,6 +86,7 @@ public class Request extends RubyObject {
         attrs = new ArrayList<IRubyObject>();
     }
 
+    @JRubyMethod(name="initialize", frame=true, rest=true)
     public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             return this;
@@ -165,6 +147,7 @@ public class Request extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         System.err.println("WARNING: unimplemented method called: init_copy");
         if(this == obj) {
@@ -177,24 +160,29 @@ public class Request extends RubyObject {
         return this;
     }
 
+    @JRubyMethod(name={"to_pem","to_s"})
     public IRubyObject to_pem() {
         System.err.println("WARNING: unimplemented method called: to_pem");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject to_der() throws Exception {
         return RubyString.newString(getRuntime(), req.getDEREncoded());
     }
 
+    @JRubyMethod
     public IRubyObject to_text() {
         System.err.println("WARNING: unimplemented method called: to_text");
         return getRuntime().getNil();
     }
 
-    public IRubyObject version() {
+    @JRubyMethod
+   public IRubyObject version() {
         return this.version;
     }
 
+    @JRubyMethod(name="version=")
     public IRubyObject set_version(IRubyObject val) {
         if(val != version) {
             valid = false;
@@ -206,10 +194,12 @@ public class Request extends RubyObject {
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject subject() {
         return this.subject;
     }
 
+    @JRubyMethod(name="subject=")
     public IRubyObject set_subject(IRubyObject val) {
         if(val != subject) {
             valid = false;
@@ -218,15 +208,18 @@ public class Request extends RubyObject {
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject signature_algorithm() {
         System.err.println("WARNING: unimplemented method called: signature_algorithm");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject public_key() {
         return this.public_key;
     }
 
+    @JRubyMethod(name="public_key=")
     public IRubyObject set_public_key(IRubyObject val) {
         if(val != public_key) {
             valid = false;
@@ -235,6 +228,7 @@ public class Request extends RubyObject {
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject sign(final IRubyObject key, final IRubyObject digest) throws Exception {
         final String keyAlg = ((PKey)public_key).getAlgorithm();
         final String digAlg = ((Digest)digest).getAlgorithm();
@@ -271,6 +265,7 @@ public class Request extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject verify(IRubyObject key) {
         try {
             return valid && req.verify(((PKey)(key.callMethod(getRuntime().getCurrentContext(),"public_key"))).getPublicKey()) ? getRuntime().getTrue() : getRuntime().getFalse();
@@ -279,11 +274,13 @@ public class Request extends RubyObject {
         }
     }
 
+    @JRubyMethod
     public IRubyObject attributes() {
         return getRuntime().newArray(attrs);
     }
 
     @SuppressWarnings("unchecked")
+    @JRubyMethod(name="attributes=")
     public IRubyObject set_attributes(IRubyObject val) throws Exception {
         valid = false;
         attrs.clear();
@@ -298,6 +295,7 @@ public class Request extends RubyObject {
         return val;
     }
 
+    @JRubyMethod
     public IRubyObject add_attribute(IRubyObject val) throws Exception {
         valid = false;
         attrs.add(val);

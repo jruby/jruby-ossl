@@ -47,11 +47,11 @@ import org.jruby.RubyKernel;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
@@ -89,26 +89,7 @@ public class PKeyDH extends PKey {
         RubyClass pkeyError = pkeyModule.getClass("PKeyError");
         pkeyModule.defineClassUnder("DHError",pkeyError,pkeyError.getAllocator());
         
-        CallbackFactory cf = runtime.callbackFactory(PKeyDH.class);
-
-        dh.defineMethod("initialize", cf.getOptMethod("dh_initialize"));
-        dh.defineFastMethod("public?", cf.getFastMethod("dh_is_public"));
-        dh.defineFastMethod("private?", cf.getFastMethod("dh_is_private"));
-        dh.defineFastMethod("params", cf.getFastMethod("dh_get_params"));
-        dh.defineFastMethod("export", cf.getFastMethod("dh_export"));
-        dh.defineAlias("to_pem", "export");
-        dh.defineAlias("to_s", "export");
-        dh.defineFastMethod("to_der", cf.getFastMethod("dh_to_der"));
-        dh.defineFastMethod("p", cf.getFastMethod("dh_get_p"));
-        dh.defineFastMethod("p=", cf.getFastMethod("dh_set_p", RubyKernel.IRUBY_OBJECT));
-        dh.defineFastMethod("g", cf.getFastMethod("dh_get_g"));
-        dh.defineFastMethod("g=", cf.getFastMethod("dh_set_g", RubyKernel.IRUBY_OBJECT));
-        dh.defineFastMethod("pub_key", cf.getFastMethod("dh_get_pub_key"));
-        dh.defineFastMethod("pub_key=", cf.getFastMethod("dh_set_pub_key", RubyKernel.IRUBY_OBJECT));
-        dh.defineFastMethod("priv_key", cf.getFastMethod("dh_get_priv_key"));
-        dh.defineFastMethod("priv_key=", cf.getFastMethod("dh_set_priv_key", RubyKernel.IRUBY_OBJECT));
-        dh.defineFastMethod("generate_key!", cf.getFastMethod("dh_generate_key"));
-        dh.defineFastMethod("compute_key", cf.getFastMethod("dh_compute_key", RubyKernel.IRUBY_OBJECT));
+        dh.defineAnnotatedMethods(PKeyDH.class);
     }
     
     public static RaiseException newDHError(Ruby runtime, String message) {
@@ -143,7 +124,8 @@ public class PKeyDH extends PKey {
         super(runtime, clazz);
     }
 
-    public synchronized IRubyObject dh_initialize(IRubyObject[] args, Block unusedBlock) {
+    @JRubyMethod(name="initialize", rest=true)
+    public synchronized IRubyObject dh_initialize(IRubyObject[] args) {
         Ruby runtime = getRuntime();
         if (this.dh_p != null || this.dh_g != null || this.dh_pub_key != null || this.dh_priv_key != null) {
             throw newDHError(runtime, "illegal initialization");
@@ -246,6 +228,7 @@ public class PKeyDH extends PKey {
         return generateY(p, BigInteger.valueOf(g), x);
     }
     
+    @JRubyMethod(name="generate_key!")
     public synchronized IRubyObject dh_generate_key() {
         BigInteger p, g, x, y;
         if ((p = this.dh_p) == null || (g = this.dh_g) == null) {
@@ -260,6 +243,7 @@ public class PKeyDH extends PKey {
         return this;
     }
     
+    @JRubyMethod(name="compute_key")
     public synchronized IRubyObject dh_compute_key(IRubyObject other_pub_key) {
         BigInteger x, y, p;
         if ((y = BN.getBigInteger(other_pub_key)) == null) {
@@ -279,10 +263,12 @@ public class PKeyDH extends PKey {
         return y.modPow(x, p).toByteArray();
     }
     
+    @JRubyMethod(name="public?")
     public IRubyObject dh_is_public() {
         return getRuntime().newBoolean(dh_pub_key != null);
     }
     
+    @JRubyMethod(name="private?")
     public IRubyObject dh_is_private() {
         // FIXME! need to figure out what it means in MRI/OSSL code to
         // claim a DH is private if an engine is present -- doesn't really
@@ -290,6 +276,7 @@ public class PKeyDH extends PKey {
         return getRuntime().newBoolean(dh_priv_key != null /* || haveEngine */);
     }
     
+    @JRubyMethod(name={"export", "to_pem", "to_s"})
     public IRubyObject dh_export() {
         BigInteger p, g;
         synchronized(this) {
@@ -308,6 +295,7 @@ public class PKeyDH extends PKey {
         return getRuntime().newString(w.toString());
     }
     
+    @JRubyMethod(name="to_der")
     public IRubyObject dh_to_der() {
         BigInteger p, g;
         synchronized(this) {
@@ -330,6 +318,7 @@ public class PKeyDH extends PKey {
         return RubyString.newString(getRuntime(), encoded);
     }
     
+    @JRubyMethod(name="params")
     public IRubyObject dh_get_params() {
         BigInteger p, g, x, y;
         synchronized(this) {
@@ -350,40 +339,48 @@ public class PKeyDH extends PKey {
     }
     
     // don't need synchronized as value is volatile
+    @JRubyMethod(name="p")
     public IRubyObject dh_get_p() {
         return getBN(dh_p);
     }
     
+    @JRubyMethod(name="p=")
     public synchronized IRubyObject dh_set_p(IRubyObject arg) {
         this.dh_p = BN.getBigInteger(arg);
         return arg;
     }
 
     // don't need synchronized as value is volatile
+    @JRubyMethod(name="g")
     public IRubyObject dh_get_g() {
         return getBN(dh_g);
     }
     
+    @JRubyMethod(name="g=")
     public synchronized IRubyObject dh_set_g(IRubyObject arg) {
         this.dh_g = BN.getBigInteger(arg);
         return arg;
     }
 
     // don't need synchronized as value is volatile
+    @JRubyMethod(name="pub_key")
     public IRubyObject dh_get_pub_key() {
         return getBN(dh_pub_key);
     }
 
+    @JRubyMethod(name="pub_key=")
     public synchronized IRubyObject dh_set_pub_key(IRubyObject arg) {
         this.dh_pub_key = BN.getBigInteger(arg);
         return arg;
     }
 
     // don't need synchronized as value is volatile
+    @JRubyMethod(name="priv_key")
     public IRubyObject dh_get_priv_key() {
         return getBN(dh_priv_key);
     }
 
+    @JRubyMethod(name="priv_key=")
     public synchronized IRubyObject dh_set_priv_key(IRubyObject arg) {
         this.dh_priv_key = BN.getBigInteger(arg);
         return arg;

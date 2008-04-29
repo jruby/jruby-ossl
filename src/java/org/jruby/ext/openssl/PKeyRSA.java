@@ -56,10 +56,10 @@ import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
@@ -78,26 +78,8 @@ public class PKeyRSA extends PKey {
         RubyClass cRSA = mPKey.defineClassUnder("RSA",mPKey.getClass("PKey"),PKEYRSA_ALLOCATOR);
         RubyClass pkeyError = mPKey.getClass("PKeyError");
         mPKey.defineClassUnder("RSAError",pkeyError,pkeyError.getAllocator());
-        
-        CallbackFactory rsacb = runtime.callbackFactory(PKeyRSA.class);
 
-        cRSA.defineMethod("initialize",rsacb.getOptMethod("initialize"));
-        cRSA.defineFastMethod("public?",rsacb.getFastMethod("public_p"));
-        cRSA.defineFastMethod("private?",rsacb.getFastMethod("private_p"));
-        cRSA.defineFastMethod("to_der",rsacb.getFastMethod("to_der"));
-        cRSA.defineFastMethod("public_key",rsacb.getFastMethod("public_key"));
-        cRSA.defineFastMethod("export",rsacb.getFastOptMethod("export"));
-        cRSA.defineFastMethod("to_pem",rsacb.getFastOptMethod("export"));
-        cRSA.defineFastMethod("to_s",rsacb.getFastOptMethod("export"));
-        cRSA.defineFastMethod("private_encrypt",rsacb.getFastOptMethod("private_encrypt"));
-        cRSA.defineFastMethod("private_decrypt",rsacb.getFastOptMethod("private_decrypt"));
-        cRSA.defineFastMethod("public_encrypt",rsacb.getFastOptMethod("public_encrypt"));
-        cRSA.defineMethod("public_decrypt",rsacb.getFastOptMethod("public_decrypt"));
-
-        cRSA.defineFastMethod("e", rsacb.getFastMethod("get_e"));
-        cRSA.defineFastMethod("e=", rsacb.getFastMethod("set_e", IRubyObject.class));
-        cRSA.defineFastMethod("n", rsacb.getFastMethod("get_n"));
-        cRSA.defineFastMethod("n=", rsacb.getFastMethod("set_n", IRubyObject.class));
+        cRSA.defineAnnotatedMethods(PKeyRSA.class);
 
         cRSA.setConstant("PKCS1_PADDING",runtime.newFixnum(1));
         cRSA.setConstant("SSLV23_PADDING",runtime.newFixnum(2));
@@ -136,6 +118,7 @@ public class PKeyRSA extends PKey {
         return "RSA";
     }
 
+    @JRubyMethod(frame=true, rest=true)
     public IRubyObject initialize(IRubyObject[] args, Block block) {
         IRubyObject arg;
         IRubyObject pass = null;
@@ -270,14 +253,17 @@ public class PKeyRSA extends PKey {
         return this;
     }
 
+    @JRubyMethod(name="public?")
     public IRubyObject public_p() {
         return pubKey != null ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @JRubyMethod(name="private?")
     public IRubyObject private_p() {
         return privKey != null ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @JRubyMethod
     public IRubyObject to_der() throws Exception {
         if(pubKey != null && privKey == null) {
             ASN1EncodableVector v1 = new ASN1EncodableVector();
@@ -299,6 +285,7 @@ public class PKeyRSA extends PKey {
         }
     }
 
+    @JRubyMethod
     public IRubyObject public_key() {
         PKeyRSA val = new PKeyRSA(getRuntime(),getMetaClass().getRealClass());
         val.privKey = null;
@@ -306,6 +293,7 @@ public class PKeyRSA extends PKey {
         return val;
     }
 
+    @JRubyMethod(name={"export", "to_pem", "to_s"}, rest=true)
     public IRubyObject export(IRubyObject[] args) throws Exception {
         StringWriter w = new StringWriter();
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
@@ -342,6 +330,7 @@ public class PKeyRSA extends PKey {
         return p;
     }        
 
+    @JRubyMethod(rest=true)
     public IRubyObject private_encrypt(IRubyObject[] args) throws Exception {
         int padding = 1;
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
@@ -360,6 +349,7 @@ public class PKeyRSA extends PKey {
         return RubyString.newString(getRuntime(), outp);
     }
 
+    @JRubyMethod(rest=true)
     public IRubyObject private_decrypt(IRubyObject[] args) throws Exception {
         int padding = 1;
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
@@ -378,6 +368,7 @@ public class PKeyRSA extends PKey {
         return RubyString.newString(getRuntime(), outp);
     }
 
+    @JRubyMethod(rest=true)
     public IRubyObject public_encrypt(IRubyObject[] args) throws Exception {
         int padding = 1;
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
@@ -392,6 +383,7 @@ public class PKeyRSA extends PKey {
         return RubyString.newString(getRuntime(), outp);
     }
 
+    @JRubyMethod(rest=true)
     public IRubyObject public_decrypt(IRubyObject[] args) throws Exception {
         int padding = 1;
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
@@ -406,6 +398,7 @@ public class PKeyRSA extends PKey {
         return RubyString.newString(getRuntime(), outp);
     }
 
+    @JRubyMethod(name="e")
     public synchronized IRubyObject get_e() {
         RSAPublicKey key;
         BigInteger e;
@@ -420,6 +413,7 @@ public class PKeyRSA extends PKey {
         return getRuntime().getNil();
     }
     
+    @JRubyMethod(name="e=")
     public synchronized IRubyObject set_e(IRubyObject value) {
         if (pubKey != null) {
             throw newRSAError(getRuntime(), "illegal modification");
@@ -429,6 +423,7 @@ public class PKeyRSA extends PKey {
         return value;
     }
     
+    @JRubyMethod(name="n")
     public synchronized IRubyObject get_n() {
         RSAPublicKey key;
         BigInteger n;
@@ -443,6 +438,7 @@ public class PKeyRSA extends PKey {
         return getRuntime().getNil();
     }
     
+    @JRubyMethod(name="n=")
     public synchronized IRubyObject set_n(IRubyObject value) {
         if (pubKey != null) {
             throw newRSAError(getRuntime(), "illegal modification");

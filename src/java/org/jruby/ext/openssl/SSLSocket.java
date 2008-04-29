@@ -47,10 +47,10 @@ import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -70,24 +70,12 @@ public class SSLSocket extends RubyObject {
     public static void createSSLSocket(Ruby runtime, RubyModule mSSL) {
         RubyClass cSSLSocket = mSSL.defineClassUnder("SSLSocket",runtime.getObject(),SSLSOCKET_ALLOCATOR);
 
-        cSSLSocket.attr_accessor(new IRubyObject[]{runtime.newSymbol("io")});
-        cSSLSocket.attr_accessor(new IRubyObject[]{runtime.newSymbol("context")});
-        cSSLSocket.attr_accessor(new IRubyObject[]{runtime.newSymbol("sync_close")});
-
-        CallbackFactory sockcb = runtime.callbackFactory(SSLSocket.class);
+        cSSLSocket.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newSymbol("io")});
+        cSSLSocket.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newSymbol("context")});
+        cSSLSocket.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newSymbol("sync_close")});
         cSSLSocket.defineAlias("to_io","io");
-        cSSLSocket.defineMethod("initialize",sockcb.getOptMethod("_initialize"));
-        cSSLSocket.defineFastMethod("connect",sockcb.getFastMethod("connect"));
-        cSSLSocket.defineFastMethod("accept",sockcb.getFastMethod("accept"));
-        cSSLSocket.defineFastMethod("sysread",sockcb.getFastOptMethod("sysread"));
-        cSSLSocket.defineFastMethod("syswrite",sockcb.getFastMethod("syswrite",IRubyObject.class));
-        cSSLSocket.defineFastMethod("sysclose",sockcb.getFastMethod("sysclose"));
-        cSSLSocket.defineFastMethod("cert",sockcb.getFastMethod("cert"));
-        cSSLSocket.defineFastMethod("peer_cert",sockcb.getFastMethod("peer_cert"));
-        cSSLSocket.defineFastMethod("peer_cert_chain",sockcb.getFastMethod("peer_cert_chain"));
-        cSSLSocket.defineFastMethod("cipher",sockcb.getFastMethod("cipher"));
-        cSSLSocket.defineFastMethod("state",sockcb.getFastMethod("state"));
-        cSSLSocket.defineFastMethod("pending",sockcb.getFastMethod("pending"));
+
+        cSSLSocket.defineAnnotatedMethods(SSLSocket.class);
     }
 
     private RubyClass sslError;
@@ -114,7 +102,8 @@ public class SSLSocket extends RubyObject {
     private Selector wsel;
     private Selector asel;
     
-    public IRubyObject _initialize(IRubyObject[] args, Block unusedBlock) throws Exception {
+    @JRubyMethod(name="initialize", rest=true, frame=true)
+    public IRubyObject _initialize(IRubyObject[] args, Block unused) throws Exception {
         IRubyObject io, ctx;
         if (org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 1) {
             RubyClass sslContext = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("SSL"))).getClass("SSLContext");
@@ -167,6 +156,7 @@ public class SSLSocket extends RubyObject {
         }
     }
 
+    @JRubyMethod
     public IRubyObject connect() throws Exception {
         try {
             ossl_ssl_setup();
@@ -192,6 +182,7 @@ public class SSLSocket extends RubyObject {
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject accept() throws Exception {
         try {
             ThreadContext tc = getRuntime().getCurrentContext();
@@ -386,6 +377,7 @@ public class SSLSocket extends RubyObject {
         asel.close();
     }
 
+    @JRubyMethod(rest=true)
     public IRubyObject sysread(IRubyObject[] args) throws Exception {
         //        System.err.println("WARNING: unimplemented method called: SSLSocket#sysread");
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2);
@@ -425,6 +417,7 @@ public class SSLSocket extends RubyObject {
         return str;
     }
 
+    @JRubyMethod
     public IRubyObject syswrite(IRubyObject arg) throws Exception {
         ///        System.err.println("WARNING: unimplemented method called: SSLSocket#syswrite");
         //        System.err.println(type + ".syswrite(" + arg + ")");
@@ -453,6 +446,7 @@ public class SSLSocket extends RubyObject {
         }
     }
 
+    @JRubyMethod
     public IRubyObject sysclose() throws Exception {
         //        System.err.println("WARNING: unimplemented method called: SSLSocket#sysclose");
         //        System.err.println(type + ".sysclose");
@@ -464,11 +458,13 @@ public class SSLSocket extends RubyObject {
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject cert() {
         System.err.println("WARNING: unimplemented method called: SSLSocket#cert");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject peer_cert() throws Exception {
         java.security.cert.Certificate[] cert = engine.getSession().getPeerCertificates();
         if (cert.length > 0) {
@@ -477,21 +473,25 @@ public class SSLSocket extends RubyObject {
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject peer_cert_chain() {
         System.err.println("WARNING: unimplemented method called: SSLSocket#peer_cert_chain");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject cipher() {
         System.err.println("WARNING: unimplemented method called: SSLSocket#cipher");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject state() {
         System.err.println("WARNING: unimplemented method called: SSLSocket#state");
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject pending() {
         System.err.println("WARNING: unimplemented method called: SSLSocket#pending");
         return getRuntime().getNil();

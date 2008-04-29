@@ -40,11 +40,11 @@ import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.common.IRubyWarnings.ID;
@@ -68,13 +68,10 @@ public class SSLContext extends RubyObject {
     public static void createSSLContext(Ruby runtime, RubyModule mSSL) {
         RubyClass cSSLContext = mSSL.defineClassUnder("SSLContext",runtime.getObject(),SSLCONTEXT_ALLOCATOR);
         for(int i=0;i<ctx_attrs.length;i++) {
-            cSSLContext.attr_accessor(new IRubyObject[]{runtime.newSymbol(ctx_attrs[i])});
+            cSSLContext.attr_accessor(runtime.getCurrentContext(),new IRubyObject[]{runtime.newSymbol(ctx_attrs[i])});
         }
 
-        CallbackFactory ctxcb = runtime.callbackFactory(SSLContext.class);
-        cSSLContext.defineMethod("initialize",ctxcb.getOptMethod("initialize"));
-        cSSLContext.defineFastMethod("ciphers",ctxcb.getFastMethod("ciphers"));
-        cSSLContext.defineFastMethod("ciphers=",ctxcb.getFastMethod("set_ciphers",IRubyObject.class));
+        cSSLContext.defineAnnotatedMethods(SSLContext.class);
     }
 
     public SSLContext(Ruby runtime, RubyClass type) {
@@ -117,15 +114,18 @@ public class SSLContext extends RubyObject {
         return t_cert;
     }
 
-    public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
+    @JRubyMethod(rest=true)
+    public IRubyObject initialize(IRubyObject[] args) {
         ciphers = getRuntime().getNil();
         return this;
     }
 
+    @JRubyMethod
     public IRubyObject ciphers() {
         return this.ciphers;
     }
 
+    @JRubyMethod(name="ciphers=")
     public IRubyObject set_ciphers(IRubyObject val) {
         this.ciphers = val;
         return val;

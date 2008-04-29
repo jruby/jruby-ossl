@@ -39,9 +39,9 @@ import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -56,11 +56,7 @@ public abstract class PKey extends RubyObject {
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
         mPKey.defineClassUnder("PKeyError",openSSLError,openSSLError.getAllocator());
 
-        CallbackFactory pkeycb = runtime.callbackFactory(PKey.class);
-
-        cPKey.defineMethod("initialize",pkeycb.getMethod("initialize"));
-        cPKey.defineFastMethod("sign",pkeycb.getFastMethod("sign",IRubyObject.class,IRubyObject.class));
-        cPKey.defineFastMethod("verify",pkeycb.getFastMethod("verify",IRubyObject.class,IRubyObject.class,IRubyObject.class));
+        cPKey.defineAnnotatedMethods(PKey.class);
 
         PKeyRSA.createPKeyRSA(runtime,mPKey);
         PKeyDSA.createPKeyDSA(runtime,mPKey);
@@ -75,7 +71,8 @@ public abstract class PKey extends RubyObject {
         super(runtime,type);
     }
 
-    public IRubyObject initialize(Block unusedBlock) {
+    @JRubyMethod
+    public IRubyObject initialize() {
         return this;
     }
 
@@ -94,6 +91,7 @@ public abstract class PKey extends RubyObject {
     // FIXME: any compelling reason for abstract method here?
     public abstract IRubyObject to_der() throws Exception;
 
+    @JRubyMethod
     public IRubyObject sign(IRubyObject digest, IRubyObject data) throws Exception {
         if(!this.callMethod(getRuntime().getCurrentContext(),"private?").isTrue()) {
             throw getRuntime().newArgumentError("Private key is needed.");
@@ -120,6 +118,7 @@ public abstract class PKey extends RubyObject {
          */
     }
 
+    @JRubyMethod
     public IRubyObject verify(IRubyObject digest, IRubyObject sig, IRubyObject data) {
         if (!(digest instanceof Digest)) {
             throw newPKeyError(getRuntime(), "invalid digest");

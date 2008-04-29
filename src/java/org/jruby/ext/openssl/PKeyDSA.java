@@ -53,10 +53,10 @@ import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
 import org.jruby.RubyString;
+import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
-import org.jruby.runtime.CallbackFactory;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
@@ -78,28 +78,8 @@ public class PKeyDSA extends PKey {
         RubyClass pkeyError = mPKey.getClass("PKeyError");
         mPKey.defineClassUnder("DSAError",pkeyError,pkeyError.getAllocator());
         
-        CallbackFactory dsacb = runtime.callbackFactory(PKeyDSA.class);
 
-        cDSA.defineMethod("initialize",dsacb.getOptMethod("initialize"));
-
-        cDSA.defineFastMethod("public?",dsacb.getFastMethod("public_p"));
-        cDSA.defineFastMethod("private?",dsacb.getFastMethod("private_p"));
-        cDSA.defineFastMethod("to_der",dsacb.getFastMethod("to_der"));
-        cDSA.defineFastMethod("to_text",dsacb.getFastMethod("to_text"));
-        cDSA.defineFastMethod("public_key",dsacb.getFastMethod("public_key"));
-        cDSA.defineFastMethod("export",dsacb.getFastOptMethod("export"));
-        cDSA.defineFastMethod("to_pem",dsacb.getFastOptMethod("export"));
-        cDSA.defineFastMethod("to_s",dsacb.getFastOptMethod("export"));
-        cDSA.defineFastMethod("syssign",dsacb.getFastMethod("syssign",IRubyObject.class));
-        cDSA.defineFastMethod("sysverify",dsacb.getFastMethod("sysverify",IRubyObject.class,IRubyObject.class));
-        cDSA.defineFastMethod("p", dsacb.getFastMethod("get_p"));
-        cDSA.defineFastMethod("p=", dsacb.getFastMethod("set_p", IRubyObject.class));
-        cDSA.defineFastMethod("q", dsacb.getFastMethod("get_q"));
-        cDSA.defineFastMethod("q=", dsacb.getFastMethod("set_q", IRubyObject.class));
-        cDSA.defineFastMethod("g", dsacb.getFastMethod("get_g"));
-        cDSA.defineFastMethod("g=", dsacb.getFastMethod("set_g", IRubyObject.class));
-        cDSA.defineFastMethod("pub_key", dsacb.getFastMethod("get_pub_key"));
-        cDSA.defineFastMethod("pub_key=", dsacb.getFastMethod("set_pub_key", IRubyObject.class));
+        cDSA.defineAnnotatedMethods(PKeyDSA.class);
     }
 
     public static RaiseException newDSAError(Ruby runtime, String message) {
@@ -137,7 +117,8 @@ public class PKeyDSA extends PKey {
         return "DSA";
     }
 
-    public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
+    @JRubyMethod(rest=true)
+    public IRubyObject initialize(IRubyObject[] args) {
         IRubyObject arg;
         IRubyObject pass = null;
         char[] passwd = null;
@@ -217,14 +198,17 @@ public class PKeyDSA extends PKey {
         return this;
     }
 
+    @JRubyMethod(name="public?")
     public IRubyObject public_p() {
         return pubKey != null ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @JRubyMethod(name="private?")
     public IRubyObject private_p() {
         return privKey != null ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @JRubyMethod
     public IRubyObject to_der() throws Exception {
         if(pubKey != null && privKey == null) {
             return RubyString.newString(getRuntime(), pubKey.getEncoded());
@@ -243,10 +227,12 @@ public class PKeyDSA extends PKey {
         }
     }
 
+    @JRubyMethod
     public IRubyObject to_text() throws Exception {
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject public_key() {
         PKeyDSA val = new PKeyDSA(getRuntime(),getMetaClass().getRealClass());
         val.privKey = null;
@@ -254,6 +240,7 @@ public class PKeyDSA extends PKey {
         return val;
     }
 
+    @JRubyMethod(name={"export","to_pem","to_s"}, rest=true)
     public IRubyObject export(IRubyObject[] args) throws Exception {
         StringWriter w = new StringWriter();
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
@@ -292,14 +279,17 @@ public class PKeyDSA extends PKey {
     }  
     */      
 
+    @JRubyMethod
     public IRubyObject syssign(IRubyObject arg) {
         return getRuntime().getNil();
     }
 
+    @JRubyMethod
     public IRubyObject sysverify(IRubyObject arg, IRubyObject arg2) {
         return getRuntime().getNil();
     }
     
+    @JRubyMethod(name="p")
     public synchronized IRubyObject get_p() {
         // FIXME: return only for public?
         DSAKey key;
@@ -316,10 +306,12 @@ public class PKeyDSA extends PKey {
         return getRuntime().getNil();
     }
     
+    @JRubyMethod(name="p=")
     public synchronized IRubyObject set_p(IRubyObject p) {
         return setKeySpecComponent(SPEC_P, p);
     }
 
+    @JRubyMethod(name="q")
     public synchronized IRubyObject get_q() {
         // FIXME: return only for public?
         DSAKey key;
@@ -336,10 +328,12 @@ public class PKeyDSA extends PKey {
         return getRuntime().getNil();
     }
 
+    @JRubyMethod(name="q=")
     public synchronized IRubyObject set_q(IRubyObject q) {
         return setKeySpecComponent(SPEC_Q, q);
     }
 
+    @JRubyMethod(name="g")
     public synchronized IRubyObject get_g() {
         // FIXME: return only for public?
         DSAKey key;
@@ -356,10 +350,12 @@ public class PKeyDSA extends PKey {
         return getRuntime().getNil();
     }
     
+    @JRubyMethod(name="g=")
     public synchronized IRubyObject set_g(IRubyObject g) {
         return setKeySpecComponent(SPEC_G, g);
     }
 
+    @JRubyMethod(name="pub_key")
     public synchronized IRubyObject get_pub_key() {
         DSAPublicKey key;
         BigInteger param;
@@ -373,6 +369,7 @@ public class PKeyDSA extends PKey {
         return getRuntime().getNil();
     }
     
+    @JRubyMethod(name="pub_key=")
     public synchronized IRubyObject set_pub_key(IRubyObject pub_key) {
         return setKeySpecComponent(SPEC_Y, pub_key);
     }
