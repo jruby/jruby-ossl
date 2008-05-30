@@ -8,9 +8,10 @@ task :default => [:java_compile, :test]
 
 def java_classpath_arg # myriad of ways to discover JRuby classpath
   begin
-    require 'java' # already running in a JRuby JVM
-    jruby_cpath = Java::java.lang.System.getProperty('java.class.path')
-  rescue LoadError
+    cpath  = Java::java.lang.System.getProperty('java.class.path').split(File::PATH_SEPARATOR)
+    cpath += Java::java.lang.System.getProperty('sun.boot.class.path').split(File::PATH_SEPARATOR)
+    jruby_cpath = cpath.compact.join(File::PATH_SEPARATOR)
+  rescue => e
   end
   unless jruby_cpath
     jruby_cpath = ENV['JRUBY_PARENT_CLASSPATH'] || ENV['JRUBY_HOME'] &&
