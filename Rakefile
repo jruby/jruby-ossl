@@ -49,7 +49,7 @@ begin
     p.changes = p.paragraphs_of('History.txt', 0..1).join("\n\n")
     p.rdoc_pattern = /^(lib\/.*rb)|txt$/
     p.description = p.paragraphs_of('README.txt', 0...1).join("\n\n")
-    p.test_globs = FileList["test/test_openssl.rb"]
+    p.test_globs = ENV["TEST"] || ["test/test_*.rb"]
   end.spec.dependencies.delete_if { |dep| dep.name == "hoe" }
 rescue LoadError
   puts "You really need Hoe installed to be able to package this gem"
