@@ -251,8 +251,10 @@ public class ASN1 {
         return null == v ? -1 : v.intValue();
     }
 
-    public static Class classForId(int id) {
-        return (Class)(ASN1_INFO[id][1]);
+    public static Class<? extends ASN1Encodable> classForId(int id) {
+        @SuppressWarnings("unchecked")
+        Class<? extends ASN1Encodable> result = (Class<? extends ASN1Encodable>)(ASN1_INFO[id][1]);
+        return result;
     }
     
     public static void createASN1(Ruby runtime, RubyModule ossl) {
@@ -768,7 +770,7 @@ public class ASN1 {
         ASN1Encodable toASN1() throws Exception {
             //            System.err.println(getMetaClass().getRealClass().getBaseName()+"#toASN1");
             int tag = idForRubyName(getMetaClass().getRealClass().getBaseName());
-            Class imp = (Class)ASN1_INFO[tag][1];
+            @SuppressWarnings("unchecked") Class<? extends ASN1Encodable> imp = (Class<? extends ASN1Encodable>)ASN1_INFO[tag][1];
             IRubyObject val = callMethod(getRuntime().getCurrentContext(),"value");
             if(imp == DERObjectIdentifier.class) {
                 return getObjectIdentifier(val.toString());
@@ -803,7 +805,7 @@ public class ASN1 {
                 }
                 return new DERBitString(bs,unused);
             } else if(val instanceof RubyString) {
-                return (ASN1Encodable)imp.getConstructor(new Class[]{String.class}).newInstance(new Object[]{val.toString()});
+                return imp.getConstructor(String.class).newInstance(val.toString());
             }
             System.err.println("object with tag: " + tag + " and value: " + val + " and val.class: " + val.getClass().getName() + " and impl: " + imp.getName());
             System.err.println("WARNING: unimplemented method called: asn1data#toASN1");
@@ -891,7 +893,9 @@ public class ASN1 {
                         vec.add(((ASN1Data)ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),OpenSSLImpl.to_der_if_possible(v))).toASN1());
                     }
                 }
-                return (ASN1Encodable)(((Class)(ASN1_INFO[id][1])).getConstructor(new Class[]{DEREncodableVector.class}).newInstance(new Object[]{vec}));
+                @SuppressWarnings("unchecked")
+                ASN1Encodable result = (ASN1Encodable)(((Class<? extends ASN1Encodable>)(ASN1_INFO[id][1])).getConstructor(new Class[]{DEREncodableVector.class}).newInstance(new Object[]{vec}));
+                return result;
             }
             return null;
         }

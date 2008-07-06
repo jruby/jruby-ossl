@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -380,7 +381,7 @@ else
     }
 
     private DERObject convert(DERObjectIdentifier oid, String value, int type) throws Exception {
-        Class clzz = ASN1.classForId(type);
+        Class<? extends ASN1Encodable> clzz = ASN1.classForId(type);
         if(clzz != null) {
             java.lang.reflect.Constructor ctor = clzz.getConstructor(new Class[]{String.class});
             if(null != ctor) {

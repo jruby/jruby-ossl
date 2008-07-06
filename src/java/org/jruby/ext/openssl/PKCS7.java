@@ -49,6 +49,7 @@ import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
 import org.bouncycastle.cms.CMSException;
+import org.bouncycastle.cms.RecipientInformation;
 import org.bouncycastle.cms.SignerInformation;
 import org.bouncycastle.cms.SignerInformationStore;
 import org.bouncycastle.asn1.x509.TBSCertificateStructure;
@@ -63,9 +64,11 @@ import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.anno.JRubyMethod;
+import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
+import javax.security.auth.x500.X500Principal;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -117,62 +120,8 @@ public class PKCS7 extends RubyObject {
 
         @JRubyMethod(meta=true, rest=true)
         public static IRubyObject sign(IRubyObject recv, IRubyObject[] args) throws Exception {
-            IRubyObject cert = recv.getRuntime().getNil();
-            IRubyObject key = recv.getRuntime().getNil();
-            IRubyObject data = recv.getRuntime().getNil();
-            IRubyObject certs = recv.getRuntime().getNil();
-            //IRubyObject flags = recv.getRuntime().getNil();
-            org.jruby.runtime.Arity.checkArgumentCount(recv.getRuntime(),args,3,5);
-            switch(args.length) {
-            case 5:
-                //flags = args[4];
-            case 4:
-                certs = args[3];
-            case 3:
-                cert = args[0];
-                key = args[1];
-                data = args[2];
-            }
-
-            X509AuxCertificate x509 = ((X509Cert)cert).getAuxCert();
-            PrivateKey pkey = ((PKey)key).getPrivateKey();
-            List<X509AuxCertificate> x509s = null;
-            if(!certs.isNil()) {
-                x509s = new ArrayList<X509AuxCertificate>();
-                for(Iterator iter = ((RubyArray)certs).getList().iterator();iter.hasNext();) {
-                    x509s.add(((X509Cert)iter.next()).getAuxCert());
-                }
-                x509s.add(x509);
-            }
-
-            final CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
-
-            gen.addSigner(pkey,x509,"1.3.14.3.2.26"); //SHA1 OID
-            if(x509s != null) {
-                CertStore store = CertStore.getInstance("Collection", new CollectionCertStoreParameters(x509s), OpenSSLReal.PROVIDER);
-                gen.addCertificatesAndCRLs(store);
-            }
-
-            final CMSSignedData[] result = new CMSSignedData[1];
-            final byte[] bdata = data.convertToString().getBytes();
-            OpenSSLReal.doWithBCProvider(new Runnable() {
-                    public void run() {
-                        try {
-                            result[0] = gen.generate(new CMSProcessableByteArray(bdata), "BC");
-                        } catch(GeneralSecurityException e) {
-                        } catch(CMSException e) {
-                        }
-                    }
-                });
-
-            CMSSignedData sdata = result[0];
-        
-            PKCS7 ret = new PKCS7(recv.getRuntime(),((RubyClass)((RubyModule)(recv.getRuntime().getModule("OpenSSL").getConstant("PKCS7"))).getConstant("PKCS7")));
-            ret.setInstanceVariable("@data",recv.getRuntime().getNil());
-            ret.setInstanceVariable("@error_string",recv.getRuntime().getNil());
-            ret.signedData = sdata;
-
-            return ret;
+            System.err.println("WARNING: un-implemented method called PKCS7#sign");
+            return recv.getRuntime().getNil();
         }
 
         /** ossl_pkcs7_s_encrypt
@@ -180,114 +129,23 @@ public class PKCS7 extends RubyObject {
          */
         @JRubyMethod(meta=true, rest=true)
         public static IRubyObject encrypt(IRubyObject recv, IRubyObject[] args) throws Exception {
-            IRubyObject certs = recv.getRuntime().getNil();
-            IRubyObject data = recv.getRuntime().getNil();
-            IRubyObject cipher = recv.getRuntime().getNil();
-            IRubyObject flags = recv.getRuntime().getNil();
-            org.jruby.runtime.Arity.checkArgumentCount(recv.getRuntime(),args,2,4);
-
-            String algo = "RC2-CBC";
-            int keySize = 40;
-
-            switch(args.length) {
-            case 4:
-                flags = args[3];
-            case 3:
-                cipher = args[2];
-            case 2:
-                data = args[1];
-                certs = args[0];
-            }
-
-            if(!cipher.isNil()) {
-                algo = ((Cipher)cipher).getName();
-                keySize = ((Cipher)cipher).getKeyLen() * 8;
-                //                System.err.println("BLAH: " + keySize);
-            }
-
-
-            int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
-            
-            IRubyObject arg = OpenSSLImpl.to_der_if_possible(data);
-            byte[] contentBytes = arg.convertToString().getBytes();
-
-            ((Cipher)cipher).dumpVars();
-
-            final CMSEnvelopedDataGenerator fact = new CMSEnvelopedDataGenerator();
-
-            if(certs instanceof RubyArray) {
-                RubyArray arr = (RubyArray)certs;
-                for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
-                    X509Cert haha = (X509Cert)iter.next();
-                    TBSCertificateStructure tbs = TBSCertificateStructure.getInstance(
-                                                                                      ASN1Object.fromByteArray(haha.getAuxCert().getTBSCertificate()));
-                    //                    System.err.println( tbs.getSubjectPublicKeyInfo().getAlgorithmId().getObjectId() );
-
-                    //                    System.err.println("bladibla: " + haha.getAuxCert());
-                    //                    System.err.println("hm: " + haha.getAuxCert().getPublicKey());
-                    fact.addKeyTransRecipient(haha.getAuxCert());
-                }
-            }
-
-            final CMSProcessableByteArray content = new CMSProcessableByteArray(contentBytes);
-            final String algo1 = ASN1.ln2oid(recv.getRuntime(), algo.toLowerCase());
-            final int keySize1 = keySize;
-
-            CMSEnvelopedData envdata = (CMSEnvelopedData)(OpenSSLReal.getWithBCProvider(new Callable() {
-                    public Object call() {
-                        try {
-                            return fact.generate(content, algo1, keySize1, "BC");
-                        } catch (Exception e) {
-                            //                            System.err.println(e);
-                            //                            e.getCause().printStackTrace();
-                            return null;
-                        }
-                    }
-                }));
-            
-            PKCS7 ret = new PKCS7(recv.getRuntime(),((RubyClass)((RubyModule)(recv.getRuntime().getModule("OpenSSL").getConstant("PKCS7"))).getConstant("PKCS7")));
-            ret.setInstanceVariable("@data",recv.getRuntime().getNil());
-            ret.setInstanceVariable("@error_string",recv.getRuntime().getNil());
-            ret.envelopedData = envdata;
-
-            return ret;
+            System.err.println("WARNING: un-implemented method called PKCS7#encrypt");
+            return recv.getRuntime().getNil();
         }
     }
     public PKCS7(Ruby runtime, RubyClass type) {
         super(runtime,type);
     }
 
-    private CMSEnvelopedData envelopedData;
-    private CMSSignedData signedData;
-
     @JRubyMethod(name="initialize", rest=true)
     public IRubyObject _initialize(IRubyObject[] args) throws Exception {
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
-            return this;
-        }
-        IRubyObject arg = OpenSSLImpl.to_der_if_possible(args[0]);
-        byte[] b = arg.convertToString().getBytes();
-        signedData = PEMInputOutput.readPKCS7(new InputStreamReader(new ByteArrayInputStream(b)),null);
-        if(null == signedData) {
-            ContentInfo info = ContentInfo.getInstance(new ASN1InputStream(b).readObject());
-            try {
-                signedData = new CMSSignedData(info);
-            } catch(Exception e) {
-                envelopedData = new CMSEnvelopedData(info);
-            }
-        }
-        this.setInstanceVariable("@data",getRuntime().getNil());
-        this.setInstanceVariable("@error_string",getRuntime().getNil());
+        System.err.println("WARNING: un-implemented method called PKCS7#initialize");
         return this;
     }
 
     @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         System.err.println("WARNING: un.implemented method called PKCS7#init_copy");
-        if(this == obj) {
-            return this;
-        }
-        checkFrozen();
         return this;
     }
 
@@ -299,7 +157,7 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod(name="type")
     public IRubyObject get_type() {
-        System.err.println("WARNING: un.implemented method called PKCS7#type");
+        System.err.println("WARNING: un.implemented method called PKCS7#get_type");
         return getRuntime().getNil();
     }
 
@@ -340,14 +198,8 @@ public class PKCS7 extends RubyObject {
      */
     @JRubyMethod
     public IRubyObject signers() {
-        Collection signers = this.signedData.getSignerInfos().getSigners();
-
-        List<IRubyObject> ary = new ArrayList<IRubyObject>(signers.size());
-        for(Object signer : signers) {
-            ary.add(SignerInfo.create(getRuntime(), (SignerInformation)signer));
-        }
-
-        return getRuntime().newArray(ary);
+        System.err.println("WARNING: un.implemented method called PKCS7#signers");
+        return getRuntime().getNil();
     }
 
     @JRubyMethod
@@ -376,23 +228,8 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject certificates() throws Exception {
-        final CertStore[] result = new CertStore[1];
-        OpenSSLReal.doWithBCProvider(new Runnable() {
-                public void run() {
-                    try {
-                        result[0] = signedData.getCertificatesAndCRLs("Collection","BC");
-                    } catch(GeneralSecurityException e) {
-                    } catch(CMSException e) {
-                    }
-                }
-            });
-        CertStore cc = result[0];
-        List<X509AuxCertificate> l = StoreContext.ensureAux(cc.getCertificates(null));
-        List<IRubyObject> certs = new ArrayList<IRubyObject>(l.size());
-        for(X509AuxCertificate c : l) {
-            certs.add(X509Cert.wrap(getRuntime(), c));
-        }
-        return getRuntime().newArray(certs);
+        System.err.println("WARNING: un.implemented method called PKCS7#certificates");
+        return getRuntime().getNil();
     }
 
     @JRubyMethod
@@ -421,112 +258,26 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod(rest=true)
     public IRubyObject verify(IRubyObject[] args) throws Exception {
-        IRubyObject certs;
-        //IRubyObject store;
-        IRubyObject indata = getRuntime().getNil();
-        //IRubyObject flags = getRuntime().getNil();
-        switch(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,2,4)) {
-        case 4:
-            //flags = args[3];
-        case 3:
-            indata = args[2];
-        default:
-            certs = args[0];
-            //store = args[1];
-        }
-        
-        if(indata.isNil()) {
-            indata = getInstanceVariable("@data");
-        }
-        List<X509AuxCertificate> x509s = null;
-        if(!certs.isNil()) {
-            x509s = new ArrayList<X509AuxCertificate>();
-            for(Iterator iter = ((RubyArray)certs).getList().iterator();iter.hasNext();) {
-                x509s.add(((X509Cert)iter.next()).getAuxCert());
-            }
-        }
-
-        CertStore _x509s = CertStore.getInstance("Collection", new CollectionCertStoreParameters(x509s),OpenSSLReal.PROVIDER);
-
-        int verified = 0;
-
-        SignerInformationStore  signers =  signedData.getSignerInfos();
-
-        final CertStore[] result2 = new CertStore[1];
-        OpenSSLReal.doWithBCProvider(new Runnable() {
-                public void run() {
-                    try {
-                        result2[0] = signedData.getCertificatesAndCRLs("Collection","BC");
-                    } catch(GeneralSecurityException e) {
-                    } catch(CMSException e) {
-                    }
-                }
-            });
-        CertStore  cs = result2[0];
-        Collection              c = signers.getSigners();
-        Iterator                it = c.iterator();
-  
-        while(it.hasNext()) {
-            final SignerInformation   signer = (SignerInformation)it.next();
-
-            Collection          certCollection = _x509s.getCertificates(signer.getSID());
-            Iterator        certIt = certCollection.iterator();
-            X509Certificate cert = null;
-
-            if(certIt.hasNext()) {
-                cert = (X509AuxCertificate)certIt.next();
-            }
-            if(cert == null) {
-                Collection          certCollection2 = cs.getCertificates(signer.getSID());
-                Iterator        certIt2 = certCollection2.iterator();
-                if(certIt2.hasNext()) {
-                    cert = (X509Certificate)certIt2.next();
-                }                
-            }
-
-            final boolean[] result = new boolean[]{false};
-            final X509Certificate cert2 = cert;
-            if(null != cert) {
-                OpenSSLReal.doWithBCProvider(new Runnable() {
-                        public void run() {
-                            try {
-                                result[0] = signer.verify(cert2, "BC");
-                            } catch(GeneralSecurityException e) {
-                            } catch(CMSException e) {
-                            } catch(NullPointerException e) {
-                            }
-                        }
-                    });
-                if(result[0]) {
-                    verified++;
-                }
-            }
-        }
-
-        return (verified != 0) ? getRuntime().getTrue() : getRuntime().getFalse();
+        System.err.println("WARNING: un-implemented method called PKCS7#verify");
+        return getRuntime().getNil();
     }
 
     @JRubyMethod(rest=true)
     public IRubyObject decrypt(IRubyObject[] args) {
-        System.err.println("WARNING: un.implemented method called PKCS7#decrypt");
+        System.err.println("WARNING: un-implemented method called PKCS7#decrypt");
         return getRuntime().getNil();
     }
 
     @JRubyMethod(name={"to_pem","to_s"})
     public IRubyObject to_pem() throws Exception {
-        StringWriter w = new StringWriter();
-        PEMInputOutput.writePKCS7(w,signedData);
-        w.close();
-        return getRuntime().newString(w.toString());
+        System.err.println("WARNING: un-implemented method called PKCS7#to_pem");
+        return getRuntime().getNil();
     }
 
     @JRubyMethod
     public IRubyObject to_der() throws Exception {
-        if(signedData != null) {
-            return RubyString.newString(getRuntime(), signedData.getEncoded());
-        } else {
-            return RubyString.newString(getRuntime(), envelopedData.getEncoded());
-        }
+        System.err.println("WARNING: un-implemented method called PKCS7#to_der");
+        return getRuntime().getNil();
     }
 
     public static class SignerInfo extends RubyObject {
@@ -597,6 +348,19 @@ public class PKCS7 extends RubyObject {
 
         public RecipientInfo(Ruby runtime, RubyClass type) {
             super(runtime,type);
+        }
+
+
+        public static RecipientInfo create(Ruby runtime, RecipientInformation info) {
+            RecipientInfo rinfo = new RecipientInfo(runtime, (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("PKCS7"))).getConstant("RecipientInfo")));
+            rinfo.initWithRecipientInformation(info);
+            return rinfo;
+        }
+
+        private RecipientInformation info;
+
+        private void initWithRecipientInformation(RecipientInformation info) {
+            this.info = info;
         }
 
         @JRubyMethod
