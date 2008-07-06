@@ -202,7 +202,7 @@ public class PKCS7 extends RubyObject {
             if(!cipher.isNil()) {
                 algo = ((Cipher)cipher).getName();
                 keySize = ((Cipher)cipher).getKeyLen() * 8;
-                System.err.println("BLAH: " + keySize);
+                //                System.err.println("BLAH: " + keySize);
             }
 
 
@@ -219,12 +219,12 @@ public class PKCS7 extends RubyObject {
                 RubyArray arr = (RubyArray)certs;
                 for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
                     X509Cert haha = (X509Cert)iter.next();
-                TBSCertificateStructure tbs = TBSCertificateStructure.getInstance(
-                                                       ASN1Object.fromByteArray(haha.getAuxCert().getTBSCertificate()));
-                System.err.println( tbs.getSubjectPublicKeyInfo().getAlgorithmId().getObjectId() );
+                    TBSCertificateStructure tbs = TBSCertificateStructure.getInstance(
+                                                                                      ASN1Object.fromByteArray(haha.getAuxCert().getTBSCertificate()));
+                    //                    System.err.println( tbs.getSubjectPublicKeyInfo().getAlgorithmId().getObjectId() );
 
-                    System.err.println("bladibla: " + haha.getAuxCert());
-                    System.err.println("hm: " + haha.getAuxCert().getPublicKey());
+                    //                    System.err.println("bladibla: " + haha.getAuxCert());
+                    //                    System.err.println("hm: " + haha.getAuxCert().getPublicKey());
                     fact.addKeyTransRecipient(haha.getAuxCert());
                 }
             }
@@ -238,8 +238,8 @@ public class PKCS7 extends RubyObject {
                         try {
                             return fact.generate(content, algo1, keySize1, "BC");
                         } catch (Exception e) {
-                            System.err.println(e);
-                            e.getCause().printStackTrace();
+                            //                            System.err.println(e);
+                            //                            e.getCause().printStackTrace();
                             return null;
                         }
                     }
