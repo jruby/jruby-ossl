@@ -32,9 +32,32 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class Signed {
+    /**
+     * Describe version here.
+     */
+    private int version;
+
     PKCS7 contents;
 
     public void setContents(PKCS7 contents) {
         this.contents = contents;
+    }
+
+    /**
+     * Get the <code>Version</code> value.
+     *
+     * @return an <code>int</code> value
+     */
+    public final int getVersion() {
+        return version;
+    }
+
+    /**
+     * Set the <code>Version</code> value.
+     *
+     * @param newVersion The new Version value.
+     */
+    public final void setVersion(final int newVersion) {
+        this.version = newVersion;
     }
 }// Signed

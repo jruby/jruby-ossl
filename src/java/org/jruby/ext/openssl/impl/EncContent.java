@@ -32,4 +32,26 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class EncContent {
+    /**
+     * Describe contentType here.
+     */
+    private int contentType;
+
+    /**
+     * Get the <code>ContentType</code> value.
+     *
+     * @return an <code>int</code> value
+     */
+    public final int getContentType() {
+        return contentType;
+    }
+
+    /**
+     * Set the <code>ContentType</code> value.
+     *
+     * @param newContentType The new ContentType value.
+     */
+    public final void setContentType(final int newContentType) {
+        this.contentType = newContentType;
+    }
 }// EncContent

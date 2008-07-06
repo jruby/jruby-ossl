@@ -27,51 +27,23 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-/** PKCS7_ENCRYPT
+/** c: BIO
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class Encrypt {
-    private int version;
-
-    /**
-     * Describe encContent here.
-     */
-    private EncContent encData = new EncContent();
-
-    /**
-     * Get the <code>Version</code> value.
+public class BIO {
+    
+    /** c: BIO_flush
      *
-     * @return an <code>int</code> value
      */
-    public final int getVersion() {
-        return version;
+    public void flush() {
+        // TODO: implement
     }
 
-    /**
-     * Set the <code>Version</code> value.
+    /** c: SMIME_crlf_copy
      *
-     * @param newVersion The new Version value.
      */
-    public final void setVersion(final int newVersion) {
-        this.version = newVersion;
+    public void crlfCopy(byte[] in, int flags) {
+        // TODO: implement
     }
-
-    /**
-     * Get the <code>EncData</code> value.
-     *
-     * @return an <code>EncContent</code> value
-     */
-    public final EncContent getEncData() {
-        return encData;
-    }
-
-    /**
-     * Set the <code>EncData</code> value.
-     *
-     * @param newEncContent The new EncContent value.
-     */
-    public final void setEncData(final EncContent newEncData) {
-        this.encData = newEncData;
-    }
-}// Encrypt
+}// BIO

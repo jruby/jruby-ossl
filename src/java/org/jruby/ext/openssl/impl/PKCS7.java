@@ -29,6 +29,10 @@ package org.jruby.ext.openssl.impl;
 
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1OctetString;
+import java.security.cert.X509Certificate;
+import javax.crypto.Cipher;
+import java.util.List;
+import org.bouncycastle.asn1.DEROctetString;
 
 /** c: PKCS7
  *
@@ -62,7 +66,7 @@ public class PKCS7 extends TypeDiscriminating {
     private Envelope enveloped;
 
     /* NID_pkcs7_signedAndEnveloped */
-    private SignEnvelope signed_and_enveloped;
+    private SignEnvelope signedAndEnveloped;
 
     /* NID_pkcs7_digest */
     private Digest digest;
@@ -89,7 +93,7 @@ public class PKCS7 extends TypeDiscriminating {
             break;
         case OP_GET_DETACHED_SIGNATURE:
             if(isSigned()) {
-                if(sign == null || sign.contents.ptr == null) {
+                if(sign == null || sign.contents.data == null) {
                     ret = 1;
                 } else {
                     ret = 0;
@@ -117,6 +121,110 @@ public class PKCS7 extends TypeDiscriminating {
 
     public boolean isDetached() {
         return isSigned() && getDetached() != 0;
+    }
+
+    public static PKCS7 encrypt(List<X509Certificate> certs, byte[] in, Cipher cipher, int flags) {
+        PKCS7 p7 = new PKCS7();
+
+        p7.setType(NID_pkcs7_enveloped);
+
+        try {
+            p7.setCipher(cipher);
+
+            for(X509Certificate x509 : certs) {
+                p7.addRecipient(x509);
+            }
+
+            BIO p7bio = p7.dataInit(null);
+
+            p7bio.crlfCopy(in, flags);
+            p7bio.flush();
+            p7.dataFinal(p7bio);
+
+            return p7;
+        } catch(PKCS7Exception e) {
+            // Equiv of err:
+            // TODO: Handle different exceptions correctly here
+            return null;
+        }
+    }
+
+    private void deleteOtherValues() {
+        ptr = null;
+        data = null;
+        sign = null;
+        enveloped = null;
+        signedAndEnveloped = null;
+        digest = null;
+        encrypted = null;
+        other = null;
+    }
+
+    /** c: PKCS7_set_type
+     *
+     */
+    public void setType(int type) {
+        this.type = type;
+        deleteOtherValues();
+        switch(type) {
+        case NID_pkcs7_signed:
+            this.sign = new Signed();
+            this.sign.setVersion(1);
+            break;
+        case NID_pkcs7_data:
+            this.data = new DEROctetString(new byte[0]);
+            break;
+        case NID_pkcs7_signedAndEnveloped:
+            this.signedAndEnveloped = new SignEnvelope();
+            this.signedAndEnveloped.setVersion(1);
+            this.signedAndEnveloped.getEncData().setContentType(NID_pkcs7_data);
+            break;
+        case NID_pkcs7_enveloped:
+            this.enveloped = new Envelope();
+            this.enveloped.setVersion(0);
+            this.enveloped.getEncData().setContentType(NID_pkcs7_data);
+            break;
+        case NID_pkcs7_encrypted:
+            this.encrypted = new Encrypt();
+            this.encrypted.setVersion(0);
+            this.encrypted.getEncData().setContentType(NID_pkcs7_data);
+            break;
+        case NID_pkcs7_digest:
+            this.digest = new Digest();
+            this.digest.setVersion(0);
+            break;
+        default:
+            throw new PKCS7Exception(F_PKCS7_SET_TYPE,R_UNSUPPORTED_CONTENT_TYPE);
+        }
+    }
+
+    /** c: PKCS7_set_cipher
+     *
+     */
+    public void setCipher(Cipher cipher) {
+        // TODO: implement
+    }
+
+    /** c: PKCS7_add_recipient
+     *
+     */
+    public void addRecipient(X509Certificate recip) {
+        // TODO: implement
+    }
+
+    /** c: PKCS7_dataInit
+     *
+     */
+    public BIO dataInit(Object val) {
+        // TODO: implement
+        return new BIO();
+    }
+
+    /** c: PKCS7_dataFinal
+     *
+     */
+    public void dataFinal(BIO bio) {
+        // TODO: implement
     }
 
     public static final int S_HEADER = 0;
@@ -231,8 +339,36 @@ public class PKCS7 extends TypeDiscriminating {
     public static final int R_WRONG_CONTENT_TYPE = 113;
     public static final int R_WRONG_PKCS7_TYPE = 114;
 
+    public String getPtr() {
+        return this.ptr;
+    }
+
+    public Envelope getEnveloped() {
+        return this.enveloped;
+    }
+
+    public SignEnvelope getSignedAndEnveloped() {
+        return this.signedAndEnveloped;
+    }
+
+    public Digest getDigest() {
+        return this.digest;
+    }
+
+    public Encrypt getEncrypted() {
+        return this.encrypted;
+    }
+
+    public ASN1Encodable getOther() {
+        return this.other;
+    }
+
     public void setSign(Signed sign) {
         this.sign = sign;
+    }
+
+    public Signed getSign() {
+        return this.sign;
     }
 
     public void setData(ASN1OctetString data) {

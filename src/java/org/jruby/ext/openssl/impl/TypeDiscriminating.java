@@ -59,7 +59,7 @@ public abstract class TypeDiscriminating {
 
     // helpers for testing
 
-    public void setType(int type) {
+    public void setInternalType(int type) {
         this.type = type;
     }
 }// TypeDiscriminating

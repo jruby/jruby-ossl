@@ -32,4 +32,46 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class SignEnvelope {
+    private int version;
+
+    /**
+     * Describe encContent here.
+     */
+    private EncContent encData = new EncContent();
+
+    /**
+     * Get the <code>Version</code> value.
+     *
+     * @return an <code>int</code> value
+     */
+    public final int getVersion() {
+        return version;
+    }
+
+    /**
+     * Set the <code>Version</code> value.
+     *
+     * @param newVersion The new Version value.
+     */
+    public final void setVersion(final int newVersion) {
+        this.version = newVersion;
+    }
+
+    /**
+     * Get the <code>EncData</code> value.
+     *
+     * @return an <code>EncContent</code> value
+     */
+    public final EncContent getEncData() {
+        return encData;
+    }
+
+    /**
+     * Set the <code>EncData</code> value.
+     *
+     * @param newEncContent The new EncContent value.
+     */
+    public final void setEncData(final EncContent newEncData) {
+        this.encData = newEncData;
+    }
 }// SignEnvelope

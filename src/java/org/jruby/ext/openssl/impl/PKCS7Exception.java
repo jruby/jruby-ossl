@@ -27,51 +27,25 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-/** PKCS7_ENCRYPT
+/**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class Encrypt {
-    private int version;
+public class PKCS7Exception extends RuntimeException {
+    private int method;
+    private int reason;
 
-    /**
-     * Describe encContent here.
-     */
-    private EncContent encData = new EncContent();
-
-    /**
-     * Get the <code>Version</code> value.
-     *
-     * @return an <code>int</code> value
-     */
-    public final int getVersion() {
-        return version;
+    public PKCS7Exception(int method, int reason) {
+        super();
+        this.method = method;
+        this.reason = reason;
     }
 
-    /**
-     * Set the <code>Version</code> value.
-     *
-     * @param newVersion The new Version value.
-     */
-    public final void setVersion(final int newVersion) {
-        this.version = newVersion;
+    public int getMethod() {
+        return this.method;
     }
 
-    /**
-     * Get the <code>EncData</code> value.
-     *
-     * @return an <code>EncContent</code> value
-     */
-    public final EncContent getEncData() {
-        return encData;
+    public int getReason() {
+        return this.reason;
     }
-
-    /**
-     * Set the <code>EncData</code> value.
-     *
-     * @param newEncContent The new EncContent value.
-     */
-    public final void setEncData(final EncContent newEncData) {
-        this.encData = newEncData;
-    }
-}// Encrypt
+}// PKCS7Exception
