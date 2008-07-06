@@ -250,10 +250,21 @@ public class PKCS7 extends RubyObject {
         return getRuntime().getNil();
     }
 
+    /** ossl_pkcs7_get_signer
+     * 
+     * This seems to return a list of SignerInfo objects.
+     *
+     */
     @JRubyMethod
     public IRubyObject signers() {
-        System.err.println("WARNING: un.implemented method called PKCS7#signers");
-        return getRuntime().getNil();
+        Collection signers = this.signedData.getSignerInfos().getSigners();
+
+        List<IRubyObject> ary = new ArrayList<IRubyObject>(signers.size());
+        for(Object signer : signers) {
+            ary.add(SignerInfo.create(getRuntime(), (SignerInformation)signer));
+        }
+
+        return getRuntime().newArray(ary);
     }
 
     @JRubyMethod
@@ -374,7 +385,6 @@ public class PKCS7 extends RubyObject {
   
         while(it.hasNext()) {
             final SignerInformation   signer = (SignerInformation)it.next();
-            System.err.println(signer.getSignedAttributes().toHashtable());
 
             Collection          certCollection = _x509s.getCertificates(signer.getSID());
             Iterator        certIt = certCollection.iterator();
@@ -400,6 +410,7 @@ public class PKCS7 extends RubyObject {
                                 result[0] = signer.verify(cert2, "BC");
                             } catch(GeneralSecurityException e) {
                             } catch(CMSException e) {
+                            } catch(NullPointerException e) {
                             }
                         }
                     });
@@ -445,8 +456,18 @@ public class PKCS7 extends RubyObject {
             cPKCS7Signer.defineAnnotatedMethods(SignerInfo.class);
         }
 
+        public static SignerInfo create(Ruby runtime, SignerInformation info) {
+            SignerInfo sinfo = new SignerInfo(runtime, (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("PKCS7"))).getConstant("SignerInfo")));
+            sinfo.initWithSignerInformation(info);
+            return sinfo;
+        }
+
         public SignerInfo(Ruby runtime, RubyClass type) {
             super(runtime,type);
+        }
+
+        private void initWithSignerInformation(SignerInformation info) {
+        
         }
 
         @JRubyMethod
