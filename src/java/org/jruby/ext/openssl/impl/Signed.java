@@ -32,4 +32,9 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class Signed {
+    PKCS7 contents;
+
+    public void setContents(PKCS7 contents) {
+        this.contents = contents;
+    }
 }// Signed

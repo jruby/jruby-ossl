@@ -27,10 +27,39 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-/** PKCS7_DIGEST
- *
+/**
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class Digest {
-    PKCS7 contents;
-}// Digest
+public abstract class TypeDiscriminating {
+    protected int type;
+
+    public boolean isSigned() {
+        return this.type == PKCS7.NID_pkcs7_signed;
+    }
+
+    public boolean isEncrypted() {
+        return this.type == PKCS7.NID_pkcs7_encrypted;
+    }
+
+    public boolean isEnveloped() {
+        return this.type == PKCS7.NID_pkcs7_enveloped;
+    }
+
+    public boolean isSignedAndEnveloped() {
+        return this.type == PKCS7.NID_pkcs7_signedAndEnveloped;
+    }
+
+    public boolean isData() {
+        return this.type == PKCS7.NID_pkcs7_data;
+    }
+
+    public boolean isDigest() {
+        return this.type == PKCS7.NID_pkcs7_digest;
+    }
+
+    // helpers for testing
+
+    public void setType(int type) {
+        this.type = type;
+    }
+}// TypeDiscriminating

@@ -34,12 +34,17 @@ import org.bouncycastle.asn1.ASN1OctetString;
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class PKCS7 {
+public class PKCS7 extends TypeDiscriminating {
+    public static final int NID_pkcs7_signed = 22;
+    public static final int NID_pkcs7_encrypted = 26;
+    public static final int NID_pkcs7_enveloped = 23;
+    public static final int NID_pkcs7_signedAndEnveloped = 24;
+    public static final int NID_pkcs7_data = 21;
+    public static final int NID_pkcs7_digest = 25;
+
     private String asn1;
     private int state; //used during processing
     private int detached;
-
-    private ASN1Encodable type;
 
 	/* content as defined by the type */
 	/* all encryption/message digests are applied to the 'contents',
@@ -68,6 +73,51 @@ public class PKCS7 {
     /* Anything else */
     private ASN1Encodable other;
 
+    public Object ctrl(int cmd, Object v, Object ignored) {
+        int ret = 0;
+        switch(cmd) {
+        case OP_SET_DETACHED_SIGNATURE:
+            if(isSigned()) {
+                ret = detached = ((Integer)v).intValue();
+                if(ret != 0 && sign.contents.isData()) {
+                    sign.contents.data = null;
+                }
+            } else {
+                // TODO: ERR
+                ret = 0;
+            }
+            break;
+        case OP_GET_DETACHED_SIGNATURE:
+            if(isSigned()) {
+                if(sign == null || sign.contents.ptr == null) {
+                    ret = 1;
+                } else {
+                    ret = 0;
+                }
+            } else {
+                // TODO: ERR
+                ret = 0;
+            }
+
+            break;
+        default:
+            // TODO: ERR
+            ret = 0;
+        }
+        return Integer.valueOf(ret);
+    }
+
+    public void setDetached(int v) {
+        ctrl(OP_SET_DETACHED_SIGNATURE, Integer.valueOf(v), null);
+    }
+
+    public int getDetached() {
+        return ((Integer)ctrl(OP_GET_DETACHED_SIGNATURE, null, null)).intValue();
+    }
+
+    public boolean isDetached() {
+        return isSigned() && getDetached() != 0;
+    }
 
     public static final int S_HEADER = 0;
     public static final int S_BODY = 1;
@@ -180,5 +230,17 @@ public class PKCS7 {
     public static final int R_UNSUPPORTED_CONTENT_TYPE = 112;
     public static final int R_WRONG_CONTENT_TYPE = 113;
     public static final int R_WRONG_PKCS7_TYPE = 114;
+
+    public void setSign(Signed sign) {
+        this.sign = sign;
+    }
+
+    public void setData(ASN1OctetString data) {
+        this.data = data;
+    }
+
+    public ASN1OctetString getData() {
+        return this.data;
+    }
 }// PKCS7
 
