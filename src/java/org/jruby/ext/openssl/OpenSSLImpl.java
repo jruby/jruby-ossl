@@ -232,6 +232,18 @@ ASN1.addObject(runtime, 171, "authorityInfoAccess", "Authority Information Acces
 ASN1.addObject(runtime, 172, "OCSP", "OCSP","1.3.6.1.5.5.7.48.1");
 ASN1.addObject(runtime, 173, "caIssuers", "CA Issuers","1.3.6.1.5.5.7.48.2");
 ASN1.addObject(runtime, 174, "OCSPSigning", "OCSP Signing","1.3.6.1.5.5.7.3.9");
+ASN1.addObject(runtime, 175, "AES-128-EBC", "aes-128-ebc","2.16.840.1.101.3.4.1.1");
+ASN1.addObject(runtime, 176, "AES-128-CBC", "aes-128-cbc","2.16.840.1.101.3.4.1.2");
+ASN1.addObject(runtime, 177, "AES-128-OFB", "aes-128-ofb","2.16.840.1.101.3.4.1.3");
+ASN1.addObject(runtime, 178, "AES-128-CFB", "aes-128-cfb","2.16.840.1.101.3.4.1.4");
+ASN1.addObject(runtime, 179, "AES-192-EBC", "aes-192-ebc","2.16.840.1.101.3.4.1.21");
+ASN1.addObject(runtime, 180, "AES-192-CBC", "aes-192-cbc","2.16.840.1.101.3.4.1.22");
+ASN1.addObject(runtime, 181, "AES-192-OFB", "aes-192-ofb","2.16.840.1.101.3.4.1.23");
+ASN1.addObject(runtime, 182, "AES-192-CFB", "aes-192-cfb","2.16.840.1.101.3.4.1.24");
+ASN1.addObject(runtime, 183, "AES-256-EBC", "aes-256-ebc","2.16.840.1.101.3.4.1.41");
+ASN1.addObject(runtime, 184, "AES-256-CBC", "aes-256-cbc","2.16.840.1.101.3.4.1.42");
+ASN1.addObject(runtime, 185, "AES-256-OFB", "aes-256-ofb","2.16.840.1.101.3.4.1.43");
+ASN1.addObject(runtime, 186, "AES-256-CFB", "aes-256-cfb","2.16.840.1.101.3.4.1.44");
     }
 
     public static interface KeyAndIv {

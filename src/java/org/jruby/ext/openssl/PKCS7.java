@@ -41,17 +41,22 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.cms.ContentInfo;
+import org.bouncycastle.cms.CMSEnvelopedData;
+import org.bouncycastle.cms.CMSEnvelopedDataGenerator;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
 import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.SignerInformation;
 import org.bouncycastle.cms.SignerInformationStore;
+import org.bouncycastle.asn1.x509.TBSCertificateStructure;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
+import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
@@ -170,16 +175,89 @@ public class PKCS7 extends RubyObject {
             return ret;
         }
 
+        /** ossl_pkcs7_s_encrypt
+         *
+         */
         @JRubyMethod(meta=true, rest=true)
-        public static IRubyObject encrypt(IRubyObject recv, IRubyObject[] args) {
-            System.err.println("WARNING: un-implemented method called PKCS7#encrypt");
-            return recv.getRuntime().getNil();
+        public static IRubyObject encrypt(IRubyObject recv, IRubyObject[] args) throws Exception {
+            IRubyObject certs = recv.getRuntime().getNil();
+            IRubyObject data = recv.getRuntime().getNil();
+            IRubyObject cipher = recv.getRuntime().getNil();
+            IRubyObject flags = recv.getRuntime().getNil();
+            org.jruby.runtime.Arity.checkArgumentCount(recv.getRuntime(),args,2,4);
+
+            String algo = "RC2-CBC";
+            int keySize = 40;
+
+            switch(args.length) {
+            case 4:
+                flags = args[3];
+            case 3:
+                cipher = args[2];
+            case 2:
+                data = args[1];
+                certs = args[0];
+            }
+
+            if(!cipher.isNil()) {
+                algo = ((Cipher)cipher).getName();
+                keySize = ((Cipher)cipher).getKeyLen() * 8;
+                System.err.println("BLAH: " + keySize);
+            }
+
+
+            int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
+            
+            IRubyObject arg = OpenSSLImpl.to_der_if_possible(data);
+            byte[] contentBytes = arg.convertToString().getBytes();
+
+            ((Cipher)cipher).dumpVars();
+
+            final CMSEnvelopedDataGenerator fact = new CMSEnvelopedDataGenerator();
+
+            if(certs instanceof RubyArray) {
+                RubyArray arr = (RubyArray)certs;
+                for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
+                    X509Cert haha = (X509Cert)iter.next();
+                TBSCertificateStructure tbs = TBSCertificateStructure.getInstance(
+                                                       ASN1Object.fromByteArray(haha.getAuxCert().getTBSCertificate()));
+                System.err.println( tbs.getSubjectPublicKeyInfo().getAlgorithmId().getObjectId() );
+
+                    System.err.println("bladibla: " + haha.getAuxCert());
+                    System.err.println("hm: " + haha.getAuxCert().getPublicKey());
+                    fact.addKeyTransRecipient(haha.getAuxCert());
+                }
+            }
+
+            final CMSProcessableByteArray content = new CMSProcessableByteArray(contentBytes);
+            final String algo1 = ASN1.ln2oid(recv.getRuntime(), algo.toLowerCase());
+            final int keySize1 = keySize;
+
+            CMSEnvelopedData envdata = (CMSEnvelopedData)(OpenSSLReal.getWithBCProvider(new Callable() {
+                    public Object call() {
+                        try {
+                            return fact.generate(content, algo1, keySize1, "BC");
+                        } catch (Exception e) {
+                            System.err.println(e);
+                            e.getCause().printStackTrace();
+                            return null;
+                        }
+                    }
+                }));
+            
+            PKCS7 ret = new PKCS7(recv.getRuntime(),((RubyClass)((RubyModule)(recv.getRuntime().getModule("OpenSSL").getConstant("PKCS7"))).getConstant("PKCS7")));
+            ret.setInstanceVariable("@data",recv.getRuntime().getNil());
+            ret.setInstanceVariable("@error_string",recv.getRuntime().getNil());
+            ret.envelopedData = envdata;
+
+            return ret;
         }
     }
     public PKCS7(Ruby runtime, RubyClass type) {
         super(runtime,type);
     }
 
+    private CMSEnvelopedData envelopedData;
     private CMSSignedData signedData;
 
     @JRubyMethod(name="initialize", rest=true)
@@ -191,7 +269,12 @@ public class PKCS7 extends RubyObject {
         byte[] b = arg.convertToString().getBytes();
         signedData = PEMInputOutput.readPKCS7(new InputStreamReader(new ByteArrayInputStream(b)),null);
         if(null == signedData) {
-            signedData = new CMSSignedData(ContentInfo.getInstance(new ASN1InputStream(b).readObject()));
+            ContentInfo info = ContentInfo.getInstance(new ASN1InputStream(b).readObject());
+            try {
+                signedData = new CMSSignedData(info);
+            } catch(Exception e) {
+                envelopedData = new CMSEnvelopedData(info);
+            }
         }
         this.setInstanceVariable("@data",getRuntime().getNil());
         this.setInstanceVariable("@error_string",getRuntime().getNil());
@@ -439,7 +522,11 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject to_der() throws Exception {
-        return RubyString.newString(getRuntime(), signedData.getEncoded());
+        if(signedData != null) {
+            return RubyString.newString(getRuntime(), signedData.getEncoded());
+        } else {
+            return RubyString.newString(getRuntime(), envelopedData.getEncoded());
+        }
     }
 
     public static class SignerInfo extends RubyObject {

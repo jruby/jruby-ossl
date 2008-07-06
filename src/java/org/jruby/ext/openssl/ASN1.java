@@ -128,6 +128,15 @@ public class ASN1 {
         return obj2nid(runtime, new DERObjectIdentifier(oid));
     }
 
+    synchronized static String ln2oid(Ruby runtime, String ln) {
+        Map<String, DERObjectIdentifier> val = SYM_TO_OID.get(runtime);
+        if(null == val) {
+            initMaps(runtime);
+            val = SYM_TO_OID.get(runtime);
+        }
+        return val.get(ln).getId();
+    }
+
     synchronized static Integer obj2nid(Ruby runtime, DERObjectIdentifier oid) {
         Map<DERObjectIdentifier, Integer> o2n = OID_TO_NID.get(runtime);
         if(null == o2n) {

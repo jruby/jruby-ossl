@@ -57,7 +57,7 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Cipher extends RubyObject {
-
+ 
     // set to enable debug output
     private static final boolean DEBUG = false;
     private static ObjectAllocator CIPHER_ALLOCATOR = new ObjectAllocator() {
@@ -200,7 +200,7 @@ public class Cipher extends RubyObject {
     private byte[] iv;
     private String padding;
     
-    private void dumpVars() {
+    void dumpVars() {
         System.out.println("***** Cipher instance vars ****");
         System.out.println("name = " + name);
         System.out.println("cryptoBase = " + cryptoBase);
@@ -436,7 +436,7 @@ public class Cipher extends RubyObject {
         return this;
     }
 
-    private javax.crypto.Cipher getCipher() {
+    javax.crypto.Cipher getCipher() {
         return (javax.crypto.Cipher) OpenSSLReal.getWithBCProvider(new Callable() {
             public Object call() {
                 try {
@@ -591,5 +591,21 @@ public class Cipher extends RubyObject {
 
     String getAlgorithm() {
         return this.ciph.getAlgorithm();
+    }
+
+    String getName() {
+        return this.name;
+    }
+
+    String getCryptoBase() {
+        return this.cryptoBase;
+    }
+
+    String getCryptoMode() {
+        return this.cryptoMode;
+    }
+
+    int getKeyLen() {
+        return this.keyLen;
     }
 }
