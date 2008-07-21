@@ -61,6 +61,10 @@ public class Attribute {
         return set;
     }
 
+    public boolean isSingle() {
+        return this.single;
+    }
+
     @Override
     public boolean equals(Object obj) {
         boolean ret = this == obj;

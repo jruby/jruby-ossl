@@ -86,7 +86,7 @@ public class SignerInfo {
     }
 
 
-    /** c: add_attribute
+    /** c: static(pk7_doit.c) add_attribute
      *
      */
     private void addAttribute(List<Attribute> sk, int nid, int atrtype, ASN1Encodable value) {
@@ -99,5 +99,37 @@ public class SignerInfo {
             }
         }
         sk.add(attr);
+    }
+
+    /** c: PKCS7_get_signed_attribute
+     *
+     */
+    public ASN1Encodable getSignedAttribute(int nid) {
+        return getAttribute(authAttr, nid);
+    }
+
+    /** c: PKCS7_get_attribute
+     *
+     */
+    public ASN1Encodable getAttribute(int nid) {
+        return getAttribute(unauthAttr, nid);
+    }
+
+
+    /** c: static(pk7_doit.c) get_attribute
+     *
+     */
+    private ASN1Encodable getAttribute(List<Attribute> sk, int nid) {
+        for(int i=0,j=sk.size(); i<j; i++) {
+            Attribute attr = sk.get(i);
+            if(attr.getType() == nid) {
+                if(!attr.isSingle() && attr.getSet().size() > 0) {
+                    return attr.getSet().get(0);
+                } else {
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 }// SignerInfo

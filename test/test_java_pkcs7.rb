@@ -44,6 +44,51 @@ CERT
     X509Cert = java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(java.io.ByteArrayInputStream.new(X509CertString.to_java_bytes))
 
     class TestJavaSignerInfo < Test::Unit::TestCase
+      def test_get_attribute_with_nonexisting_nid
+        assert_nil SignerInfo.new.get_attribute(321)
+        val = ASN1::OctetString.new("foo".to_java_bytes)
+
+        si = SignerInfo.new
+        si.add_attribute(123, 444, val)
+        assert_nil si.get_attribute(321)
+      end
+
+      def test_get_attribute_with_existing_nid
+        val = ASN1::OctetString.new("foo".to_java_bytes)
+        val2 = ASN1::OctetString.new("bar".to_java_bytes)
+
+        si = SignerInfo.new
+        si.add_attribute(123, 444, val)
+        assert_equal val, si.get_attribute(123)
+
+        si.add_attribute(124, 444, val2)
+        assert_equal val, si.get_attribute(123)
+        assert_equal val2, si.get_attribute(124)
+      end
+
+      def test_get_signed_attribute_with_nonexisting_nid
+        assert_nil SignerInfo.new.get_signed_attribute(321)
+        val = ASN1::OctetString.new("foo".to_java_bytes)
+        attr1 = Attribute.create(123, 444, val)
+
+        si = SignerInfo.new
+        si.add_signed_attribute(123, 444, val)
+        assert_nil si.get_signed_attribute(321)
+      end
+
+      def test_get_signed_attribute_with_existing_nid
+        val = ASN1::OctetString.new("foo".to_java_bytes)
+        val2 = ASN1::OctetString.new("bar".to_java_bytes)
+
+        si = SignerInfo.new
+        si.add_signed_attribute(123, 444, val)
+        assert_equal val, si.get_signed_attribute(123)
+
+        si.add_signed_attribute(124, 444, val2)
+        assert_equal val, si.get_signed_attribute(123)
+        assert_equal val2, si.get_signed_attribute(124)
+      end
+      
       def test_add_signed_attribute
         val = ASN1::OctetString.new("foo".to_java_bytes)
         val2 = ASN1::OctetString.new("bar".to_java_bytes)
