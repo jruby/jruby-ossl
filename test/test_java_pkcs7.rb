@@ -149,7 +149,36 @@ CRL
 
         headers = ArrayList.new
         mime.expects(:parseHeaders).with(bio).returns(headers)
+        mime.expects(:findHeader).with(headers, "content-type").returns(MimeHeader.new("content-type", "application/pkcs7-mime"))
+
+        SMIME.new(mime).readPKCS7(bio, nil)
+      end
+
+      def test_read_pkcs7_throws_correct_exception_if_wrong_content_type
+        bio = BIO.new
+        mime = Mime.new
+
+        headers = ArrayList.new
+        mime.expects(:parseHeaders).with(bio).returns(headers)
         mime.expects(:findHeader).with(headers, "content-type").returns(MimeHeader.new("content-type", "foo"))
+
+        begin
+          SMIME.new(mime).readPKCS7(bio, nil)
+          assert false
+        rescue PKCS7Exception => e
+          assert_equal PKCS7::F_SMIME_READ_PKCS7, e.cause.get_method
+          assert_equal PKCS7::R_INVALID_MIME_TYPE, e.cause.get_reason
+          assert_equal "type: foo", e.cause.error_data
+        end
+      end
+      
+      def test_read_pkcs7_happy_path_without_multipart
+        bio = BIO.new
+        mime = Mime.new
+
+        headers = ArrayList.new
+        mime.expects(:parseHeaders).with(bio).returns(headers)
+        mime.expects(:findHeader).with(headers, "content-type").returns(MimeHeader.new("content-type", "application/pkcs7-mime"))
 
         SMIME.new(mime).readPKCS7(bio, nil)
       end

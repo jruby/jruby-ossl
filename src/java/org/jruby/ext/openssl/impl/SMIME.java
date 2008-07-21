@@ -40,6 +40,12 @@ public class SMIME {
         this.mime = mime;
     }
 
+    /* c: B64_read_PKCS7
+     *
+     */
+    public PKCS7 readBase64PKCS7(BIO bio) {
+    }
+
     /* c: SMIME_read_PKCS7
      *
      */
@@ -59,13 +65,13 @@ public class SMIME {
         }
 
 
-        return null;
+        
+        if(!"application/x-pkcs7-mime".equals(hdr.getValue()) &&
+           !"application/pkcs7-mime".equals(hdr.getValue())) {
+            throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_INVALID_MIME_TYPE, "type: " + hdr.getValue());
+        }
 
-// 	if(!(hdr = mime_hdr_find(headers, "content-type")) || !hdr->value) {
-// 		sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-// 		PKCS7err(PKCS7_F_SMIME_READ_PKCS7, PKCS7_R_NO_CONTENT_TYPE);
-// 		return NULL;
-// 	}
+        return readBase64PKCS7(bio);
 
 // 	/* Handle multipart/signed */
 
@@ -126,23 +132,5 @@ public class SMIME {
 // 		} else sk_BIO_pop_free(parts, BIO_vfree);
 // 		return p7;
 // 	}
-		
-// 	/* OK, if not multipart/signed try opaque signature */
-
-// 	if (strcmp (hdr->value, "application/x-pkcs7-mime") &&
-// 	    strcmp (hdr->value, "application/pkcs7-mime")) {
-// 		PKCS7err(PKCS7_F_SMIME_READ_PKCS7,PKCS7_R_INVALID_MIME_TYPE);
-// 		ERR_add_error_data(2, "type: ", hdr->value);
-// 		sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-// 		return NULL;
-// 	}
-
-// 	sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-	
-// 	if(!(p7 = B64_read_PKCS7(bio))) {
-// 		PKCS7err(PKCS7_F_SMIME_READ_PKCS7, PKCS7_R_PKCS7_PARSE_ERROR);
-// 		return NULL;
-// 	}
-// 	return p7;
     }
 }

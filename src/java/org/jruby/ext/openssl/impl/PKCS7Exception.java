@@ -34,11 +34,17 @@ package org.jruby.ext.openssl.impl;
 public class PKCS7Exception extends RuntimeException {
     private int method;
     private int reason;
+    private String errorData;
 
     public PKCS7Exception(int method, int reason) {
+        this(method, reason, null);
+    }
+
+    public PKCS7Exception(int method, int reason, String errorData) {
         super();
         this.method = method;
         this.reason = reason;
+        this.errorData = errorData;
     }
 
     public int getMethod() {
@@ -47,5 +53,9 @@ public class PKCS7Exception extends RuntimeException {
 
     public int getReason() {
         return this.reason;
+    }
+
+    public String getErrorData() {
+        return this.errorData;
     }
 }// PKCS7Exception
