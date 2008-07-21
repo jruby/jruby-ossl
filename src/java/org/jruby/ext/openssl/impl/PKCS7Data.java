@@ -27,11 +27,12 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.ASN1Encodable;
-import javax.crypto.Cipher;
-import java.util.List;
 import java.security.cert.X509Certificate;
+import java.util.List;
+import javax.crypto.Cipher;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1OctetString;
+import java.security.cert.X509CRL;
 
 /**
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -124,5 +125,9 @@ public abstract class PKCS7Data {
 
     public void addCertificate(X509Certificate cert) {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_CERTIFICATE,PKCS7.R_WRONG_CONTENT_TYPE);
+    }
+
+    public void addCRL(X509CRL crl) {
+        throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_CRL,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 }// PKCS7Data

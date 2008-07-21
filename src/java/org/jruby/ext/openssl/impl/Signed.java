@@ -27,11 +27,12 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.HashSet;
+import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /** PKCS7_SIGNED
  *
@@ -42,6 +43,11 @@ public class Signed {
      * Describe version here.
      */
     private int version;
+
+    /**
+     * Describe crl here.
+     */
+    private List<X509CRL> crl = new ArrayList<X509CRL>();
 
     /**
      * Describe cert here.
@@ -148,5 +154,23 @@ public class Signed {
      */
     public final void setCert(final List<X509Certificate> newCert) {
         this.cert = newCert;
+    }
+
+    /**
+     * Get the <code>Crl</code> value.
+     *
+     * @return a <code>List<X509CRL></code> value
+     */
+    public final List<X509CRL> getCrl() {
+        return crl;
+    }
+
+    /**
+     * Set the <code>Crl</code> value.
+     *
+     * @param newCrl The new Crl value.
+     */
+    public final void setCrl(final List<X509CRL> newCrl) {
+        this.crl = newCrl;
     }
 }// Signed

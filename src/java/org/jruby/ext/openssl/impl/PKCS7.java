@@ -33,6 +33,7 @@ import java.security.cert.X509Certificate;
 import javax.crypto.Cipher;
 import java.util.List;
 import org.bouncycastle.asn1.DEROctetString;
+import java.security.cert.X509CRL;
 
 /** c: PKCS7
  *
@@ -163,6 +164,13 @@ public class PKCS7 {
      */
     public void addCertificate(X509Certificate cert) {
         this.data.addCertificate(cert);
+    }
+
+    /** c: PKCS7_add_crl
+     *
+     */
+    public void addCRL(X509CRL crl) {
+        this.data.addCRL(crl);
     }
 
     /** c: PKCS7_add_recipient_info

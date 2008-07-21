@@ -28,6 +28,8 @@
 package org.jruby.ext.openssl.impl;
 
 import java.util.List;
+import java.security.cert.X509CRL;
+
 import java.security.cert.X509Certificate;
 
 /**
@@ -99,5 +101,9 @@ public class PKCS7DataSigned extends PKCS7Data {
 
     public void addCertificate(X509Certificate cert) {
         this.sign.getCert().add(cert);
+    }
+
+    public void addCRL(X509CRL crl) {
+        this.sign.getCrl().add(crl);
     }
 }// PKCS7DataSigned

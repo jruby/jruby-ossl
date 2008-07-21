@@ -27,8 +27,10 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import javax.crypto.Cipher;
 import java.util.List;
+import javax.crypto.Cipher;
+import java.security.cert.X509CRL;
+
 import java.security.cert.X509Certificate;
 
 /**
@@ -76,5 +78,9 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
 
     public void addCertificate(X509Certificate cert) {
         this.signedAndEnveloped.getCert().add(cert);
+    }
+
+    public void addCRL(X509CRL crl) {
+        this.signedAndEnveloped.getCrl().add(crl);
     }
 }// PKCS7DataSignedAndEnveloped

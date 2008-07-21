@@ -22,6 +22,10 @@ if defined?(JRUBY_VERSION)
     Signed = org.jruby.ext.openssl.impl.Signed unless defined?(Signed)
     SignerInfo = org.jruby.ext.openssl.impl.SignerInfo unless defined?(SignerInfo)
     
+    CertificateFactory = java.security.cert.CertificateFactory unless defined?(CertificateFactory)
+    BCP = org.bouncycastle.jce.provider.BouncyCastleProvider unless defined?(BCP)
+    ByteArrayInputStream = java.io.ByteArrayInputStream unless defined?(ByteArrayInputStream)
+    
     X509CertString = <<CERT
 -----BEGIN CERTIFICATE-----
 MIICijCCAXKgAwIBAgIBAjANBgkqhkiG9w0BAQUFADA9MRMwEQYKCZImiZPyLGQB
@@ -40,8 +44,23 @@ Y9uP/o8Dc7ZcRJOAX7NPu1bbZcbxEbZ8sMe5wZ5HNiAR6gnOrjz2Yyazb//PSskE
 dqbS54IKvzElD+R0QVS2z6TIGJSpuSBnZ4yfuNuq
 -----END CERTIFICATE-----
 CERT
+
+    X509CRLString = <<CRL
+----BEGIN X509 CRL-----
+MIIBlTB/AgEBMA0GCSqGSIb3DQEBBQUAMD0xEzARBgoJkiaJk/IsZAEZFgNvcmcx
+GTAXBgoJkiaJk/IsZAEZFglydWJ5LWxhbmcxCzAJBgNVBAMMAkNBFw0wODA3MTgx
+NzQxMjhaFw0wODA3MTgxODA4MDhaoA4wDDAKBgNVHRQEAwIBATANBgkqhkiG9w0B
+AQUFAAOCAQEASJaj1keN+tMmsF3QmjH2RhbW/9rZAl4gjv+uQQqrcS2ByfkXLU1d
+l/8rCHeT/XMoeU6xhQNHPP3uZBwfuuETcp65BMBcZFOUhUR0U5AaGhvSDS/+6EsP
+zFdQgAagmThFdN5ei9guTLqWwN0ZyqiaHyevFJuk+L9qbKavaSeKqfJbU7Sj/Z3J
+WLKoixvyj3N6W7evygH80lTvjZugmxJ1/AjICVSYr1hpHHd6EWq0b0YFrGFmg27R
+WmsAXd0QV5UChfAJ2+Cz5U1bPszvIJGrzfAIoLxHv5rI5rseQzqZdPaFSe4Oehln
+9qEYmsK3PS6bYoQol0cgj97Ep4olS8CulA==
+-----END X509 CRL-----
+CRL
     
-    X509Cert = java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(java.io.ByteArrayInputStream.new(X509CertString.to_java_bytes))
+    X509Cert = CertificateFactory.getInstance("X.509",BCP.new).generateCertificate(ByteArrayInputStream.new(X509CertString.to_java_bytes))
+    X509CRL = CertificateFactory.getInstance("X.509",BCP.new).generateCRL(ByteArrayInputStream.new(X509CRLString.to_java_bytes))
 
     class TestJavaSignerInfo < Test::Unit::TestCase
       def test_get_attribute_with_nonexisting_nid
@@ -782,6 +801,54 @@ CERT
         p7.add_certificate(X509Cert)
         assert_equal 1, p7.get_signed_and_enveloped.cert.size
         assert_equal X509Cert, p7.get_signed_and_enveloped.cert.get(0)
+      end
+
+      def test_add_crl_on_data_throws_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_data
+        assert_raises NativeException do 
+          p7.add_crl(X509CRL)
+        end
+      end
+
+      def test_add_crl_on_enveloped_throws_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_enveloped
+        assert_raises NativeException do 
+          p7.add_crl(X509CRL)
+        end
+      end
+
+      def test_add_crl_on_encrypted_throws_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_encrypted
+        assert_raises NativeException do 
+          p7.add_crl(X509CRL)
+        end
+      end
+
+      def test_add_crl_on_digest_throws_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_digest
+        assert_raises NativeException do 
+          p7.add_crl(X509CRL)
+        end
+      end
+
+      def test_add_crl_on_signed_adds_the_crl
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_signed
+        p7.add_crl(X509CRL)
+        assert_equal 1, p7.get_sign.crl.size
+        assert_equal X509CRL, p7.get_sign.crl.get(0)
+      end
+
+      def test_add_crl_on_signedAndEnveloped_adds_the_crl
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+        p7.add_crl(X509CRL)
+        assert_equal 1, p7.get_signed_and_enveloped.crl.size
+        assert_equal X509CRL, p7.get_signed_and_enveloped.crl.get(0)
       end
     end
   end

@@ -121,6 +121,9 @@ Q1VB8qkJN7rA7/2HrCR3gTsWNb1YhAsnFsoeRscC+LxXoXi9OAIUBG98h4tilg6S
       crl.add_extension(ef.create_extension(oid, value, critical))
     }
     crl.sign(issuer_key, digest)
+    File.open("crls", "a") do |f|
+      f.puts crl
+    end
     crl
   end
 
