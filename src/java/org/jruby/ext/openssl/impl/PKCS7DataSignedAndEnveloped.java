@@ -29,6 +29,7 @@ package org.jruby.ext.openssl.impl;
 
 import javax.crypto.Cipher;
 import java.util.List;
+import java.security.cert.X509Certificate;
 
 /**
  *
@@ -71,5 +72,9 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
 
     public List<SignerInfo> getSignerInfo() {
         return this.signedAndEnveloped.getSignerInfo();
+    }
+
+    public void addCertificate(X509Certificate cert) {
+        this.signedAndEnveloped.getCert().add(cert);
     }
 }// PKCS7DataSignedAndEnveloped

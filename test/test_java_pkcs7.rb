@@ -734,6 +734,55 @@ CERT
         p7.content_new(PKCS7::NID_pkcs7_encrypted)
         assert p7.get_sign.contents.encrypted?
       end
+
+    
+      def test_add_certificate_on_data_throws_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_data
+        assert_raises NativeException do 
+          p7.add_certificate(X509Cert)
+        end
+      end
+
+      def test_add_certificate_on_enveloped_throws_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_enveloped
+        assert_raises NativeException do 
+          p7.add_certificate(X509Cert)
+        end
+      end
+
+      def test_add_certificate_on_encrypted_throws_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_encrypted
+        assert_raises NativeException do 
+          p7.add_certificate(X509Cert)
+        end
+      end
+
+      def test_add_certificate_on_digest_throws_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_digest
+        assert_raises NativeException do 
+          p7.add_certificate(X509Cert)
+        end
+      end
+
+      def test_add_certificate_on_signed_adds_the_certificate
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_signed
+        p7.add_certificate(X509Cert)
+        assert_equal 1, p7.get_sign.cert.size
+        assert_equal X509Cert, p7.get_sign.cert.get(0)
+      end
+
+      def test_add_certificate_on_signedAndEnveloped_adds_the_certificate
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+        p7.add_certificate(X509Cert)
+        assert_equal 1, p7.get_signed_and_enveloped.cert.size
+        assert_equal X509Cert, p7.get_signed_and_enveloped.cert.get(0)
+      end
     end
   end
 end

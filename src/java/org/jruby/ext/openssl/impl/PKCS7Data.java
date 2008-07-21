@@ -31,6 +31,7 @@ import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Encodable;
 import javax.crypto.Cipher;
 import java.util.List;
+import java.security.cert.X509Certificate;
 
 /**
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -119,5 +120,9 @@ public abstract class PKCS7Data {
 
     public List<SignerInfo> getSignerInfo() {
         return null;
+    }
+
+    public void addCertificate(X509Certificate cert) {
+        throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_CERTIFICATE,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 }// PKCS7Data

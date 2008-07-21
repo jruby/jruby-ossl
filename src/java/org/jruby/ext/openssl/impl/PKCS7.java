@@ -158,6 +158,13 @@ public class PKCS7 {
         this.data.addSigner(psi);
     }
 
+    /** c: PKCS7_add_certificate
+     *
+     */
+    public void addCertificate(X509Certificate cert) {
+        this.data.addCertificate(cert);
+    }
+
     /** c: PKCS7_add_recipient_info
      *
      */

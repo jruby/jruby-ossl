@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
+import java.security.cert.X509Certificate;
 
 /** PKCS7_SIGNED
  *
@@ -41,6 +42,11 @@ public class Signed {
      * Describe version here.
      */
     private int version;
+
+    /**
+     * Describe cert here.
+     */
+    private List<X509Certificate> cert = new ArrayList<X509Certificate>();
 
     /**
      * Describe mdAlgs here.
@@ -124,5 +130,23 @@ public class Signed {
      */
     public final void setContents(final PKCS7 newContents) {
         this.contents = newContents;
+    }
+
+    /**
+     * Get the <code>Cert</code> value.
+     *
+     * @return a <code>List<X509Certificate></code> value
+     */
+    public final List<X509Certificate> getCert() {
+        return cert;
+    }
+
+    /**
+     * Set the <code>Cert</code> value.
+     *
+     * @param newCert The new Cert value.
+     */
+    public final void setCert(final List<X509Certificate> newCert) {
+        this.cert = newCert;
     }
 }// Signed

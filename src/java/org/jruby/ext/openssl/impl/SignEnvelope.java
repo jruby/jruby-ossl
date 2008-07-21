@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.security.cert.X509Certificate;
 
 /** PKCS7_SIGN_ENVELOPE
  *
@@ -43,6 +44,11 @@ public class SignEnvelope {
      * Describe encContent here.
      */
     private EncContent encData = new EncContent();
+
+    /**
+     * Describe cert here.
+     */
+    private List<X509Certificate> cert = new ArrayList<X509Certificate>();
 
     /**
      * Describe mdAlgs here.
@@ -147,5 +153,23 @@ public class SignEnvelope {
      */
     public final void setMdAlgs(final Set<String> newMdAlgs) {
         this.mdAlgs = newMdAlgs;
+    }
+
+    /**
+     * Get the <code>Cert</code> value.
+     *
+     * @return a <code>List<X509Certificate></code> value
+     */
+    public final List<X509Certificate> getCert() {
+        return cert;
+    }
+
+    /**
+     * Set the <code>Cert</code> value.
+     *
+     * @param newCert The new Cert value.
+     */
+    public final void setCert(final List<X509Certificate> newCert) {
+        this.cert = newCert;
     }
 }// SignEnvelope
