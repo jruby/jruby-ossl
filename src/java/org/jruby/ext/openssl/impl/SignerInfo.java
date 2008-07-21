@@ -27,11 +27,17 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.util.List;
+import java.util.ArrayList;
+import org.bouncycastle.asn1.ASN1Encodable;
+
 /** PKCS7_SIGNER_INFO
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class SignerInfo {
+    private List<Attribute> authAttr = new ArrayList<Attribute>();
+    private List<Attribute> unauthAttr = new ArrayList<Attribute>();
 
     /**
      * Describe digestAlgorithm here.
@@ -54,5 +60,44 @@ public class SignerInfo {
      */
     public final void setDigestAlgorithm(final String newDigestAlgorithm) {
         this.digestAlgorithm = newDigestAlgorithm;
+    }
+
+    public List<Attribute> getAuthAttr() {
+        return this.authAttr;
+    }
+
+
+    public List<Attribute> getUnauthAttr() {
+        return this.unauthAttr;
+    }
+
+    /** c: PKCS7_add_signed_attribute
+     *
+     */
+    public void addSignedAttribute(int nid, int atrtype, ASN1Encodable value) {
+        addAttribute(authAttr, nid, atrtype, value);
+    }
+
+    /** c: PKCS7_add_attribute
+     *
+     */
+    public void addAttribute(int nid, int atrtype, ASN1Encodable value) {
+        addAttribute(unauthAttr, nid, atrtype, value);
+    }
+
+
+    /** c: add_attribute
+     *
+     */
+    private void addAttribute(List<Attribute> sk, int nid, int atrtype, ASN1Encodable value) {
+        Attribute attr = Attribute.create(nid, atrtype, value);
+
+        for(int i=0,j=sk.size(); i<j; i++) {
+            if(sk.get(i).getType() == nid) {
+                sk.set(i, attr);
+                return;
+            }
+        }
+        sk.add(attr);
     }
 }// SignerInfo
