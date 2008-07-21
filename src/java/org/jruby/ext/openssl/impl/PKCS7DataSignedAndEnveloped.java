@@ -58,4 +58,8 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
     public void setCipher(Cipher cipher) {
         this.signedAndEnveloped.getEncData().setCipher(cipher);
     }
+
+    public void addRecipientInfo(RecipInfo ri) {
+        this.signedAndEnveloped.getRecipientInfo().add(ri);
+    }
 }// PKCS7DataSignedAndEnveloped

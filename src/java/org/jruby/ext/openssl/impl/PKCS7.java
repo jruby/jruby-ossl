@@ -130,45 +130,23 @@ public class PKCS7 {
      */
     public void setCipher(Cipher cipher) {
         this.data.setCipher(cipher);
-
-
-// 	int i;
-// 	ASN1_OBJECT *objtmp;
-// 	PKCS7_ENC_CONTENT *ec;
-
-// 	i=OBJ_obj2nid(p7->type);
-// 	switch (i)
-// 		{
-//         case NID_pkcs7_signedAndEnveloped:
-//             ec=p7->d.signed_and_enveloped->enc_data;
-//             break;
-//         case NID_pkcs7_enveloped:
-//             ec=p7->d.enveloped->enc_data;
-//             break;
-//         default:
-//             PKCS7err(PKCS7_F_PKCS7_SET_CIPHER,PKCS7_R_WRONG_CONTENT_TYPE);
-//             return(0);
-// 		}
-
-// 	/* Check cipher OID exists and has data in it*/
-// 	i = EVP_CIPHER_type(cipher);
-// 	if(i == NID_undef) {
-// 		PKCS7err(PKCS7_F_PKCS7_SET_CIPHER,PKCS7_R_CIPHER_HAS_NO_OBJECT_IDENTIFIER);
-// 		return(0);
-// 	}
-// 	objtmp = OBJ_nid2obj(i);
-
-// 	ec->cipher = cipher;
-// 	return 1;
-
-        // TODO: implement
     }
 
     /** c: PKCS7_add_recipient
      *
      */
-    public void addRecipient(X509Certificate recip) {
-        // TODO: implement
+    public RecipInfo addRecipient(X509Certificate recip) {
+        RecipInfo ri = new RecipInfo();
+        ri.set(recip);
+        addRecipientInfo(ri);
+        return ri;
+    }
+
+    /** c: PKCS7_add_recipient_info
+     *
+     */
+    public void addRecipientInfo(RecipInfo ri) {
+        this.data.addRecipientInfo(ri);
     }
 
     /** c: PKCS7_dataInit

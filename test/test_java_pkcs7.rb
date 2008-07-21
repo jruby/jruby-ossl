@@ -21,6 +21,27 @@ if defined?(JRUBY_VERSION)
     Signed = org.jruby.ext.openssl.impl.Signed unless defined?(Signed)
     SignerInfo = org.jruby.ext.openssl.impl.SignerInfo unless defined?(SignerInfo)
     
+    X509CertString = <<CERT
+-----BEGIN CERTIFICATE-----
+MIICijCCAXKgAwIBAgIBAjANBgkqhkiG9w0BAQUFADA9MRMwEQYKCZImiZPyLGQB
+GRYDb3JnMRkwFwYKCZImiZPyLGQBGRYJcnVieS1sYW5nMQswCQYDVQQDDAJDQTAe
+Fw0wODA3MDgxOTE1NDZaFw0wODA3MDgxOTQ1NDZaMEQxEzARBgoJkiaJk/IsZAEZ
+FgNvcmcxGTAXBgoJkiaJk/IsZAEZFglydWJ5LWxhbmcxEjAQBgNVBAMMCWxvY2Fs
+aG9zdDCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAy8LEsNRApz7U/j5DoB4X
+BgO9Z8Atv5y/OVQRp0ag8Tqo1YewsWijxEWB7JOATwpBN267U4T1nPZIxxEEO7n/
+WNa2ws9JWsjah8ssEBFSxZqdXKSLf0N4Hi7/GQ/aYoaMCiQ8jA4jegK2FJmXM71u
+Pe+jFN/peeBOpRfyXxRFOYcCAwEAAaMSMBAwDgYDVR0PAQH/BAQDAgWgMA0GCSqG
+SIb3DQEBBQUAA4IBAQCU879BALJIM9avHiuZ3WTjDy0UYP3ZG5wtuSqBSnD1k8pr
+hXfRaga7mDj6EQaGUovImb+KrRi6mZc+zsx4rTxwBNJT9U8yiW2eYxmgcT9/qKrD
+/1nz+e8NeUCCDY5UTUHGszZw5zLEDgDX2n3E/CDIZsoRSyq5vXq1jpfih/tSWanj
+Y9uP/o8Dc7ZcRJOAX7NPu1bbZcbxEbZ8sMe5wZ5HNiAR6gnOrjz2Yyazb//PSskE
+4flt/2h4pzGA0/ZHcnDjcoLdiLtInsqPOlVDLgqd/XqRYWtj84N4gw1iS9cHyrIZ
+dqbS54IKvzElD+R0QVS2z6TIGJSpuSBnZ4yfuNuq
+-----END CERTIFICATE-----
+CERT
+    
+    X509Cert = java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(java.io.ByteArrayInputStream.new(X509CertString.to_java_bytes))
+    
     def test_is_signed
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_signed
@@ -305,6 +326,53 @@ if defined?(JRUBY_VERSION)
       p7.cipher = cipher
       
       assert_equal cipher, p7.get_signed_and_enveloped.enc_data.cipher
+    end
+    
+    def test_add_recipient_info_to_something_that_cant_have_recipients
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signed
+      assert_raises NativeException do 
+        p7.add_recipient(X509Cert)
+      end
+
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_data
+      assert_raises NativeException do 
+        p7.add_recipient(X509Cert)
+      end
+      
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_encrypted
+      assert_raises NativeException do 
+        p7.add_recipient(X509Cert)
+      end
+      
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_digest
+      assert_raises NativeException do 
+        p7.add_recipient(X509Cert)
+      end
+    end
+
+    def test_add_recipient_info_to_enveloped_should_add_that_to_stack
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_enveloped
+      
+      ri = p7.add_recipient(X509Cert)
+      
+      assert_equal 1, p7.get_enveloped.recipient_info.size
+      assert_equal ri, p7.get_enveloped.recipient_info.get(0)
+    end
+
+
+    def test_add_recipient_info_to_signedAndEnveloped_should_add_that_to_stack
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+      
+      ri = p7.add_recipient(X509Cert)
+      
+      assert_equal 1, p7.get_signed_and_enveloped.recipient_info.size
+      assert_equal ri, p7.get_signed_and_enveloped.recipient_info.get(0)
     end
   end
 end

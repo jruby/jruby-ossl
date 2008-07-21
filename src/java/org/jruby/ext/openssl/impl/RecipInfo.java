@@ -27,9 +27,24 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import org.bouncycastle.asn1.ASN1OctetString;
+import java.security.cert.X509Certificate;
+
 /** PKCS7_RECIP_INFO
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class RecipInfo {
+    private int version;
+    private IssuerAndSerial issuerAndSerial;
+    private String keyEncAlgor;
+    private ASN1OctetString encKey;
+    private X509Certificate cert;
+
+    /** c: PKCS7_RECIP_INFO_set
+     *
+     */
+    public void set(X509Certificate cert) {
+        // TODO: implement
+    }
 }// RecipInfo

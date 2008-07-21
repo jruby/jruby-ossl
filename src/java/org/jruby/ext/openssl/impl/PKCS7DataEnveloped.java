@@ -58,4 +58,8 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
     public void setCipher(Cipher cipher) {
         this.enveloped.getEncData().setCipher(cipher);
     }
+
+    public void addRecipientInfo(RecipInfo ri) {
+        this.enveloped.getRecipientInfo().add(ri);
+    }
 }// PKCS7DataEnveloped

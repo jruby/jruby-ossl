@@ -27,6 +27,9 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.util.List;
+import java.util.ArrayList;
+
 /** PKCS7_SIGN_ENVELOPE
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -38,6 +41,11 @@ public class SignEnvelope {
      * Describe encContent here.
      */
     private EncContent encData = new EncContent();
+
+    /**
+     * Describe recipientInfo here.
+     */
+    private List<RecipInfo> recipientInfo = new ArrayList<RecipInfo>();
 
     /**
      * Get the <code>Version</code> value.
@@ -73,5 +81,23 @@ public class SignEnvelope {
      */
     public final void setEncData(final EncContent newEncData) {
         this.encData = newEncData;
+    }
+
+    /**
+     * Get the <code>RecipientInfo</code> value.
+     *
+     * @return a <code>List<RecipInfo></code> value
+     */
+    public final List<RecipInfo> getRecipientInfo() {
+        return recipientInfo;
+    }
+
+    /**
+     * Set the <code>RecipientInfo</code> value.
+     *
+     * @param newRecipientInfo The new RecipientInfo value.
+     */
+    public final void setRecipientInfo(final List<RecipInfo> newRecipientInfo) {
+        this.recipientInfo = newRecipientInfo;
     }
 }// SignEnvelope
