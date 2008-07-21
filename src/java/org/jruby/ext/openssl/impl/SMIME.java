@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.util.Arrays;
 import java.util.List;
 
 /** SMIME methods for PKCS7
@@ -43,8 +44,15 @@ public class SMIME {
     /* c: B64_read_PKCS7
      *
      */
-    public PKCS7 readBase64PKCS7(BIO bio) {
+    public PKCS7 readPKCS7Base64(BIO bio) {
         return null;
+    }
+
+    /* c: static multi_split
+     *
+     */
+    public List<BIO> multiSplit(BIO bio, String boundary) {
+        return Arrays.<BIO>asList(null, null);
     }
 
     /* c: SMIME_read_PKCS7
@@ -65,32 +73,30 @@ public class SMIME {
             throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_CONTENT_TYPE);
         }
 
+        if("multipart/signed".equals(hdr.getValue())) {
+            MimeParam prm = mime.findParam(hdr, "boundary");
+            if(prm == null || prm.getParamValue() == null) {
+                throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_MULTIPART_BOUNDARY);
+            }
 
+            List<BIO> parts = multiSplit(bio, prm.getParamValue());
+            if(parts == null || parts.size() != 2) {
+                throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_MULTIPART_BODY_FAILURE);
+            }
+
+
+            return null;
+        }
         
         if(!"application/x-pkcs7-mime".equals(hdr.getValue()) &&
            !"application/pkcs7-mime".equals(hdr.getValue())) {
             throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_INVALID_MIME_TYPE, "type: " + hdr.getValue());
         }
 
-        return readBase64PKCS7(bio);
+        return readPKCS7Base64(bio);
 
 // 	/* Handle multipart/signed */
 
-// 	if(!strcmp(hdr->value, "multipart/signed")) {
-// 		/* Split into two parts */
-// 		prm = mime_param_find(hdr, "boundary");
-// 		if(!prm || !prm->param_value) {
-// 			sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-// 			PKCS7err(PKCS7_F_SMIME_READ_PKCS7, PKCS7_R_NO_MULTIPART_BOUNDARY);
-// 			return NULL;
-// 		}
-// 		ret = multi_split(bio, prm->param_value, &parts);
-// 		sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-// 		if(!ret || (sk_BIO_num(parts) != 2) ) {
-// 			PKCS7err(PKCS7_F_SMIME_READ_PKCS7, PKCS7_R_NO_MULTIPART_BODY_FAILURE);
-// 			sk_BIO_pop_free(parts, BIO_vfree);
-// 			return NULL;
-// 		}
 
 // 		/* Parse the signature piece */
 // 		p7in = sk_BIO_value(parts, 1);

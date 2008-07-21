@@ -27,6 +27,7 @@ if defined?(JRUBY_VERSION)
     SMIME = org.jruby.ext.openssl.impl.SMIME unless defined?(SMIME)
     Mime = org.jruby.ext.openssl.impl.Mime unless defined?(Mime)
     MimeHeader = org.jruby.ext.openssl.impl.MimeHeader unless defined?(MimeHeader)
+    MimeParam = org.jruby.ext.openssl.impl.MimeParam unless defined?(MimeParam)
     BIO = org.jruby.ext.openssl.impl.BIO unless defined?(BIO)
     PKCS7Exception = org.jruby.ext.openssl.impl.PKCS7Exception unless defined?(PKCS7Exception)
     
@@ -172,6 +173,46 @@ CRL
         end
       end
       
+      def test_read_pkcs7_with_multipart_should_fail_if_no_boundary_found
+        bio = BIO.new
+        mime = Mime.new
+
+        headers = ArrayList.new
+        hdr = MimeHeader.new("content-type", "multipart/signed")
+        mime.expects(:parseHeaders).with(bio).returns(headers)
+        mime.expects(:findHeader).with(headers, "content-type").returns(hdr)
+
+        mime.expects(:findParam).with(hdr, "boundary").returns(nil)
+         
+        begin
+          SMIME.new(mime).readPKCS7(bio, nil)
+          assert false
+        rescue PKCS7Exception => e
+          assert_equal PKCS7::F_SMIME_READ_PKCS7, e.cause.get_method
+          assert_equal PKCS7::R_NO_MULTIPART_BOUNDARY, e.cause.get_reason
+        end
+      end
+      
+      def test_read_pkcs7_with_multipart_should_fail_if_null_boundary_value
+        bio = BIO.new
+        mime = Mime.new
+
+        headers = ArrayList.new
+        hdr = MimeHeader.new("content-type", "multipart/signed")
+        mime.expects(:parseHeaders).with(bio).returns(headers)
+        mime.expects(:findHeader).with(headers, "content-type").returns(hdr)
+
+        mime.expects(:findParam).with(hdr, "boundary").returns(MimeParam.new("boundary", nil))
+         
+        begin
+          SMIME.new(mime).readPKCS7(bio, nil)
+          assert false
+        rescue PKCS7Exception => e
+          assert_equal PKCS7::F_SMIME_READ_PKCS7, e.cause.get_method
+          assert_equal PKCS7::R_NO_MULTIPART_BOUNDARY, e.cause.get_reason
+        end
+      end
+
       def test_read_pkcs7_happy_path_without_multipart
         bio = BIO.new
         mime = Mime.new

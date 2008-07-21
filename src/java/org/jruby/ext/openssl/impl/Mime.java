@@ -43,4 +43,9 @@ public interface Mime {
      *
      */
     MimeHeader findHeader(List<MimeHeader> headers, String key); 
+
+    /* c: mime_param_find
+     *
+     */
+    MimeParam findParam(MimeHeader header, String key); 
 }// Mime

@@ -27,6 +27,9 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /** MIME_HEADER
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -35,6 +38,11 @@ public class MimeHeader {
     private String name;
     private String value;
 
+    /**
+     * Describe params here.
+     */
+    private List<MimeParam> params = new ArrayList<MimeParam>();
+
     public MimeHeader(String name, String value) {
         this.name = name;
         this.value = value;
@@ -42,5 +50,23 @@ public class MimeHeader {
 
     public String getValue() {
         return this.value;
+    }
+
+    /**
+     * Get the <code>Params</code> value.
+     *
+     * @return a <code>List<MimeParam></code> value
+     */
+    public final List<MimeParam> getParams() {
+        return params;
+    }
+
+    /**
+     * Set the <code>Params</code> value.
+     *
+     * @param newParams The new Params value.
+     */
+    public final void setParams(final List<MimeParam> newParams) {
+        this.params = newParams;
     }
 }// MimeHeader
