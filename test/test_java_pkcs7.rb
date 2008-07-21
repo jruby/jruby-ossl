@@ -1,4 +1,7 @@
+$:.unshift File.join(File.dirname(__FILE__), '..', 'mocha', 'lib')
+
 require "test/unit"
+require 'mocha'
 
 if defined?(JRUBY_VERSION)
   require "java"
@@ -21,7 +24,13 @@ if defined?(JRUBY_VERSION)
     SignEnvelope = org.jruby.ext.openssl.impl.SignEnvelope unless defined?(SignEnvelope)
     Signed = org.jruby.ext.openssl.impl.Signed unless defined?(Signed)
     SignerInfo = org.jruby.ext.openssl.impl.SignerInfo unless defined?(SignerInfo)
+    SMIME = org.jruby.ext.openssl.impl.SMIME unless defined?(SMIME)
+    Mime = org.jruby.ext.openssl.impl.Mime unless defined?(Mime)
+    MimeHeader = org.jruby.ext.openssl.impl.MimeHeader unless defined?(MimeHeader)
+    BIO = org.jruby.ext.openssl.impl.BIO unless defined?(BIO)
+    PKCS7Exception = org.jruby.ext.openssl.impl.PKCS7Exception unless defined?(PKCS7Exception)
     
+    ArrayList = java.util.ArrayList unless defined?(ArrayList)
     CertificateFactory = java.security.cert.CertificateFactory unless defined?(CertificateFactory)
     BCP = org.bouncycastle.jce.provider.BouncyCastleProvider unless defined?(BCP)
     ByteArrayInputStream = java.io.ByteArrayInputStream unless defined?(ByteArrayInputStream)
@@ -62,6 +71,58 @@ CRL
     X509Cert = CertificateFactory.getInstance("X.509",BCP.new).generateCertificate(ByteArrayInputStream.new(X509CertString.to_java_bytes))
     X509CRL = CertificateFactory.getInstance("X.509",BCP.new).generateCRL(ByteArrayInputStream.new(X509CRLString.to_java_bytes))
 
+    class TestJavaSMIME < Test::Unit::TestCase
+      def test_read_pkcs7_should_raise_error_when_parsing_headers_fails
+        bio = BIO.new
+        mime = Mime.new
+        mime.stubs(:parseHeaders).returns(nil)
+
+        begin
+          SMIME.new(mime).readPKCS7(bio, nil)
+          assert false
+        rescue PKCS7Exception => e
+          assert_equal PKCS7::F_SMIME_READ_PKCS7, e.cause.get_method
+          assert_equal PKCS7::R_MIME_PARSE_ERROR, e.cause.get_reason
+        end
+      end
+      
+      def test_read_pkcs7_should_set_the_second_arguments_contents_to_null_if_its_there
+        mime = Mime.new
+        mime.stubs(:parseHeaders).raises("getOutOfJailForFree")
+
+        bio2 = BIO.new
+        arr = [bio2].to_java BIO
+        
+        begin
+          SMIME.new(mime).readPKCS7(nil, arr)
+        rescue
+        end
+
+        assert_nil arr[0]
+
+
+        arr = [bio2, bio2].to_java BIO
+        begin
+          SMIME.new(mime).readPKCS7(nil, arr)
+        rescue
+        end
+
+        assert_nil arr[0]
+        assert_equal bio2, arr[1]
+      end
+      
+      def test_read_pkcs7_should_call_methods_on_mime
+        bio = BIO.new
+        mime = Mime.new
+
+        headers = ArrayList.new
+        mime.expects(:parseHeaders).with(bio).returns(headers)
+        mime.expects(:findHeader).with(headers, "content-type").returns(MimeHeader.new)
+
+        SMIME.new(mime).readPKCS7(bio, nil)
+      end
+    end
+    
     class TestJavaSignerInfo < Test::Unit::TestCase
       def test_get_attribute_with_nonexisting_nid
         assert_nil SignerInfo.new.get_attribute(321)
