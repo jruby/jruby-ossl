@@ -27,6 +27,11 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
+
 /** PKCS7_SIGNED
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -36,6 +41,16 @@ public class Signed {
      * Describe version here.
      */
     private int version;
+
+    /**
+     * Describe mdAlgs here.
+     */
+    private Set<String> mdAlgs = new HashSet<String>();
+
+    /**
+     * Describe signerInfo here.
+     */
+    private List<SignerInfo> signerInfo = new ArrayList<SignerInfo>();
 
     PKCS7 contents;
 
@@ -59,5 +74,41 @@ public class Signed {
      */
     public final void setVersion(final int newVersion) {
         this.version = newVersion;
+    }
+
+    /**
+     * Get the <code>SignerInfo</code> value.
+     *
+     * @return a <code>List<SignerInfo></code> value
+     */
+    public final List<SignerInfo> getSignerInfo() {
+        return signerInfo;
+    }
+
+    /**
+     * Set the <code>SignerInfo</code> value.
+     *
+     * @param newSignerInfo The new SignerInfo value.
+     */
+    public final void setSignerInfo(final List<SignerInfo> newSignerInfo) {
+        this.signerInfo = newSignerInfo;
+    }
+
+    /**
+     * Get the <code>MdAlgs</code> value.
+     *
+     * @return a <code>Set<String></code> value
+     */
+    public final Set<String> getMdAlgs() {
+        return mdAlgs;
+    }
+
+    /**
+     * Set the <code>MdAlgs</code> value.
+     *
+     * @param newMdAlgs The new MdAlgs value.
+     */
+    public final void setMdAlgs(final Set<String> newMdAlgs) {
+        this.mdAlgs = newMdAlgs;
     }
 }// Signed

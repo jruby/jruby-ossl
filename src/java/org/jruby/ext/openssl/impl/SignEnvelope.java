@@ -29,6 +29,8 @@ package org.jruby.ext.openssl.impl;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 /** PKCS7_SIGN_ENVELOPE
  *
@@ -41,6 +43,16 @@ public class SignEnvelope {
      * Describe encContent here.
      */
     private EncContent encData = new EncContent();
+
+    /**
+     * Describe mdAlgs here.
+     */
+    private Set<String> mdAlgs = new HashSet<String>();
+
+    /**
+     * Describe signerInfo here.
+     */
+    private List<SignerInfo> signerInfo = new ArrayList<SignerInfo>();
 
     /**
      * Describe recipientInfo here.
@@ -99,5 +111,41 @@ public class SignEnvelope {
      */
     public final void setRecipientInfo(final List<RecipInfo> newRecipientInfo) {
         this.recipientInfo = newRecipientInfo;
+    }
+
+    /**
+     * Get the <code>SignerInfo</code> value.
+     *
+     * @return a <code>List<SignerInfo></code> value
+     */
+    public final List<SignerInfo> getSignerInfo() {
+        return signerInfo;
+    }
+
+    /**
+     * Set the <code>SignerInfo</code> value.
+     *
+     * @param newSignerInfo The new SignerInfo value.
+     */
+    public final void setSignerInfo(final List<SignerInfo> newSignerInfo) {
+        this.signerInfo = newSignerInfo;
+    }
+
+    /**
+     * Get the <code>MdAlgs</code> value.
+     *
+     * @return a <code>Set<String></code> value
+     */
+    public final Set<String> getMdAlgs() {
+        return mdAlgs;
+    }
+
+    /**
+     * Set the <code>MdAlgs</code> value.
+     *
+     * @param newMdAlgs The new MdAlgs value.
+     */
+    public final void setMdAlgs(final Set<String> newMdAlgs) {
+        this.mdAlgs = newMdAlgs;
     }
 }// SignEnvelope

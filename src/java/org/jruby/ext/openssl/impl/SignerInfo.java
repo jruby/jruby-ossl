@@ -32,4 +32,27 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class SignerInfo {
+
+    /**
+     * Describe digestAlgorithm here.
+     */
+    private String digestAlgorithm;
+
+    /**
+     * Get the <code>DigestAlgorithm</code> value.
+     *
+     * @return a <code>String</code> value
+     */
+    public final String getDigestAlgorithm() {
+        return digestAlgorithm;
+    }
+
+    /**
+     * Set the <code>DigestAlgorithm</code> value.
+     *
+     * @param newDigestAlgorithm The new DigestAlgorithm value.
+     */
+    public final void setDigestAlgorithm(final String newDigestAlgorithm) {
+        this.digestAlgorithm = newDigestAlgorithm;
+    }
 }// SignerInfo

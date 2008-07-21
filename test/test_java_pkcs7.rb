@@ -374,5 +374,110 @@ CERT
       assert_equal 1, p7.get_signed_and_enveloped.recipient_info.size
       assert_equal ri, p7.get_signed_and_enveloped.recipient_info.get(0)
     end
+    
+    def test_add_signer_to_something_that_cant_have_signers
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_enveloped
+      assert_raises NativeException do 
+        p7.add_signer(SignerInfo.new)
+      end
+
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_data
+      assert_raises NativeException do 
+        p7.add_signer(SignerInfo.new)
+      end
+      
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_encrypted
+      assert_raises NativeException do 
+        p7.add_signer(SignerInfo.new)
+      end
+      
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_digest
+      assert_raises NativeException do 
+        p7.add_signer(SignerInfo.new)
+      end
+    end
+
+    def test_add_signer_to_signed_should_add_that_to_stack
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signed
+      
+      si = SignerInfo.new
+      p7.add_signer(si)
+      
+      assert_equal 1, p7.get_sign.signer_info.size
+      assert_equal si, p7.get_sign.signer_info.get(0)
+    end
+
+
+    def test_add_signer_to_signedAndEnveloped_should_add_that_to_stack
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+      
+      si = SignerInfo.new
+      p7.add_signer(si)
+      
+      assert_equal 1, p7.get_signed_and_enveloped.signer_info.size
+      assert_equal si, p7.get_signed_and_enveloped.signer_info.get(0)
+    end
+
+  
+    def test_add_signer_to_signed_with_new_algo_should_add_that_algo_to_the_algo_list
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signed
+      
+      si = SignerInfo.new
+      si.digest_algorithm = "MD5"
+      p7.add_signer(si)
+
+      assert_equal "MD5", p7.get_sign.md_algs.iterator.next
+      assert_equal 1, p7.get_sign.md_algs.size
+
+      si = SignerInfo.new
+      si.digest_algorithm = "MD5"
+      p7.add_signer(si)
+
+      assert_equal "MD5", p7.get_sign.md_algs.iterator.next
+      assert_equal 1, p7.get_sign.md_algs.size
+
+      si = SignerInfo.new
+      si.digest_algorithm = "MD4"
+      p7.add_signer(si)
+
+      assert_equal 2, p7.get_sign.md_algs.size
+      assert p7.get_sign.md_algs.contains("MD4")
+      assert p7.get_sign.md_algs.contains("MD5")
+    end
+
+
+    def test_add_signer_to_signedAndEnveloped_with_new_algo_should_add_that_algo_to_the_algo_list
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+      
+      si = SignerInfo.new
+      si.digest_algorithm = "MD5"
+      p7.add_signer(si)
+
+      assert_equal "MD5", p7.get_signed_and_enveloped.md_algs.iterator.next
+      assert_equal 1, p7.get_signed_and_enveloped.md_algs.size
+
+      si = SignerInfo.new
+      si.digest_algorithm = "MD5"
+      p7.add_signer(si)
+
+      assert_equal "MD5", p7.get_signed_and_enveloped.md_algs.iterator.next
+      assert_equal 1, p7.get_signed_and_enveloped.md_algs.size
+
+      si = SignerInfo.new
+      si.digest_algorithm = "MD4"
+      p7.add_signer(si)
+
+      assert_equal 2, p7.get_signed_and_enveloped.md_algs.size
+      assert p7.get_signed_and_enveloped.md_algs.contains("MD4")
+      assert p7.get_signed_and_enveloped.md_algs.contains("MD5")
+    end
   end
 end

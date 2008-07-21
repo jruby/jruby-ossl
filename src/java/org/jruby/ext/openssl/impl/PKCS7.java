@@ -142,6 +142,13 @@ public class PKCS7 {
         return ri;
     }
 
+    /** c: PKCS7_add_signer
+     *
+     */
+    public void addSigner(SignerInfo psi) {
+        this.data.addSigner(psi);
+    }
+
     /** c: PKCS7_add_recipient_info
      *
      */

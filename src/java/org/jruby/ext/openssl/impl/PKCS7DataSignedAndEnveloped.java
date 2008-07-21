@@ -62,4 +62,9 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
     public void addRecipientInfo(RecipInfo ri) {
         this.signedAndEnveloped.getRecipientInfo().add(ri);
     }
+
+    public void addSigner(SignerInfo psi) {
+        this.signedAndEnveloped.getMdAlgs().add(psi.getDigestAlgorithm());
+        this.signedAndEnveloped.getSignerInfo().add(psi);
+    }
 }// PKCS7DataSignedAndEnveloped

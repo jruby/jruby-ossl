@@ -80,4 +80,9 @@ public class PKCS7DataSigned extends PKCS7Data {
     public boolean isSigned() {
         return true;
     }
+
+    public void addSigner(SignerInfo psi) {
+        this.sign.getMdAlgs().add(psi.getDigestAlgorithm());
+        this.sign.getSignerInfo().add(psi);
+    }
 }// PKCS7DataSigned

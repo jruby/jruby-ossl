@@ -29,6 +29,8 @@ package org.jruby.ext.openssl.impl;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
 
 /** PKCS7_ENVELOPE
  *

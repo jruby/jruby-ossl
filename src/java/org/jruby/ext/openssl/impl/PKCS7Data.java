@@ -107,4 +107,8 @@ public abstract class PKCS7Data {
     public void addRecipientInfo(RecipInfo ri) {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_RECIPIENT_INFO,PKCS7.R_WRONG_CONTENT_TYPE);
     }
+
+    public void addSigner(SignerInfo psi) {
+        throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_SIGNER,PKCS7.R_WRONG_CONTENT_TYPE);
+    }
 }// PKCS7Data
