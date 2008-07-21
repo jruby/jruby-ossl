@@ -34,6 +34,33 @@ import java.util.List;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public interface Mime {
+    Mime DEFAULT = new Mime() {
+            public List<MimeHeader> parseHeaders(BIO bio) {
+                return null;
+            }
+
+            public MimeHeader findHeader(List<MimeHeader> headers, String key) {
+                for(MimeHeader hdr : headers) {
+                    if(hdr.getName().equals(key)) {
+                        return hdr;
+                    }
+                }
+
+                return null;
+            }
+
+            public MimeParam findParam(MimeHeader header, String key) {
+                for(MimeParam par : header.getParams()) {
+                    if(par.getParamName().equals(key)) {
+                        return par;
+                    }
+                }
+
+                return null;
+            }
+        };
+
+
     /* c: mime_parse_hdr
      *
      */

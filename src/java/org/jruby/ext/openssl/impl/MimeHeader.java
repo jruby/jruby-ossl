@@ -41,11 +41,20 @@ public class MimeHeader {
     /**
      * Describe params here.
      */
-    private List<MimeParam> params = new ArrayList<MimeParam>();
+    private List<MimeParam> params;
 
     public MimeHeader(String name, String value) {
+        this(name, value, new ArrayList<MimeParam>());
+    }
+
+    public MimeHeader(String name, String value, List<MimeParam> params) {
         this.name = name;
         this.value = value;
+        this.params = params;
+    }
+
+    public String getName() {
+        return this.name;
     }
 
     public String getValue() {

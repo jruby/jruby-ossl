@@ -37,6 +37,10 @@ import java.util.List;
 public class SMIME {
     private Mime mime;
 
+    public SMIME() {
+        this(Mime.DEFAULT);
+    }
+
     public SMIME(Mime mime) {
         this.mime = mime;
     }

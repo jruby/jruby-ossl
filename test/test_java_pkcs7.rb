@@ -72,6 +72,32 @@ CRL
     X509Cert = CertificateFactory.getInstance("X.509",BCP.new).generateCertificate(ByteArrayInputStream.new(X509CertString.to_java_bytes))
     X509CRL = CertificateFactory.getInstance("X.509",BCP.new).generateCRL(ByteArrayInputStream.new(X509CRLString.to_java_bytes))
 
+    class TestJavaMime < Test::Unit::TestCase
+      def test_find_header_returns_null_on_nonexisting_header
+        headers = []
+        assert_nil Mime::DEFAULT.find_header(headers, "foo")
+
+        headers = [MimeHeader.new("blarg", "bluff")]
+        assert_nil Mime::DEFAULT.find_header(headers, "foo")
+      end
+
+      def test_find_header_returns_the_header_with_the_same_name
+        hdr = MimeHeader.new("one", "two")
+        assert_equal hdr, Mime::DEFAULT.find_header([hdr], "one")
+      end
+
+      def test_find_param_returns_null_on_nonexisting_param
+        assert_nil Mime::DEFAULT.find_param(MimeHeader.new("one", "two", []), "foo")
+        assert_nil Mime::DEFAULT.find_param(MimeHeader.new("one", "two", [MimeParam.new("hi", "ho")]), "foo")
+      end
+
+      def test_find_param_returns_the_param_with_the_same_name
+        par = MimeParam.new("hox", "box")
+        hdr = MimeHeader.new("one", "two", [par])
+        assert_equal par, Mime::DEFAULT.find_param(hdr, "hox")
+      end
+    end
+
     class TestJavaSMIME < Test::Unit::TestCase
       def test_read_pkcs7_should_raise_error_when_parsing_headers_fails
         bio = BIO.new
