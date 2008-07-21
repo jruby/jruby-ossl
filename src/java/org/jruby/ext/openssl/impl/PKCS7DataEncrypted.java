@@ -28,7 +28,28 @@
 package org.jruby.ext.openssl.impl;
 
 /**
+ *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public abstract class TypeDiscriminating {
-}// TypeDiscriminating
+public class PKCS7DataEncrypted extends PKCS7Data {
+    /* NID_pkcs7_encrypted */
+    private Encrypt encrypted;
+
+    public PKCS7DataEncrypted() {
+        this.encrypted = new Encrypt();
+        this.encrypted.setVersion(0);
+        this.encrypted.getEncData().setContentType(PKCS7.NID_pkcs7_data);
+    }
+
+    public int getType() {
+        return PKCS7.NID_pkcs7_encrypted;
+    }
+    
+    public Encrypt getEncrypted() {
+        return this.encrypted;
+    }
+
+    public boolean isEncrypted() {
+        return true;
+    }
+}// PKCS7DataEncrypted

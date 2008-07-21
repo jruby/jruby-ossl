@@ -38,7 +38,7 @@ import org.bouncycastle.asn1.DEROctetString;
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class PKCS7 extends TypeDiscriminating {
+public class PKCS7 {
     public static final int NID_pkcs7_signed = 22;
     public static final int NID_pkcs7_encrypted = 26;
     public static final int NID_pkcs7_enveloped = 23;
@@ -48,67 +48,15 @@ public class PKCS7 extends TypeDiscriminating {
 
     private String asn1;
     private int state; //used during processing
-    private int detached;
 
 	/* content as defined by the type */
 	/* all encryption/message digests are applied to the 'contents',
 	 * leaving out the 'type' field. */
 
-    private String ptr;
-    
-    /* NID_pkcs7_data */
-	private ASN1OctetString data;
-
-    /* NID_pkcs7_signed */
-    private Signed sign;
-
-    /* NID_pkcs7_enveloped */
-    private Envelope enveloped;
-
-    /* NID_pkcs7_signedAndEnveloped */
-    private SignEnvelope signedAndEnveloped;
-
-    /* NID_pkcs7_digest */
-    private Digest digest;
-    
-    /* NID_pkcs7_encrypted */
-    private Encrypt encrypted;
-
-    /* Anything else */
-    private ASN1Encodable other;
+    private PKCS7Data data;
 
     public Object ctrl(int cmd, Object v, Object ignored) {
-        int ret = 0;
-        switch(cmd) {
-        case OP_SET_DETACHED_SIGNATURE:
-            if(isSigned()) {
-                ret = detached = ((Integer)v).intValue();
-                if(ret != 0 && sign.contents.isData()) {
-                    sign.contents.data = null;
-                }
-            } else {
-                // TODO: ERR
-                ret = 0;
-            }
-            break;
-        case OP_GET_DETACHED_SIGNATURE:
-            if(isSigned()) {
-                if(sign == null || sign.contents.data == null) {
-                    ret = 1;
-                } else {
-                    ret = 0;
-                }
-            } else {
-                // TODO: ERR
-                ret = 0;
-            }
-
-            break;
-        default:
-            // TODO: ERR
-            ret = 0;
-        }
-        return Integer.valueOf(ret);
+        return this.data.ctrl(cmd, v, ignored);
     }
 
     public void setDetached(int v) {
@@ -149,49 +97,28 @@ public class PKCS7 extends TypeDiscriminating {
         }
     }
 
-    private void deleteOtherValues() {
-        ptr = null;
-        data = null;
-        sign = null;
-        enveloped = null;
-        signedAndEnveloped = null;
-        digest = null;
-        encrypted = null;
-        other = null;
-    }
-
     /** c: PKCS7_set_type
      *
      */
     public void setType(int type) {
-        this.type = type;
-        deleteOtherValues();
         switch(type) {
         case NID_pkcs7_signed:
-            this.sign = new Signed();
-            this.sign.setVersion(1);
+            this.data = new PKCS7DataSigned();
             break;
         case NID_pkcs7_data:
-            this.data = new DEROctetString(new byte[0]);
+            this.data = new PKCS7DataData();
             break;
         case NID_pkcs7_signedAndEnveloped:
-            this.signedAndEnveloped = new SignEnvelope();
-            this.signedAndEnveloped.setVersion(1);
-            this.signedAndEnveloped.getEncData().setContentType(NID_pkcs7_data);
+            this.data = new PKCS7DataSignedAndEnveloped();
             break;
         case NID_pkcs7_enveloped:
-            this.enveloped = new Envelope();
-            this.enveloped.setVersion(0);
-            this.enveloped.getEncData().setContentType(NID_pkcs7_data);
+            this.data = new PKCS7DataEnveloped();
             break;
         case NID_pkcs7_encrypted:
-            this.encrypted = new Encrypt();
-            this.encrypted.setVersion(0);
-            this.encrypted.getEncData().setContentType(NID_pkcs7_data);
+            this.data = new PKCS7DataEncrypted();
             break;
         case NID_pkcs7_digest:
-            this.digest = new Digest();
-            this.digest.setVersion(0);
+            this.data = new PKCS7DataDigest();
             break;
         default:
             throw new PKCS7Exception(F_PKCS7_SET_TYPE,R_UNSUPPORTED_CONTENT_TYPE);
@@ -202,6 +129,38 @@ public class PKCS7 extends TypeDiscriminating {
      *
      */
     public void setCipher(Cipher cipher) {
+        this.data.setCipher(cipher);
+
+
+// 	int i;
+// 	ASN1_OBJECT *objtmp;
+// 	PKCS7_ENC_CONTENT *ec;
+
+// 	i=OBJ_obj2nid(p7->type);
+// 	switch (i)
+// 		{
+//         case NID_pkcs7_signedAndEnveloped:
+//             ec=p7->d.signed_and_enveloped->enc_data;
+//             break;
+//         case NID_pkcs7_enveloped:
+//             ec=p7->d.enveloped->enc_data;
+//             break;
+//         default:
+//             PKCS7err(PKCS7_F_PKCS7_SET_CIPHER,PKCS7_R_WRONG_CONTENT_TYPE);
+//             return(0);
+// 		}
+
+// 	/* Check cipher OID exists and has data in it*/
+// 	i = EVP_CIPHER_type(cipher);
+// 	if(i == NID_undef) {
+// 		PKCS7err(PKCS7_F_PKCS7_SET_CIPHER,PKCS7_R_CIPHER_HAS_NO_OBJECT_IDENTIFIER);
+// 		return(0);
+// 	}
+// 	objtmp = OBJ_nid2obj(i);
+
+// 	ec->cipher = cipher;
+// 	return 1;
+
         // TODO: implement
     }
 
@@ -339,44 +298,69 @@ public class PKCS7 extends TypeDiscriminating {
     public static final int R_WRONG_CONTENT_TYPE = 113;
     public static final int R_WRONG_PKCS7_TYPE = 114;
 
-    public String getPtr() {
-        return this.ptr;
-    }
-
     public Envelope getEnveloped() {
-        return this.enveloped;
+        return this.data.getEnveloped();
     }
 
     public SignEnvelope getSignedAndEnveloped() {
-        return this.signedAndEnveloped;
+        return this.data.getSignedAndEnveloped();
     }
 
     public Digest getDigest() {
-        return this.digest;
+        return this.data.getDigest();
     }
 
     public Encrypt getEncrypted() {
-        return this.encrypted;
+        return this.data.getEncrypted();
     }
 
     public ASN1Encodable getOther() {
-        return this.other;
+        return this.data.getOther();
     }
 
     public void setSign(Signed sign) {
-        this.sign = sign;
+        this.data.setSign(sign);
     }
 
     public Signed getSign() {
-        return this.sign;
+        return this.data.getSign();
     }
 
     public void setData(ASN1OctetString data) {
-        this.data = data;
+        this.data.setData(data);
     }
 
     public ASN1OctetString getData() {
-        return this.data;
+        return this.data.getData();
     }
+
+    public boolean isSigned() {
+        return this.data.isSigned();
+    }
+
+    public boolean isEncrypted() {
+        return this.data.isEncrypted();
+    }
+
+    public boolean isEnveloped() {
+        return this.data.isEnveloped();
+    }
+
+    public boolean isSignedAndEnveloped() {
+        return this.data.isSignedAndEnveloped();
+    }
+
+    public boolean isData() {
+        return this.data.isData();
+    }
+
+    public boolean isDigest() {
+        return this.data.isDigest();
+    }
+
+    public int getType() {
+        return this.data.getType();
+    }
+
 }// PKCS7
 

@@ -23,7 +23,7 @@ if defined?(JRUBY_VERSION)
     
     def test_is_signed
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_signed
+      p7.type = PKCS7::NID_pkcs7_signed
       assert p7.signed?
       assert !p7.encrypted?
       assert !p7.enveloped?
@@ -34,7 +34,7 @@ if defined?(JRUBY_VERSION)
 
     def test_is_encrypted
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_encrypted
+      p7.type = PKCS7::NID_pkcs7_encrypted
       assert !p7.signed?
       assert p7.encrypted?
       assert !p7.enveloped?
@@ -45,7 +45,7 @@ if defined?(JRUBY_VERSION)
 
     def test_is_enveloped
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_enveloped
+      p7.type = PKCS7::NID_pkcs7_enveloped
       assert !p7.signed?
       assert !p7.encrypted?
       assert p7.enveloped?
@@ -56,7 +56,7 @@ if defined?(JRUBY_VERSION)
 
     def test_is_signed_and_enveloped
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_signedAndEnveloped
+      p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
       assert !p7.signed?
       assert !p7.encrypted?
       assert !p7.enveloped?
@@ -67,7 +67,7 @@ if defined?(JRUBY_VERSION)
 
     def test_is_data
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_data
+      p7.type = PKCS7::NID_pkcs7_data
       assert !p7.signed?
       assert !p7.encrypted?
       assert !p7.enveloped?
@@ -78,7 +78,7 @@ if defined?(JRUBY_VERSION)
 
     def test_is_digest
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_digest
+      p7.type = PKCS7::NID_pkcs7_digest
       assert !p7.signed?
       assert !p7.encrypted?
       assert !p7.enveloped?
@@ -89,13 +89,13 @@ if defined?(JRUBY_VERSION)
 
     def test_set_detached
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_signed
+      p7.type = PKCS7::NID_pkcs7_signed
 
       sign = Signed.new
       p7.sign = sign
       
       test_p7 = PKCS7.new
-      test_p7.internal_type = PKCS7::NID_pkcs7_data 
+      test_p7.type = PKCS7::NID_pkcs7_data 
       test_p7.data = ASN1::OctetString.new("foo".to_java_bytes)
       sign.contents = test_p7
       
@@ -106,13 +106,13 @@ if defined?(JRUBY_VERSION)
 
     def test_set_not_detached
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_signed
+      p7.type = PKCS7::NID_pkcs7_signed
 
       sign = Signed.new
       p7.sign = sign
       
       test_p7 = PKCS7.new
-      test_p7.internal_type = PKCS7::NID_pkcs7_data 
+      test_p7.type = PKCS7::NID_pkcs7_data 
       data = ASN1::OctetString.new("foo".to_java_bytes)
       test_p7.data = data
       sign.contents = test_p7
@@ -124,13 +124,13 @@ if defined?(JRUBY_VERSION)
 
     def test_is_detached
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_signed
+      p7.type = PKCS7::NID_pkcs7_signed
 
       sign = Signed.new
       p7.sign = sign
       
       test_p7 = PKCS7.new
-      test_p7.internal_type = PKCS7::NID_pkcs7_data 
+      test_p7.type = PKCS7::NID_pkcs7_data 
       data = ASN1::OctetString.new("foo".to_java_bytes)
       test_p7.data = data
       sign.contents = test_p7
@@ -141,7 +141,7 @@ if defined?(JRUBY_VERSION)
 
     def test_is_detached_with_wrong_type
       p7 = PKCS7.new
-      p7.internal_type = PKCS7::NID_pkcs7_data
+      p7.type = PKCS7::NID_pkcs7_data
       
       p7.detached = 1
       assert !p7.detached?
@@ -169,15 +169,14 @@ if defined?(JRUBY_VERSION)
       p7.type = PKCS7::NID_pkcs7_signed
 
       assert p7.signed?
-      assert_equal 1, p7.sign.version
+      assert_equal 1, p7.get_sign.version
 
-      assert_nil p7.ptr
-      assert_nil p7.data
-      assert_nil p7.enveloped
-      assert_nil p7.signed_and_enveloped
-      assert_nil p7.digest
-      assert_nil p7.encrypted
-      assert_nil p7.other
+      assert_nil p7.get_data
+      assert_nil p7.get_enveloped
+      assert_nil p7.get_signed_and_enveloped
+      assert_nil p7.get_digest
+      assert_nil p7.get_encrypted
+      assert_nil p7.get_other
     end
 
     def test_set_type_data
@@ -187,13 +186,12 @@ if defined?(JRUBY_VERSION)
       assert p7.data?
       assert_equal ASN1::OctetString.new("".to_java_bytes), p7.data
 
-      assert_nil p7.ptr
-      assert_nil p7.sign
-      assert_nil p7.enveloped
-      assert_nil p7.signed_and_enveloped
-      assert_nil p7.digest
-      assert_nil p7.encrypted
-      assert_nil p7.other
+      assert_nil p7.get_sign
+      assert_nil p7.get_enveloped
+      assert_nil p7.get_signed_and_enveloped
+      assert_nil p7.get_digest
+      assert_nil p7.get_encrypted
+      assert_nil p7.get_other
     end
 
     def test_set_type_signed_and_enveloped
@@ -201,16 +199,15 @@ if defined?(JRUBY_VERSION)
       p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
 
       assert p7.signed_and_enveloped?
-      assert_equal 1, p7.signed_and_enveloped.version
-      assert_equal PKCS7::NID_pkcs7_data, p7.signed_and_enveloped.enc_data.content_type
+      assert_equal 1, p7.get_signed_and_enveloped.version
+      assert_equal PKCS7::NID_pkcs7_data, p7.get_signed_and_enveloped.enc_data.content_type
 
-      assert_nil p7.ptr
-      assert_nil p7.sign
-      assert_nil p7.enveloped
-      assert_nil p7.data
-      assert_nil p7.digest
-      assert_nil p7.encrypted
-      assert_nil p7.other
+      assert_nil p7.get_sign
+      assert_nil p7.get_enveloped
+      assert_nil p7.get_data
+      assert_nil p7.get_digest
+      assert_nil p7.get_encrypted
+      assert_nil p7.get_other
     end
 
     def test_set_type_enveloped
@@ -218,16 +215,15 @@ if defined?(JRUBY_VERSION)
       p7.type = PKCS7::NID_pkcs7_enveloped
 
       assert p7.enveloped?
-      assert_equal 0, p7.enveloped.version
-      assert_equal PKCS7::NID_pkcs7_data, p7.enveloped.enc_data.content_type
+      assert_equal 0, p7.get_enveloped.version
+      assert_equal PKCS7::NID_pkcs7_data, p7.get_enveloped.enc_data.content_type
 
-      assert_nil p7.ptr
-      assert_nil p7.sign
-      assert_nil p7.signed_and_enveloped
-      assert_nil p7.data
-      assert_nil p7.digest
-      assert_nil p7.encrypted
-      assert_nil p7.other
+      assert_nil p7.get_sign
+      assert_nil p7.get_signed_and_enveloped
+      assert_nil p7.get_data
+      assert_nil p7.get_digest
+      assert_nil p7.get_encrypted
+      assert_nil p7.get_other
     end
 
     def test_set_type_encrypted
@@ -235,16 +231,15 @@ if defined?(JRUBY_VERSION)
       p7.type = PKCS7::NID_pkcs7_encrypted
 
       assert p7.encrypted?
-      assert_equal 0, p7.encrypted.version
-      assert_equal PKCS7::NID_pkcs7_data, p7.encrypted.enc_data.content_type
+      assert_equal 0, p7.get_encrypted.version
+      assert_equal PKCS7::NID_pkcs7_data, p7.get_encrypted.enc_data.content_type
 
-      assert_nil p7.ptr
-      assert_nil p7.sign
-      assert_nil p7.signed_and_enveloped
-      assert_nil p7.data
-      assert_nil p7.digest
-      assert_nil p7.enveloped
-      assert_nil p7.other
+      assert_nil p7.get_sign
+      assert_nil p7.get_signed_and_enveloped
+      assert_nil p7.get_data
+      assert_nil p7.get_digest
+      assert_nil p7.get_enveloped
+      assert_nil p7.get_other
     end
 
     def test_set_type_digest
@@ -252,15 +247,64 @@ if defined?(JRUBY_VERSION)
       p7.type = PKCS7::NID_pkcs7_digest
 
       assert p7.digest?
-      assert_equal 0, p7.digest.version
+      assert_equal 0, p7.get_digest.version
 
-      assert_nil p7.ptr
-      assert_nil p7.sign
-      assert_nil p7.signed_and_enveloped
-      assert_nil p7.data
-      assert_nil p7.encrypted
-      assert_nil p7.enveloped
-      assert_nil p7.other
+      assert_nil p7.get_sign
+      assert_nil p7.get_signed_and_enveloped
+      assert_nil p7.get_data
+      assert_nil p7.get_encrypted
+      assert_nil p7.get_enveloped
+      assert_nil p7.get_other
+    end
+    
+    def test_set_cipher_on_non_enveloped_object
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_digest
+      
+      assert_raises NativeException do 
+        p7.cipher = nil
+      end
+      
+      p7.type = PKCS7::NID_pkcs7_encrypted
+
+      assert_raises NativeException do 
+        p7.cipher = nil
+      end
+
+      p7.type = PKCS7::NID_pkcs7_data
+
+      assert_raises NativeException do 
+        p7.cipher = nil
+      end
+
+      p7.type = PKCS7::NID_pkcs7_signed
+
+      assert_raises NativeException do 
+        p7.cipher = nil
+      end
+    end
+    
+    def test_set_cipher_on_enveloped_object
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_enveloped
+
+      cipher = javax.crypto.Cipher.getInstance("RSA")
+      
+      p7.cipher = cipher
+      
+      assert_equal cipher, p7.get_enveloped.enc_data.cipher
+    end
+
+      
+    def test_set_cipher_on_signedAndEnveloped_object
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+
+      cipher = javax.crypto.Cipher.getInstance("RSA")
+      
+      p7.cipher = cipher
+      
+      assert_equal cipher, p7.get_signed_and_enveloped.enc_data.cipher
     end
   end
 end

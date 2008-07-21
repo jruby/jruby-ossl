@@ -28,7 +28,27 @@
 package org.jruby.ext.openssl.impl;
 
 /**
+ *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public abstract class TypeDiscriminating {
-}// TypeDiscriminating
+public class PKCS7DataDigest extends PKCS7Data  {
+    /* NID_pkcs7_digest */
+    private Digest digest;
+
+    public PKCS7DataDigest() {
+        this.digest = new Digest();
+        this.digest.setVersion(0);
+    }
+
+    public int getType() {
+        return PKCS7.NID_pkcs7_digest;
+    }
+
+    public Digest getDigest() {
+        return this.digest;
+    }
+
+    public boolean isDigest() {
+        return true;
+    }
+}// PKCS7DataDigest

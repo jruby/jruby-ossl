@@ -28,7 +28,56 @@
 package org.jruby.ext.openssl.impl;
 
 /**
+ *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public abstract class TypeDiscriminating {
-}// TypeDiscriminating
+public class PKCS7DataSigned extends PKCS7Data {
+    private int detached;
+
+    /* NID_pkcs7_signed */
+    private Signed sign;
+
+    public PKCS7DataSigned() {
+        this.sign = new Signed();
+        this.sign.setVersion(1);
+    }
+
+    public int getType() {
+        return PKCS7.NID_pkcs7_signed;
+    }
+
+    public Object ctrl(int cmd, Object v, Object ignored) {
+        int ret = 0;
+        switch(cmd) {
+        case PKCS7.OP_SET_DETACHED_SIGNATURE:
+            ret = detached = ((Integer)v).intValue();
+            if(ret != 0 && sign.contents.isData()) {
+                sign.contents.setData(null);
+            }
+            break;
+        case PKCS7.OP_GET_DETACHED_SIGNATURE:
+            if(sign == null || sign.contents.getData() == null) {
+                ret = 1;
+            } else {
+                ret = 0;
+            }
+            break;
+        default:
+            // TODO: ERR
+            ret = 0;
+        }
+        return Integer.valueOf(ret);
+    }
+
+    public void setSign(Signed sign) {
+        this.sign = sign;
+    }
+
+    public Signed getSign() {
+        return this.sign;
+    }
+
+    public boolean isSigned() {
+        return true;
+    }
+}// PKCS7DataSigned

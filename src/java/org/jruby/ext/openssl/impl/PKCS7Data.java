@@ -27,8 +27,80 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.ASN1Encodable;
+import javax.crypto.Cipher;
+
 /**
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public abstract class TypeDiscriminating {
-}// TypeDiscriminating
+public abstract class PKCS7Data {
+    public abstract int getType();
+
+    public Object ctrl(int cmd, Object v, Object ignored) {
+        // TODO: Error
+        return Integer.valueOf(0);
+    }
+
+    public Envelope getEnveloped() {
+        return null;
+    }
+
+    public SignEnvelope getSignedAndEnveloped() {
+        return null;
+    }
+
+    public Digest getDigest() {
+        return null;
+    }
+
+    public Encrypt getEncrypted() {
+        return null;
+    }
+
+    public ASN1Encodable getOther() {
+        return null;
+    }
+
+    public void setSign(Signed sign) {
+    }
+
+    public Signed getSign() {
+        return null;
+    }
+
+    public void setData(ASN1OctetString data) {
+    }
+
+    public ASN1OctetString getData() {
+        return null;
+    }
+
+    public boolean isSigned() {
+        return false;
+    }
+
+    public boolean isEncrypted() {
+        return false;
+    }
+
+    public boolean isEnveloped() {
+        return false;
+    }
+
+    public boolean isSignedAndEnveloped() {
+        return false;
+    }
+
+    public boolean isData() {
+        return false;
+    }
+
+    public boolean isDigest() {
+        return false;
+    }
+
+    public void setCipher(Cipher cipher) {
+        throw new PKCS7Exception(PKCS7.F_PKCS7_SET_CIPHER,PKCS7.R_WRONG_CONTENT_TYPE);
+    }
+}// PKCS7Data

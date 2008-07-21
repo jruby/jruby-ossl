@@ -27,15 +27,23 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import javax.crypto.Cipher;
+
 /** PKCS7_ENC_CONTENT
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class EncContent {
+
     /**
      * Describe contentType here.
      */
     private int contentType;
+
+    /**
+     * Describe cipher here.
+     */
+    private Cipher cipher;
 
     /**
      * Get the <code>ContentType</code> value.
@@ -53,5 +61,23 @@ public class EncContent {
      */
     public final void setContentType(final int newContentType) {
         this.contentType = newContentType;
+    }
+
+    /**
+     * Get the <code>Cipher</code> value.
+     *
+     * @return a <code>Cipher</code> value
+     */
+    public final Cipher getCipher() {
+        return cipher;
+    }
+
+    /**
+     * Set the <code>Cipher</code> value.
+     *
+     * @param newCipher The new Cipher value.
+     */
+    public final void setCipher(final Cipher newCipher) {
+        this.cipher = newCipher;
     }
 }// EncContent

@@ -27,8 +27,35 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import javax.crypto.Cipher;
+
 /**
+ *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public abstract class TypeDiscriminating {
-}// TypeDiscriminating
+public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
+    /* NID_pkcs7_signedAndEnveloped */
+    private SignEnvelope signedAndEnveloped;
+
+    public PKCS7DataSignedAndEnveloped() {
+        this.signedAndEnveloped = new SignEnvelope();
+        this.signedAndEnveloped.setVersion(1);
+        this.signedAndEnveloped.getEncData().setContentType(PKCS7.NID_pkcs7_data);
+    }
+
+    public int getType() {
+        return PKCS7.NID_pkcs7_signedAndEnveloped;
+    }
+
+    public boolean isSignedAndEnveloped() {
+        return true;
+    }
+
+    public SignEnvelope getSignedAndEnveloped() {
+        return signedAndEnveloped;
+    }
+
+    public void setCipher(Cipher cipher) {
+        this.signedAndEnveloped.getEncData().setCipher(cipher);
+    }
+}// PKCS7DataSignedAndEnveloped

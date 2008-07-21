@@ -27,8 +27,34 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.DEROctetString;
+
 /**
+ *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public abstract class TypeDiscriminating {
-}// TypeDiscriminating
+public class PKCS7DataData extends PKCS7Data {
+    /* NID_pkcs7_data */
+    private ASN1OctetString data;
+
+    public PKCS7DataData() {
+        this.data = new DEROctetString(new byte[0]);
+    }
+
+    public int getType() {
+        return PKCS7.NID_pkcs7_data;
+    }
+
+    public void setData(ASN1OctetString data) {
+        this.data = data;
+    }
+
+    public ASN1OctetString getData() {
+        return this.data;
+    }
+
+    public boolean isData() {
+        return true;
+    }
+}// PKCS7DataData
