@@ -682,6 +682,58 @@ CERT
         p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
         assert_equal p7.get_signed_and_enveloped.signer_info.object_id, p7.signer_info.object_id
       end
+      
+      def test_content_new_on_data_raises_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_data
+        assert_raises NativeException do 
+          p7.content_new(PKCS7::NID_pkcs7_data)
+        end
+      end
+
+      def test_content_new_on_encrypted_raises_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_encrypted
+        assert_raises NativeException do 
+          p7.content_new(PKCS7::NID_pkcs7_data)
+        end
+      end
+
+      def test_content_new_on_enveloped_raises_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_enveloped
+        assert_raises NativeException do 
+          p7.content_new(PKCS7::NID_pkcs7_data)
+        end
+      end
+
+      def test_content_new_on_signedAndEnveloped_raises_exception
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+        assert_raises NativeException do 
+          p7.content_new(PKCS7::NID_pkcs7_data)
+        end
+      end
+      
+      def test_content_new_on_digest_creates_new_content
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_digest
+        p7.content_new(PKCS7::NID_pkcs7_signedAndEnveloped)
+        assert p7.get_digest.contents.signed_and_enveloped?
+        
+        p7.content_new(PKCS7::NID_pkcs7_encrypted)
+        assert p7.get_digest.contents.encrypted?
+      end
+
+      def test_content_new_on_signed_creates_new_content
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_signed
+        p7.content_new(PKCS7::NID_pkcs7_signedAndEnveloped)
+        assert p7.get_sign.contents.signed_and_enveloped?
+        
+        p7.content_new(PKCS7::NID_pkcs7_encrypted)
+        assert p7.get_sign.contents.encrypted?
+      end
     end
   end
 end

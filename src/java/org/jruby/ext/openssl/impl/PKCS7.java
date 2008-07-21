@@ -142,6 +142,15 @@ public class PKCS7 {
         return ri;
     }
 
+    /** c: PKCS7_content_new
+     *
+     */
+    public void contentNew(int nid) {
+        PKCS7 ret = new PKCS7();
+        ret.setType(nid);
+        this.setContent(ret);
+    }
+
     /** c: PKCS7_add_signer
      *
      */
