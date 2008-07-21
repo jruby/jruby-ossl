@@ -24,7 +24,20 @@ end
 desc "Compile the native Java code."
 task :java_compile do
   mkdir_p "pkg/classes"
-  sh "javac -target 1.5 -source 1.5 -Xlint:unchecked -Xlint:deprecation -d pkg/classes #{java_classpath_arg} #{FileList['src/java/**/*.java'].join(' ')}"
+
+  File.open("pkg/compile_options", "w") do |f|
+    f << "-target 1.5 -source 1.5 -Xlint:unchecked -Xlint:deprecation -d pkg/classes"
+  end
+
+  File.open("pkg/compile_classpath", "w") do |f|
+    f << java_classpath_arg
+  end
+
+  File.open("pkg/compile_sourcefiles", "w") do |f|
+    f << FileList['src/java/**/*.java'].join(' ')
+  end
+  
+  sh "javac @pkg/compile_options @pkg/compile_classpath @pkg/compile_sourcefiles"
   File.open("pkg/classes/manifest.mf", "w") {|f| f.puts "Class-Path: #{BC_JARS.map{|f| File.basename(f) }.join(' ')}"}
   sh "jar cfm lib/jopenssl.jar pkg/classes/manifest.mf -C pkg/classes/ ."
 end
