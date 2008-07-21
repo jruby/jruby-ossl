@@ -56,4 +56,22 @@ public class Digest {
     public final void setVersion(final int newVersion) {
         this.version = newVersion;
     }
+
+    /**
+     * Get the <code>Contents</code> value.
+     *
+     * @return a <code>PKCS7</code> value
+     */
+    public final PKCS7 getContents() {
+        return contents;
+    }
+
+    /**
+     * Set the <code>Contents</code> value.
+     *
+     * @param newContents The new Contents value.
+     */
+    public final void setContents(final PKCS7 newContents) {
+        this.contents = newContents;
+    }
 }// Digest

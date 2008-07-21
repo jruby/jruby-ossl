@@ -156,6 +156,14 @@ public class PKCS7 {
         this.data.addRecipientInfo(ri);
     }
 
+    /** c: PKCS7_set_content
+     *
+     */
+    public void setContent(PKCS7 p7) {
+        this.data.setContent(p7);
+    }
+    
+
     /** c: PKCS7_dataInit
      *
      */

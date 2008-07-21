@@ -85,4 +85,8 @@ public class PKCS7DataSigned extends PKCS7Data {
         this.sign.getMdAlgs().add(psi.getDigestAlgorithm());
         this.sign.getSignerInfo().add(psi);
     }
+
+    public void setContent(PKCS7 p7) {
+        this.sign.setContents(p7);
+    }
 }// PKCS7DataSigned

@@ -51,4 +51,8 @@ public class PKCS7DataDigest extends PKCS7Data  {
     public boolean isDigest() {
         return true;
     }
+
+    public void setContent(PKCS7 p7) {
+        this.digest.setContents(p7);
+    }
 }// PKCS7DataDigest

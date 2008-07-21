@@ -479,5 +479,55 @@ CERT
       assert p7.get_signed_and_enveloped.md_algs.contains("MD4")
       assert p7.get_signed_and_enveloped.md_algs.contains("MD5")
     end
+    
+    def test_set_content_on_data_throws_exception
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_data
+      assert_raises NativeException do 
+        p7.setContent(PKCS7.new)
+      end
+    end
+
+    def test_set_content_on_enveloped_throws_exception
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_enveloped
+      assert_raises NativeException do 
+        p7.setContent(PKCS7.new)
+      end
+    end
+
+    def test_set_content_on_signedAndEnveloped_throws_exception
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+      assert_raises NativeException do 
+        p7.setContent(PKCS7.new)
+      end
+    end
+
+    def test_set_content_on_encrypted_throws_exception
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_encrypted
+      assert_raises NativeException do 
+        p7.setContent(PKCS7.new)
+      end
+    end
+
+    def test_set_content_on_signed_sets_the_content
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_signed
+      p7new = PKCS7.new
+      p7.setContent(p7new)
+      
+      assert_equal p7new, p7.get_sign.contents
+    end
+
+    def test_set_content_on_digest_sets_the_content
+      p7 = PKCS7.new
+      p7.type = PKCS7::NID_pkcs7_digest
+      p7new = PKCS7.new
+      p7.setContent(p7new)
+      
+      assert_equal p7new, p7.get_digest.contents
+    end
   end
 end

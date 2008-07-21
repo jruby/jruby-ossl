@@ -54,10 +54,6 @@ public class Signed {
 
     PKCS7 contents;
 
-    public void setContents(PKCS7 contents) {
-        this.contents = contents;
-    }
-
     /**
      * Get the <code>Version</code> value.
      *
@@ -110,5 +106,23 @@ public class Signed {
      */
     public final void setMdAlgs(final Set<String> newMdAlgs) {
         this.mdAlgs = newMdAlgs;
+    }
+
+    /**
+     * Get the <code>Contents</code> value.
+     *
+     * @return a <code>PKCS7</code> value
+     */
+    public final PKCS7 getContents() {
+        return contents;
+    }
+
+    /**
+     * Set the <code>Contents</code> value.
+     *
+     * @param newContents The new Contents value.
+     */
+    public final void setContents(final PKCS7 newContents) {
+        this.contents = newContents;
     }
 }// Signed
