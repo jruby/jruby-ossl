@@ -44,6 +44,7 @@ public class SMIME {
      *
      */
     public PKCS7 readBase64PKCS7(BIO bio) {
+        return null;
     }
 
     /* c: SMIME_read_PKCS7
