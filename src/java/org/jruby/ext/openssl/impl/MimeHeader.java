@@ -32,4 +32,15 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class MimeHeader {
+    private String name;
+    private String value;
+
+    public MimeHeader(String name, String value) {
+        this.name = name;
+        this.value = value;
+    }
+
+    public String getValue() {
+        return this.value;
+    }
 }// MimeHeader

@@ -54,6 +54,10 @@ public class SMIME {
         }
 
         MimeHeader hdr = mime.findHeader(headers, "content-type");
+        if(hdr == null || hdr.getValue() == null) {
+            throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_CONTENT_TYPE);
+        }
+
 
         return null;
 

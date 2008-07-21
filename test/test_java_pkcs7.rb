@@ -85,6 +85,38 @@ CRL
           assert_equal PKCS7::R_MIME_PARSE_ERROR, e.cause.get_reason
         end
       end
+
+      def test_read_pkcs7_should_raise_error_when_content_type_is_not_there
+        bio = BIO.new
+        mime = Mime.new
+
+        headers = ArrayList.new
+        mime.expects(:parseHeaders).with(bio).returns(headers)
+        mime.expects(:findHeader).with(headers, "content-type").returns(nil)
+
+        begin
+          SMIME.new(mime).readPKCS7(bio, nil)
+          assert false
+        rescue PKCS7Exception => e
+          assert_equal PKCS7::F_SMIME_READ_PKCS7, e.cause.get_method
+          assert_equal PKCS7::R_NO_CONTENT_TYPE, e.cause.get_reason
+        end
+
+
+        
+        
+        mime = Mime.new
+        mime.expects(:parseHeaders).with(bio).returns(headers)
+        mime.expects(:findHeader).with(headers, "content-type").returns(MimeHeader.new("content-type", nil))
+
+        begin
+          SMIME.new(mime).readPKCS7(bio, nil)
+          assert false
+        rescue PKCS7Exception => e
+          assert_equal PKCS7::F_SMIME_READ_PKCS7, e.cause.get_method
+          assert_equal PKCS7::R_NO_CONTENT_TYPE, e.cause.get_reason
+        end
+      end
       
       def test_read_pkcs7_should_set_the_second_arguments_contents_to_null_if_its_there
         mime = Mime.new
@@ -117,7 +149,7 @@ CRL
 
         headers = ArrayList.new
         mime.expects(:parseHeaders).with(bio).returns(headers)
-        mime.expects(:findHeader).with(headers, "content-type").returns(MimeHeader.new)
+        mime.expects(:findHeader).with(headers, "content-type").returns(MimeHeader.new("content-type", "foo"))
 
         SMIME.new(mime).readPKCS7(bio, nil)
       end
