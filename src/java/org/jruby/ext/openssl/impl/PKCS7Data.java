@@ -30,6 +30,7 @@ package org.jruby.ext.openssl.impl;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Encodable;
 import javax.crypto.Cipher;
+import java.util.List;
 
 /**
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -114,5 +115,9 @@ public abstract class PKCS7Data {
 
     public void setContent(PKCS7 p7) {
         throw new PKCS7Exception(PKCS7.F_PKCS7_SET_CONTENT,PKCS7.R_WRONG_CONTENT_TYPE);
+    }
+
+    public List<SignerInfo> getSignerInfo() {
+        return null;
     }
 }// PKCS7Data

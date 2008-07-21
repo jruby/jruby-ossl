@@ -27,6 +27,8 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.util.List;
+
 /**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -88,5 +90,9 @@ public class PKCS7DataSigned extends PKCS7Data {
 
     public void setContent(PKCS7 p7) {
         this.sign.setContents(p7);
+    }
+
+    public List<SignerInfo> getSignerInfo() {
+        return this.sign.getSignerInfo();
     }
 }// PKCS7DataSigned

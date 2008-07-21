@@ -163,6 +163,12 @@ public class PKCS7 {
         this.data.setContent(p7);
     }
     
+    /** c: PKCS7_get_signer_info
+     *
+     */
+    public List<SignerInfo> getSignerInfo() {
+        return this.data.getSignerInfo();
+    }
 
     /** c: PKCS7_dataInit
      *

@@ -646,6 +646,42 @@ CERT
         
         assert_equal p7new, p7.get_digest.contents
       end
+      
+      def test_get_signer_info_on_digest_returns_null
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_digest
+        assert_nil p7.signer_info
+      end
+
+      def test_get_signer_info_on_data_returns_null
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_data
+        assert_nil p7.signer_info
+      end
+
+      def test_get_signer_info_on_encrypted_returns_null
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_encrypted
+        assert_nil p7.signer_info
+      end
+
+      def test_get_signer_info_on_enveloped_returns_null
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_enveloped
+        assert_nil p7.signer_info
+      end
+
+      def test_get_signer_info_on_signed_returns_signer_info
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_signed
+        assert_equal p7.get_sign.signer_info.object_id, p7.signer_info.object_id
+      end
+
+      def test_get_signer_info_on_signedAndEnveloped_returns_signer_info
+        p7 = PKCS7.new
+        p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
+        assert_equal p7.get_signed_and_enveloped.signer_info.object_id, p7.signer_info.object_id
+      end
     end
   end
 end

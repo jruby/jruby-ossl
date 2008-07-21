@@ -28,6 +28,7 @@
 package org.jruby.ext.openssl.impl;
 
 import javax.crypto.Cipher;
+import java.util.List;
 
 /**
  *
@@ -66,5 +67,9 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
     public void addSigner(SignerInfo psi) {
         this.signedAndEnveloped.getMdAlgs().add(psi.getDigestAlgorithm());
         this.signedAndEnveloped.getSignerInfo().add(psi);
+    }
+
+    public List<SignerInfo> getSignerInfo() {
+        return this.signedAndEnveloped.getSignerInfo();
     }
 }// PKCS7DataSignedAndEnveloped
