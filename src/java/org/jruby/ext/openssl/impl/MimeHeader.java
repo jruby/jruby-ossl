@@ -78,4 +78,22 @@ public class MimeHeader {
     public final void setParams(final List<MimeParam> newParams) {
         this.params = newParams;
     }
+
+    @Override
+    public boolean equals(Object other) {
+        boolean ret = this == other;
+        if(!ret && (other instanceof MimeHeader)) {
+            MimeHeader mh = (MimeHeader)other;
+            ret = 
+                ((this.name == null) ? mh.name == null : this.name.equals(mh.name)) &&
+                ((this.value == null) ? mh.value == null : this.value.equals(mh.value)) &&
+                ((this.params == null) ? mh.params == null : this.params.equals(mh.params));
+        }
+        return ret;
+    }
+
+    @Override
+    public String toString() {
+        return "#<MimeHeader " + name + ": '"+value+"' params="+params+">";
+    }
 }// MimeHeader

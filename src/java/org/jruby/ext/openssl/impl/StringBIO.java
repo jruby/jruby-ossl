@@ -27,34 +27,36 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-/** c: BIO
+/**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class BIO {
-    public static BIO fromString(String input) {
-        return new StringBIO(input);
-    }
-    
-    /** c: BIO_flush
-     *
+public class StringBIO extends BIO {
+    /**
+     * Describe string here.
      */
-    public void flush() {
-        // TODO: implement
+    private byte[] stringBuffer;
+
+    private int index = 0;
+    private int slen;
+
+    public StringBIO(String string) {
+        try {
+            this.stringBuffer = string.getBytes("ISO8859-1");
+        } catch(Exception e) {}
+        this.slen = this.stringBuffer.length;
     }
 
-    /** c: SMIME_crlf_copy
-     *
-     */
-    public void crlfCopy(byte[] in, int flags) {
-        // TODO: implement
-    }
-
-    /** c: BIO_gets
-     *
-     */
     public int gets(byte[] in, int len) {
-        // TODO: implement
-        return -1;
+        int i=0;
+        for(;i<len && index < slen; i++, index++) {
+            in[i] = stringBuffer[index];
+
+            if(in[i] == '\n' || in[i] == '\r') {
+                i++; index++;
+                break;
+            }
+        }
+        return i;
     }
-}// BIO
+}// StringBIO
