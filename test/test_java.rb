@@ -46,7 +46,7 @@ if defined?(JRUBY_VERSION)
     X509Name = org.bouncycastle.asn1.x509.X509Name
     
     
-    MimeEncryptedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_encrypted.message'))
+    MimeEnvelopedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_enveloped.message'))
     MimeSignedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_signed.message'))
     MultipartSignedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_multipart_signed.message'))
 

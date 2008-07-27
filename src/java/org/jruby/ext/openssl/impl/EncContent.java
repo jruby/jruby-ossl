@@ -28,13 +28,18 @@
 package org.jruby.ext.openssl.impl;
 
 import javax.crypto.Cipher;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DEREncodable;
+import org.bouncycastle.asn1.DERObjectIdentifier;
+import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 /** PKCS7_ENC_CONTENT
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class EncContent {
-
     /**
      * Describe contentType here.
      */
@@ -44,6 +49,16 @@ public class EncContent {
      * Describe cipher here.
      */
     private Cipher cipher;
+
+    /**
+     * Describe algorithm here.
+     */
+    private AlgorithmIdentifier algorithm;
+
+    /**
+     * Describe encData here.
+     */
+    private ASN1OctetString encData;
 
     /**
      * Get the <code>ContentType</code> value.
@@ -79,5 +94,72 @@ public class EncContent {
      */
     public final void setCipher(final Cipher newCipher) {
         this.cipher = newCipher;
+    }
+
+    /**
+     * Get the <code>Algorithm</code> value.
+     *
+     * @return an <code>AlgorithmIdentifier</code> value
+     */
+    public final AlgorithmIdentifier getAlgorithm() {
+        return algorithm;
+    }
+
+    /**
+     * Set the <code>Algorithm</code> value.
+     *
+     * @param newAlgorithm The new Algorithm value.
+     */
+    public final void setAlgorithm(final AlgorithmIdentifier newAlgorithm) {
+        this.algorithm = newAlgorithm;
+    }
+
+    /**
+     * Get the <code>EncData</code> value.
+     *
+     * @return an <code>ASN1OctetString</code> value
+     */
+    public final ASN1OctetString getEncData() {
+        return encData;
+    }
+
+    /**
+     * Set the <code>EncData</code> value.
+     *
+     * @param newEncData The new EncData value.
+     */
+    public final void setEncData(final ASN1OctetString newEncData) {
+        this.encData = newEncData;
+    }
+
+    @Override
+    public String toString() {
+        return "#<EncContent contentType="+contentType+" algorithm="+ASN1Registry.o2a(algorithm.getObjectId())+" content="+encData+">";
+    }
+
+    /**
+     * EncryptedContentInfo ::= SEQUENCE {
+     *   contentType ContentType,
+     *   contentEncryptionAlgorithm ContentEncryptionAlgorithmIdentifier,
+     *   encryptedContent [0] IMPLICIT EncryptedContent OPTIONAL }
+     *
+     * EncryptedContent ::= OCTET STRING
+     */
+    public static EncContent fromASN1(DEREncodable content) {
+        ASN1Sequence sequence = (ASN1Sequence)content;
+        DERObjectIdentifier contentType = (DERObjectIdentifier)(sequence.getObjectAt(0));
+        int nid = ASN1Registry.obj2nid(contentType);
+
+        EncContent ec = new EncContent();
+        ec.setContentType(nid);
+        ec.setAlgorithm(AlgorithmIdentifier.getInstance(sequence.getObjectAt(1)));
+        if(sequence.size() > 2 && sequence.getObjectAt(2) instanceof DERTaggedObject && ((DERTaggedObject)(sequence.getObjectAt(2))).getTagNo() == 0) {
+            DEREncodable ee = ((DERTaggedObject)(sequence.getObjectAt(2))).getObject();
+            if(ee instanceof ASN1Sequence) {
+            } else {
+                ec.setEncData((ASN1OctetString)ee);
+            }
+        }
+        return ec;
     }
 }// EncContent

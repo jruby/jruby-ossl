@@ -27,8 +27,13 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import org.bouncycastle.asn1.ASN1OctetString;
 import java.security.cert.X509Certificate;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.DEREncodable;
+import org.bouncycastle.asn1.DERInteger;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 /** PKCS7_RECIP_INFO
  *
@@ -36,15 +41,133 @@ import java.security.cert.X509Certificate;
  */
 public class RecipInfo {
     private int version;
-    private IssuerAndSerial issuerAndSerial;
-    private String keyEncAlgor;
+    private IssuerAndSerialNumber issuerAndSerial;
+    private AlgorithmIdentifier keyEncAlgor;
     private ASN1OctetString encKey;
-    private X509Certificate cert;
 
     /** c: PKCS7_RECIP_INFO_set
      *
      */
     public void set(X509Certificate cert) {
         // TODO: implement
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        boolean ret = this == other;
+        if(!ret && (other instanceof RecipInfo)) {
+            RecipInfo o = (RecipInfo)other;
+            ret = 
+                this.version == o.version &&
+                (this.issuerAndSerial == null ? o.issuerAndSerial == null : (this.issuerAndSerial.equals(o.issuerAndSerial))) &&
+                (this.keyEncAlgor == null ? o.keyEncAlgor == null : (this.keyEncAlgor.equals(o.keyEncAlgor))) &&
+                (this.encKey == null ? o.encKey == null : (this.encKey.equals(o.encKey)));
+        }
+        return ret;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 31;
+        result = result + 13 * version;
+        result = result + ((issuerAndSerial == null) ? 0 : 13 * issuerAndSerial.hashCode());
+        result = result + ((keyEncAlgor == null) ? 0 : 13 * keyEncAlgor.hashCode());
+        result = result + ((encKey == null) ? 0 : 13 * encKey.hashCode());
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "#<Recipient version="+version+" issuerAndSerial="+issuerAndSerial+" keyEncAlgor="+keyEncAlgor+" encKey="+encKey+">";
+    }
+
+    /**
+     * Get the <code>Version</code> value.
+     *
+     * @return an <code>int</code> value
+     */
+    public final int getVersion() {
+        return version;
+    }
+
+    /**
+     * Set the <code>Version</code> value.
+     *
+     * @param newVersion The new Version value.
+     */
+    public final void setVersion(final int newVersion) {
+        this.version = newVersion;
+    }
+
+    /**
+     * Get the <code>IssuerAndSerial</code> value.
+     *
+     * @return an <code>IssuerAndSerialNumber</code> value
+     */
+    public final IssuerAndSerialNumber getIssuerAndSerial() {
+        return issuerAndSerial;
+    }
+
+    /**
+     * Set the <code>IssuerAndSerial</code> value.
+     *
+     * @param newIssuerAndSerial The new IssuerAndSerial value.
+     */
+    public final void setIssuerAndSerial(final IssuerAndSerialNumber newIssuerAndSerial) {
+        this.issuerAndSerial = newIssuerAndSerial;
+    }
+
+    /**
+     * Get the <code>KeyEncAlgor</code> value.
+     *
+     * @return an <code>AlgorithmIdentifier</code> value
+     */
+    public final AlgorithmIdentifier getKeyEncAlgor() {
+        return keyEncAlgor;
+    }
+
+    /**
+     * Set the <code>KeyEncAlgor</code> value.
+     *
+     * @param newKeyEncAlgor The new KeyEncAlgor value.
+     */
+    public final void setKeyEncAlgor(final AlgorithmIdentifier newKeyEncAlgor) {
+        this.keyEncAlgor = newKeyEncAlgor;
+    }
+
+    /**
+     * Get the <code>EncKey</code> value.
+     *
+     * @return an <code>ASN1OctetString</code> value
+     */
+    public final ASN1OctetString getEncKey() {
+        return encKey;
+    }
+
+    /**
+     * Set the <code>EncKey</code> value.
+     *
+     * @param newEncKey The new EncKey value.
+     */
+    public final void setEncKey(final ASN1OctetString newEncKey) {
+        this.encKey = newEncKey;
+    }
+    /**
+     * RecipientInfo ::= SEQUENCE {
+     *   version Version,
+     *   issuerAndSerialNumber IssuerAndSerialNumber,
+     *   keyEncryptionAlgorithm KeyEncryptionAlgorithmIdentifier,
+     *   encryptedKey EncryptedKey }
+     * 
+     * EncryptedKey ::= OCTET STRING
+     */
+    public static RecipInfo fromASN1(DEREncodable content) {
+        DERSequence sequence = (DERSequence)content;
+        RecipInfo ri = new RecipInfo();
+        ri.setVersion(((DERInteger)sequence.getObjectAt(0)).getValue().intValue());
+        ri.setIssuerAndSerial(IssuerAndSerialNumber.getInstance(sequence.getObjectAt(1)));
+        ri.setKeyEncAlgor(AlgorithmIdentifier.getInstance(sequence.getObjectAt(2)));
+        ri.setEncKey((ASN1OctetString)sequence.getObjectAt(3));
+        return ri;
     }
 }// RecipInfo

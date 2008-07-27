@@ -45,6 +45,10 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
         this.enveloped.getEncData().setContentType(PKCS7.NID_pkcs7_data);
     }
 
+    public PKCS7DataEnveloped(Envelope enveloped) {
+        this.enveloped = enveloped;
+    }
+
     public int getType() {
         return PKCS7.NID_pkcs7_enveloped;
     }
@@ -65,7 +69,12 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
         this.enveloped.getRecipientInfo().add(ri);
     }
 
+    @Override
+    public String toString() {
+        return this.enveloped.toString();
+    }
+
     public static PKCS7DataEnveloped fromASN1(DEREncodable content) {
-        throw new UnsupportedOperationException("TODO: can't create DataEnveloped from ASN1 yet");
+        return new PKCS7DataEnveloped(Envelope.fromASN1(content));
     }
 }// PKCS7DataEnveloped

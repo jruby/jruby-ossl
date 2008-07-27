@@ -27,10 +27,15 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
+import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.ASN1Set;
+import org.bouncycastle.asn1.DEREncodable;
+import org.bouncycastle.asn1.DERInteger;
 
 /** PKCS7_ENVELOPE
  *
@@ -47,7 +52,7 @@ public class Envelope {
     /**
      * Describe recipientInfo here.
      */
-    private List<RecipInfo> recipientInfo = new ArrayList<RecipInfo>();
+    private Set<RecipInfo> recipientInfo = new HashSet<RecipInfo>();
 
     /**
      * Get the <code>Version</code> value.
@@ -88,9 +93,9 @@ public class Envelope {
     /**
      * Get the <code>RecipientInfo</code> value.
      *
-     * @return a <code>List<RecipInfo></code> value
+     * @return a <code>Set<RecipInfo></code> value
      */
-    public final List<RecipInfo> getRecipientInfo() {
+    public final Set<RecipInfo> getRecipientInfo() {
         return recipientInfo;
     }
 
@@ -99,7 +104,47 @@ public class Envelope {
      *
      * @param newRecipientInfo The new RecipientInfo value.
      */
-    public final void setRecipientInfo(final List<RecipInfo> newRecipientInfo) {
+    public final void setRecipientInfo(final Set<RecipInfo> newRecipientInfo) {
         this.recipientInfo = newRecipientInfo;
+    }
+
+    @Override
+    public String toString() {
+        return "#<Envelope version=" + version + " encData="+encData+" recipientInfo="+recipientInfo+">";
+    }
+
+    /**
+     * EnvelopedData ::= SEQUENCE {
+     *   version Version,
+     *   recipientInfos RecipientInfos,
+     *   encryptedContentInfo EncryptedContentInfo }
+     *
+     * Version ::= INTEGER
+     *
+     * RecipientInfos ::= SET OF RecipientInfo
+     *
+     */
+    public static Envelope fromASN1(DEREncodable content) {
+        ASN1Sequence sequence = (ASN1Sequence)content;
+        DERInteger version = (DERInteger)sequence.getObjectAt(0);
+        ASN1Set recipients = (ASN1Set)sequence.getObjectAt(1);
+        DEREncodable encContent = sequence.getObjectAt(2);        
+
+        Envelope envelope = new Envelope();
+        envelope.setVersion(version.getValue().intValue());
+        envelope.setRecipientInfo(recipientInfosFromASN1Set(recipients));
+        envelope.setEncData(EncContent.fromASN1(encContent));
+
+        return envelope;
+    }
+
+
+    private static Set<RecipInfo> recipientInfosFromASN1Set(DEREncodable content) {
+        ASN1Set set = (ASN1Set)content;
+        Set<RecipInfo> result = new HashSet<RecipInfo>();
+        for(Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
+            result.add(RecipInfo.fromASN1((DEREncodable)e.nextElement()));
+        }
+        return result;
     }
 }// Envelope

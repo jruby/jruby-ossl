@@ -319,7 +319,7 @@ module PKCS7Test
       ri = p7.add_recipient(X509Cert)
       
       assert_equal 1, p7.get_enveloped.recipient_info.size
-      assert_equal ri, p7.get_enveloped.recipient_info.get(0)
+      assert_equal ri, p7.get_enveloped.recipient_info.iterator.next
     end
 
 
@@ -330,7 +330,7 @@ module PKCS7Test
       ri = p7.add_recipient(X509Cert)
       
       assert_equal 1, p7.get_signed_and_enveloped.recipient_info.size
-      assert_equal ri, p7.get_signed_and_enveloped.recipient_info.get(0)
+      assert_equal ri, p7.get_signed_and_enveloped.recipient_info.iterator.next
     end
     
     def test_add_signer_to_something_that_cant_have_signers

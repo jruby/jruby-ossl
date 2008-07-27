@@ -224,7 +224,9 @@ public class SMIME {
                 throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_SIG_CONTENT_TYPE);
             }
 
-            if(!"application/x-pkcs7-mime".equals(hdr.getValue()) &&
+            if(!"application/x-pkcs7-signature".equals(hdr.getValue()) &&
+               !"application/pkcs7-signature".equals(hdr.getValue()) &&
+               !"application/x-pkcs7-mime".equals(hdr.getValue()) &&
                !"application/pkcs7-mime".equals(hdr.getValue())) {
                 throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_SIG_INVALID_MIME_TYPE, "type: " + hdr.getValue());
             }
