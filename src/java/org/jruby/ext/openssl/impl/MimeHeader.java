@@ -48,8 +48,12 @@ public class MimeHeader {
     }
 
     public MimeHeader(String name, String value, List<MimeParam> params) {
-        this.name = name;
-        this.value = value;
+        this.name = (name == null) ?
+            null :
+            name.toLowerCase();
+        this.value = (value == null) ?
+            null :
+            value.toLowerCase();
         this.params = params;
     }
 

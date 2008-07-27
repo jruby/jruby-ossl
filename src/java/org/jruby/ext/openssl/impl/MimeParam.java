@@ -36,7 +36,9 @@ public class MimeParam {
     private String paramValue;
 
     public MimeParam(String name, String value) {
-        this.paramName = name;
+        this.paramName = (name == null) ?
+            null :
+            name.toLowerCase();
         this.paramValue = value;
     }
 
@@ -46,5 +48,22 @@ public class MimeParam {
 
     public String getParamValue() {
         return this.paramValue;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        boolean ret = this == other;
+        if(!ret && (other instanceof MimeParam)) {
+            MimeParam mh = (MimeParam)other;
+            ret = 
+                ((this.paramName == null) ? mh.paramName == null : this.paramName.equals(mh.paramName)) &&
+                ((this.paramValue == null) ? mh.paramValue == null : this.paramValue.equals(mh.paramValue));
+        }
+        return ret;
+    }
+
+    @Override
+    public String toString() {
+        return "#<Param " + paramName + "="+paramValue+">";
     }
 }// MimeParam
