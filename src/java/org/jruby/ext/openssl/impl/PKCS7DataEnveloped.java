@@ -29,6 +29,8 @@ package org.jruby.ext.openssl.impl;
 
 import javax.crypto.Cipher;
 
+import org.bouncycastle.asn1.DEREncodable;
+
 /**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -61,5 +63,9 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
 
     public void addRecipientInfo(RecipInfo ri) {
         this.enveloped.getRecipientInfo().add(ri);
+    }
+
+    public static PKCS7DataEnveloped fromASN1(DEREncodable content) {
+        throw new UnsupportedOperationException("TODO: can't create DataEnveloped from ASN1 yet");
     }
 }// PKCS7DataEnveloped

@@ -28,6 +28,7 @@
 package org.jruby.ext.openssl.impl;
 
 import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DEROctetString;
 
 /**
@@ -39,7 +40,11 @@ public class PKCS7DataData extends PKCS7Data {
     private ASN1OctetString data;
 
     public PKCS7DataData() {
-        this.data = new DEROctetString(new byte[0]);
+        this(new DEROctetString(new byte[0]));
+    }
+
+    public PKCS7DataData(ASN1OctetString data) {
+        this.data = data;
     }
 
     public int getType() {
@@ -56,5 +61,9 @@ public class PKCS7DataData extends PKCS7Data {
 
     public boolean isData() {
         return true;
+    }
+
+    public static PKCS7DataData fromASN1(DEREncodable content) {
+        return new PKCS7DataData((ASN1OctetString)content);
     }
 }// PKCS7DataData

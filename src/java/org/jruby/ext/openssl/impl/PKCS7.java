@@ -33,23 +33,26 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import javax.crypto.Cipher;
 import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DEREncodable;
+import org.bouncycastle.asn1.DERObject;
+import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DERTaggedObject;
 
 /** c: PKCS7
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class PKCS7 {
+    public static final int NID_pkcs7_data = 21;
     public static final int NID_pkcs7_signed = 22;
-    public static final int NID_pkcs7_encrypted = 26;
     public static final int NID_pkcs7_enveloped = 23;
     public static final int NID_pkcs7_signedAndEnveloped = 24;
-    public static final int NID_pkcs7_data = 21;
     public static final int NID_pkcs7_digest = 25;
-
-    private String asn1;
-    private int state; //used during processing
+    public static final int NID_pkcs7_encrypted = 26;
 
 	/* content as defined by the type */
 	/* all encryption/message digests are applied to the 'contents',
@@ -73,11 +76,40 @@ public class PKCS7 {
         return isSigned() && getDetached() != 0;
     }
 
+    private static void printDER(String moniker, DEREncodable object) {
+        System.err.println(moniker + " " + object + "{" + object.getClass().getName() + "}");
+    }
+
+    private void initiateWith(Integer nid, DEREncodable content) {
+        this.data = PKCS7Data.fromASN1(nid, content);
+    }
+
+    public static PKCS7 fromASN1(DERObject obj) {
+        int size = ((ASN1Sequence)obj).size();
+        if(size == 0) {
+            return new PKCS7();
+        }
+
+        DERObjectIdentifier contentType = (DERObjectIdentifier)(((ASN1Sequence)obj).getObjectAt(0));
+        int nid = ASN1Registry.obj2nid(contentType);
+        
+        DEREncodable content = size == 1 ? (DEREncodable)null : ((ASN1Sequence)obj).getObjectAt(1);
+
+        if(content != null && content instanceof DERTaggedObject && ((DERTaggedObject)content).getTagNo() == 0) {
+            content = ((DERTaggedObject)content).getObject();
+        }
+        
+        PKCS7 p7 = new PKCS7();
+        p7.initiateWith(nid, content);
+        return p7;
+    }
+
     /* c: d2i_PKCS7_bio
      *
      */
-    public static PKCS7 fromASN1(BIO bio) {
-        return null;
+    public static PKCS7 fromASN1(BIO bio) throws IOException {
+        ASN1InputStream ais = new ASN1InputStream(BIO.asInputStream(bio));
+        return fromASN1(ais.readObject());
     }
 
     public static PKCS7 encrypt(List<X509Certificate> certs, byte[] in, Cipher cipher, int flags) {

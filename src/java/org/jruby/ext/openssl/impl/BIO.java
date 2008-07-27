@@ -50,7 +50,7 @@ public class BIO {
             if(read == 0) {
                 return -1;
             }
-            return 1;
+            return ((int)buffer[0])&0xFF;
         }
 
         @Override

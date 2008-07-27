@@ -32,6 +32,8 @@ import java.security.cert.X509CRL;
 
 import java.security.cert.X509Certificate;
 
+import org.bouncycastle.asn1.DEREncodable;
+
 /**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -105,5 +107,9 @@ public class PKCS7DataSigned extends PKCS7Data {
 
     public void addCRL(X509CRL crl) {
         this.sign.getCrl().add(crl);
+    }
+
+    public static PKCS7DataSigned fromASN1(DEREncodable content) {
+        throw new UnsupportedOperationException("TODO: can't create DataSigned from ASN1 yet");
     }
 }// PKCS7DataSigned

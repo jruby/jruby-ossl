@@ -27,12 +27,13 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import javax.crypto.Cipher;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1OctetString;
-import java.security.cert.X509CRL;
+import org.bouncycastle.asn1.DEREncodable;
 
 /**
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -129,5 +130,24 @@ public abstract class PKCS7Data {
 
     public void addCRL(X509CRL crl) {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_CRL,PKCS7.R_WRONG_CONTENT_TYPE);
+    }
+
+    public static PKCS7Data fromASN1(Integer nid, DEREncodable content) {
+        switch(nid) {
+        case PKCS7.NID_pkcs7_data:
+            return PKCS7DataData.fromASN1(content);
+        case PKCS7.NID_pkcs7_signed:
+            return PKCS7DataSigned.fromASN1(content);
+        case PKCS7.NID_pkcs7_enveloped:
+            return PKCS7DataEnveloped.fromASN1(content);
+        case PKCS7.NID_pkcs7_signedAndEnveloped:
+            return PKCS7DataSignedAndEnveloped.fromASN1(content);
+        case PKCS7.NID_pkcs7_digest:
+            return PKCS7DataDigest.fromASN1(content);
+        case PKCS7.NID_pkcs7_encrypted:
+            return PKCS7DataEncrypted.fromASN1(content);
+        default:
+            throw new UnsupportedOperationException("can't handle PKCS#7 with content type " + ASN1Registry.nid2ln(nid));
+        }
     }
 }// PKCS7Data

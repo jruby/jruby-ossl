@@ -45,17 +45,24 @@ public class Base64BIOFilter extends BIO {
         this.nextInput = new Base64.InputStream(BIO.asInputStream(next));
     }
 
-    /** c: BIO_write
-     *
-     */
+    @Override
     public int write(byte[] out, int offset, int len) throws IOException {
         this.nextOutput.write(out, offset, len);
         return len;
     }
 
-    /** c: BIO_read
-     *
-     */
+    private static void printBytes(byte[] bs, int offset, int len) {
+        System.err.print("[");
+        String sep = "";
+        for(int i=offset, end=offset+len;i<end;i++) {
+            System.err.print(sep);
+            System.err.print(((int)bs[i]) & 0xFF);
+            sep = ", ";
+        }
+        System.err.print("]");
+    }
+
+    @Override
     public int read(byte[] into, int offset, int len) throws IOException {
         int read = this.nextInput.read(into, offset, len);
         if(read == -1) {
@@ -64,9 +71,7 @@ public class Base64BIOFilter extends BIO {
         return read;
     }
 
-    /** c: BIO_flush
-     *
-     */
+    @Override
     public void flush() throws IOException {
         this.nextOutput.flush();
     }

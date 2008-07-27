@@ -45,6 +45,7 @@ public class MemBIO extends BIO {
         buffer = newBuffer;
     }
 
+    @Override
     public int gets(byte[] in, int len) throws IOException {
         if(rpointer == slen) {
             return 0;
@@ -63,6 +64,18 @@ public class MemBIO extends BIO {
         return i;
     }
 
+    @Override
+    public int read(byte[] in, int index, int len) throws IOException {
+        if(rpointer == slen) {
+            return 0;
+        }
+        int toRead = Math.min(len, slen-rpointer);
+        System.arraycopy(buffer, rpointer, in, index, toRead);
+        rpointer+=toRead;
+        return toRead;
+    }
+
+    @Override
     public int write(byte[] out, int offset, int len) throws IOException {
         while(wpointer + len > buffer.length) {
             realloc();

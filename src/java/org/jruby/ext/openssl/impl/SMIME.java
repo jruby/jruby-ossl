@@ -229,7 +229,7 @@ public class SMIME {
                 throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_SIG_INVALID_MIME_TYPE, "type: " + hdr.getValue());
             }
 
-            PKCS7 p7 = readPKCS7Base64(bio);
+            PKCS7 p7 = readPKCS7Base64(p7in);
 
             if(bcont != null && bcont.length>0) {
                 bcont[0] = parts.get(0);
