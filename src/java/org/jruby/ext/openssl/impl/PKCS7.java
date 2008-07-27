@@ -84,7 +84,14 @@ public class PKCS7 {
         this.data = PKCS7Data.fromASN1(nid, content);
     }
 
-    public static PKCS7 fromASN1(DERObject obj) {
+    /**
+     * ContentInfo ::= SEQUENCE {
+     *   contentType ContentType,
+     *   content [0] EXPLICIT ANY DEFINED BY contentType OPTIONAL }
+     *
+     * ContentType ::= OBJECT IDENTIFIER
+     */
+    public static PKCS7 fromASN1(DEREncodable obj) {
         int size = ((ASN1Sequence)obj).size();
         if(size == 0) {
             return new PKCS7();

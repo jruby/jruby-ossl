@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.bouncycastle.asn1.DEREncodable;
 
 /** PKCS7_SIGNED
  *
@@ -172,5 +173,22 @@ public class Signed {
      */
     public final void setCrl(final List<X509CRL> newCrl) {
         this.crl = newCrl;
+    }
+
+    /**
+     * SignedData ::= SEQUENCE {
+     *   version Version,
+     *   digestAlgorithms DigestAlgorithmIdentifiers,
+     *   contentInfo ContentInfo,
+     *   certificates [0] IMPLICIT ExtendedCertificatesAndCertificates OPTIONAL,
+     *   crls [1] IMPLICIT CertificateRevocationLists OPTIONAL,
+     *   signerInfos SignerInfos }
+     *
+     * DigestAlgorithmIdentifiers ::= SET OF DigestAlgorithmIdentifier
+     *
+     * SignerInfos ::= SET OF SignerInfo
+     */
+    public static Signed fromASN1(DEREncodable content) {
+        throw new UnsupportedOperationException("TODO: can't create Signed from ASN1 yet");
     }
 }// Signed

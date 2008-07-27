@@ -63,6 +63,9 @@ public class PKCS7DataData extends PKCS7Data {
         return true;
     }
 
+    /**
+     * Data ::= OCTET STRING
+     */
     public static PKCS7DataData fromASN1(DEREncodable content) {
         return new PKCS7DataData((ASN1OctetString)content);
     }

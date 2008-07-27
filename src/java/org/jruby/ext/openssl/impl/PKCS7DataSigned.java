@@ -49,6 +49,10 @@ public class PKCS7DataSigned extends PKCS7Data {
         this.sign.setVersion(1);
     }
 
+    public PKCS7DataSigned(Signed sign) {
+        this.sign = sign;
+    }
+
     public int getType() {
         return PKCS7.NID_pkcs7_signed;
     }
@@ -110,6 +114,6 @@ public class PKCS7DataSigned extends PKCS7Data {
     }
 
     public static PKCS7DataSigned fromASN1(DEREncodable content) {
-        throw new UnsupportedOperationException("TODO: can't create DataSigned from ASN1 yet");
+        return new PKCS7DataSigned(Signed.fromASN1(content));
     }
 }// PKCS7DataSigned
