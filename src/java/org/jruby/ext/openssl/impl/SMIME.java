@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,6 +36,9 @@ import java.util.List;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class SMIME {
+    private final static int MAX_SMLEN = 1024;
+    private final static byte[] NEWLINE = new byte[]{'\r','\n'};
+
     private Mime mime;
 
     public SMIME() {
@@ -43,6 +47,75 @@ public class SMIME {
 
     public SMIME(Mime mime) {
         this.mime = mime;
+    }
+
+    private static boolean equals(byte[] first, int firstIndex, byte[] second, int secondIndex, int length) {
+        int len = length;
+        for(int i=firstIndex, 
+                j=secondIndex, 
+                flen=first.length, 
+                slen=second.length;
+            i<flen && 
+                j<slen && 
+                len>0;
+            i++, j++, len--) {
+
+            if(first[i] != second[j]) {
+                return false;
+            }
+        }
+        return len == 0;
+    }
+
+    /* c: static strip_eol
+     *
+     */
+    private boolean stripEol(byte[] linebuf, int[] plen) {
+        int len = plen[0];
+        boolean isEol = false;
+        
+        for(int p = len - 1; len > 0; len--, p--) {
+            byte c = linebuf[p];
+            if(c == '\n') {
+                isEol = true; 
+            } else if(c != '\r') {
+                break;
+            }
+            
+        }
+        plen[0] = len;
+        return isEol;
+    }
+
+    /* c: static mime_bound_check
+     *
+     */
+    private int boundCheck(byte[] line, int linelen, byte[] bound, int blen) {
+        if(linelen == -1) {
+            linelen = line.length;
+        }
+
+        if(blen == -1) {
+            blen = bound.length;
+        }
+
+        // Quickly eliminate if line length too short
+        if(blen + 2 > linelen) {
+            return 0;
+        }
+
+        if(line[0] == '-' && 
+           line[1] == '-' &&
+           equals(line, 2, bound, 0, blen)) {
+            if(line.length>=(blen+4) &&
+               line[2 + blen] == '-' &&
+               line[2 + blen + 1] == '-') {
+                return 2;
+            } else {
+                return 1;
+            }
+        }
+        return 0;
     }
 
     /* c: B64_read_PKCS7
@@ -55,8 +128,49 @@ public class SMIME {
     /* c: static multi_split
      *
      */
-    public List<BIO> multiSplit(BIO bio, String boundary) {
-        return Arrays.<BIO>asList(null, null);
+    public List<BIO> multiSplit(BIO bio, byte[] bound) {
+        List<BIO> parts = new ArrayList<BIO>();
+        byte[] linebuf = new byte[MAX_SMLEN];
+        int blen = bound.length;
+        boolean eol = false;
+        int len = 0;
+        int part = 0;
+        int state = 0;
+        boolean first = true;
+        BIO bpart = null;
+
+        while((len = bio.gets(linebuf, MAX_SMLEN)) > 0) {
+            state = boundCheck(linebuf, len, bound, blen);
+            if(state == 1) {
+                first = true;
+                part++;
+            } else if(state == 2) {
+                parts.add(bpart);
+                return parts;
+            } else if(part != 0) {
+                // strip CR+LF from linebuf
+                int[] tmp = new int[] {len};
+                boolean nextEol = stripEol(linebuf, tmp);
+                len = tmp[0];
+
+                if(first) {
+                    first = false;
+                    if(bpart != null) {
+                        parts.add(bpart);
+                    }
+                    bpart = BIO.mem();
+                    bpart.setMemEofReturn(0);
+                } else if(eol) {
+                    bpart.write(NEWLINE, 2);
+                }
+                eol = nextEol;
+                if(len != 0) {
+                    bpart.write(linebuf, len);
+                }
+            }
+        }
+
+        return parts;
     }
 
     /* c: SMIME_read_PKCS7
@@ -83,13 +197,43 @@ public class SMIME {
                 throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_MULTIPART_BOUNDARY);
             }
 
-            List<BIO> parts = multiSplit(bio, prm.getParamValue());
+            byte[] boundary = null;
+            try {
+                boundary = prm.getParamValue().getBytes("ISO8859-1");
+            } catch(Exception e) {
+                throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_MULTIPART_BOUNDARY);
+            }
+
+            List<BIO> parts = multiSplit(bio, boundary);
             if(parts == null || parts.size() != 2) {
                 throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_MULTIPART_BODY_FAILURE);
             }
 
+            BIO p7in = parts.get(1);
 
-            return null;
+            headers = mime.parseHeaders(p7in);
+
+            if(headers == null) {
+                throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_MIME_SIG_PARSE_ERROR);
+            }
+
+            hdr = mime.findHeader(headers, "content-type");
+            if(hdr == null || hdr.getValue() == null) {
+                throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_SIG_CONTENT_TYPE);
+            }
+
+            if(!"application/x-pkcs7-mime".equals(hdr.getValue()) &&
+               !"application/pkcs7-mime".equals(hdr.getValue())) {
+                throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_SIG_INVALID_MIME_TYPE, "type: " + hdr.getValue());
+            }
+
+            PKCS7 p7 = readPKCS7Base64(bio);
+
+            if(bcont != null && bcont.length>0) {
+                bcont[0] = parts.get(0);
+            }
+
+            return p7;
         }
         
         if(!"application/x-pkcs7-mime".equals(hdr.getValue()) &&
@@ -98,50 +242,5 @@ public class SMIME {
         }
 
         return readPKCS7Base64(bio);
-
-// 	/* Handle multipart/signed */
-
-
-// 		/* Parse the signature piece */
-// 		p7in = sk_BIO_value(parts, 1);
-
-// 		if (!(headers = mime_parse_hdr(p7in))) {
-// 			PKCS7err(PKCS7_F_SMIME_READ_PKCS7,PKCS7_R_MIME_SIG_PARSE_ERROR);
-// 			sk_BIO_pop_free(parts, BIO_vfree);
-// 			return NULL;
-// 		}
-
-// 		/* Get content type */
-
-// 		if(!(hdr = mime_hdr_find(headers, "content-type")) ||
-// 								 !hdr->value) {
-// 			sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-// 			PKCS7err(PKCS7_F_SMIME_READ_PKCS7, PKCS7_R_NO_SIG_CONTENT_TYPE);
-// 			return NULL;
-// 		}
-
-// 		if(strcmp(hdr->value, "application/x-pkcs7-signature") &&
-// 			strcmp(hdr->value, "application/pkcs7-signature")) {
-// 			sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-// 			PKCS7err(PKCS7_F_SMIME_READ_PKCS7,PKCS7_R_SIG_INVALID_MIME_TYPE);
-// 			ERR_add_error_data(2, "type: ", hdr->value);
-// 			sk_BIO_pop_free(parts, BIO_vfree);
-// 			return NULL;
-// 		}
-// 		sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-// 		/* Read in PKCS#7 */
-// 		if(!(p7 = B64_read_PKCS7(p7in))) {
-// 			PKCS7err(PKCS7_F_SMIME_READ_PKCS7,PKCS7_R_PKCS7_SIG_PARSE_ERROR);
-// 			sk_BIO_pop_free(parts, BIO_vfree);
-// 			return NULL;
-// 		}
-
-// 		if(bcont) {
-// 			*bcont = sk_BIO_value(parts, 0);
-// 			BIO_free(p7in);
-// 			sk_BIO_free(parts);
-// 		} else sk_BIO_pop_free(parts, BIO_vfree);
-// 		return p7;
-// 	}
     }
 }

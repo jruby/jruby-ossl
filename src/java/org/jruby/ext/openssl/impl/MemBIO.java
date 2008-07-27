@@ -27,62 +27,58 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-/** c: BIO
+/**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class BIO {
-    public static BIO fromString(String input) {
-        MemBIO bio = new MemBIO();
-        byte[] buf = null;
-        try {
-            buf = input.getBytes("ISO8859-1");
-        } catch(Exception e) {}
-        bio.write(buf, buf.length);
-        return bio;
-    }
-
-    /** c: BIO_new(BIO_s_mem())
-     *
-     */
-    public static BIO mem() {
-        return new MemBIO();
-    }
+public class MemBIO extends BIO {
+    private byte[] buffer = new byte[1024];
+    private int wpointer = 0;
+    private int rpointer = 0;
+    private int slen = 0;
     
-    /** c: BIO_flush
-     *
-     */
-    public void flush() {
-        // TODO: implement
+    private void realloc() {
+        byte[] newBuffer = new byte[buffer.length*2];
+        System.arraycopy(buffer, 0, newBuffer, 0, wpointer);
+        buffer = newBuffer;
     }
 
-    /** c: SMIME_crlf_copy
-     *
-     */
-    public void crlfCopy(byte[] in, int flags) {
-        // TODO: implement
-    }
-
-    /** c: BIO_gets
-     *
-     */
     public int gets(byte[] in, int len) {
-        // TODO: implement
-        return -1;
+        if(rpointer == slen) {
+            return 0;
+        }
+
+        int i=0;
+        for(;i<len && rpointer<slen; i++, rpointer++) {
+            in[i] = buffer[rpointer];
+
+            if(in[i] == '\n') {
+                i++; rpointer++;
+                break;
+            }
+        }
+
+        return i;
     }
 
-    /** c: BIO_write
-     *
-     */
     public int write(byte[] out, int len) {
-        // TODO: implement
-        return -1;
+        while(wpointer + len > buffer.length) {
+            realloc();
+        }
+
+        System.arraycopy(out, 0, buffer, wpointer, len);
+        wpointer += len;
+        slen += len;
+
+        return len;
     }
 
-    /** c: BIO_set_mem_eof_return
-     *
-     */
-    public void setMemEofReturn(int value) {
-        // TODO: implement
+    @Override
+    public String toString() {
+        try {
+            return "<MemBIO w:" + wpointer + " r:" + rpointer + " buf:\"" + new String(buffer,rpointer,slen-rpointer) + "\">";
+        } catch(Exception e) {}
+
+        return null;
     }
-}// BIO
+}// MemBIO

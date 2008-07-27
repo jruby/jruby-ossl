@@ -109,6 +109,7 @@ public interface Mime {
             }
 
             public List<MimeHeader> parseHeaders(BIO bio) {
+                mimeDebug("\n!!!!!!!!!!!!!!!!!\n" + bio + "\n^^^^^^^^^^^^^^^^^^^^^^^^\n"); 
                 int state = 0;
                 byte[] linebuf = new byte[MAX_SMLEN];
                 int len = 0;
@@ -196,7 +197,7 @@ public interface Mime {
                         mimeDebug("creating new: " + q + ":" + p);
                         mhdr.getParams().add(new MimeParam(ntmp, stripEnds(linebuf, q, p)));
                     }
-                    if(p == len) {
+                    if(p == 0) {
                         break;
                     }
                 }

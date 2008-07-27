@@ -35,6 +35,10 @@ if defined?(JRUBY_VERSION)
     CertificateFactory = java.security.cert.CertificateFactory unless defined?(CertificateFactory)
     BCP = org.bouncycastle.jce.provider.BouncyCastleProvider unless defined?(BCP)
     ByteArrayInputStream = java.io.ByteArrayInputStream unless defined?(ByteArrayInputStream)
+
+    MimeEncryptedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_encrypted.message'))
+    MimeSignedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_signed.message'))
+    MultipartSignedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_multipart_signed.message'))
     
     X509CertString = <<CERT
 -----BEGIN CERTIFICATE-----

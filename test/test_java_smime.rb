@@ -150,5 +150,12 @@ module PKCS7Test
 
       SMIME.new(mime).readPKCS7(bio, nil)
     end
+    
+    
+    def test_read_pkcs7_happy_path_multipart
+      bio = BIO::from_string(MultipartSignedString)
+      mime = Mime::DEFAULT
+      p7 = SMIME.new(mime).readPKCS7(bio, nil)
+    end
   end
 end
