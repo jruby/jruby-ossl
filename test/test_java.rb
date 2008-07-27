@@ -23,24 +23,33 @@ if defined?(JRUBY_VERSION)
     RecipInfo = org.jruby.ext.openssl.impl.RecipInfo unless defined?(RecipInfo)
     SignEnvelope = org.jruby.ext.openssl.impl.SignEnvelope unless defined?(SignEnvelope)
     Signed = org.jruby.ext.openssl.impl.Signed unless defined?(Signed)
-    SignerInfo = org.jruby.ext.openssl.impl.SignerInfo unless defined?(SignerInfo)
     SMIME = org.jruby.ext.openssl.impl.SMIME unless defined?(SMIME)
     Mime = org.jruby.ext.openssl.impl.Mime unless defined?(Mime)
     MimeHeader = org.jruby.ext.openssl.impl.MimeHeader unless defined?(MimeHeader)
     MimeParam = org.jruby.ext.openssl.impl.MimeParam unless defined?(MimeParam)
     BIO = org.jruby.ext.openssl.impl.BIO unless defined?(BIO)
     PKCS7Exception = org.jruby.ext.openssl.impl.PKCS7Exception unless defined?(PKCS7Exception)
-    AlgorithmIdentifier = org.jruby.ext.openssl.impl.AlgorithmIdentifier unless defined?(AlgorithmIdentifier)
+    ASN1Registry = org.jruby.ext.openssl.impl.ASN1Registry unless defined?(ASN1Registry)
+    AlgorithmIdentifier = org.bouncycastle.asn1.x509.AlgorithmIdentifier unless defined?(AlgorithmIdentifier)
+    SignerInfo = org.bouncycastle.asn1.pkcs.SignerInfo unless defined?(SignerInfo)
+    IssuerAndSerialNumber = org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber unless defined?(IssuerAndSerialNumber)
     
     ArrayList = java.util.ArrayList unless defined?(ArrayList)
     CertificateFactory = java.security.cert.CertificateFactory unless defined?(CertificateFactory)
     BCP = org.bouncycastle.jce.provider.BouncyCastleProvider unless defined?(BCP)
     ByteArrayInputStream = java.io.ByteArrayInputStream unless defined?(ByteArrayInputStream)
+    BigInteger = java.math.BigInteger unless defined?(BigInteger)
 
+    DERInteger = org.bouncycastle.asn1.DERInteger
+    DERSet = org.bouncycastle.asn1.DERSet
+    DEROctetString = org.bouncycastle.asn1.DEROctetString 
+    X509Name = org.bouncycastle.asn1.x509.X509Name
+    
+    
     MimeEncryptedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_encrypted.message'))
     MimeSignedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_signed.message'))
     MultipartSignedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_multipart_signed.message'))
-    
+
     X509CertString = <<CERT
 -----BEGIN CERTIFICATE-----
 MIICijCCAXKgAwIBAgIBAjANBgkqhkiG9w0BAQUFADA9MRMwEQYKCZImiZPyLGQB
@@ -82,6 +91,5 @@ CRL
   require File.join(File.dirname(__FILE__), 'test_java_bio')
   require File.join(File.dirname(__FILE__), 'test_java_mime')
   require File.join(File.dirname(__FILE__), 'test_java_pkcs7')
-  require File.join(File.dirname(__FILE__), 'test_java_signer_info')
   require File.join(File.dirname(__FILE__), 'test_java_smime')
 end

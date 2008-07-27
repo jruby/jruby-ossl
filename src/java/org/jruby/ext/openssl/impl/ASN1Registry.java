@@ -45,19 +45,19 @@ public class ASN1Registry {
     private static Map<Integer, String> NID_TO_SN = new HashMap<Integer, String>();
     private static Map<Integer, String> NID_TO_LN = new HashMap<Integer, String>();
     
-    static Integer obj2nid(String oid) {
+    public static Integer obj2nid(String oid) {
         return obj2nid(new DERObjectIdentifier(oid));
     }
 
-    static String ln2oid(String ln) {
+    public static String ln2oid(String ln) {
         return SYM_TO_OID.get(ln).getId();
     }
 
-    static Integer obj2nid(DERObjectIdentifier oid) {
+    public static Integer obj2nid(DERObjectIdentifier oid) {
         return OID_TO_NID.get(oid);
     }
 
-    static String o2a(DERObjectIdentifier obj) {
+    public static String o2a(DERObjectIdentifier obj) {
         Integer nid = obj2nid(obj);
         String one = NID_TO_LN.get(nid);
         if(one == null) {
@@ -66,11 +66,15 @@ public class ASN1Registry {
         return one;
     }
 
-    static String nid2ln(int nid) {
+    public static String nid2ln(int nid) {
         return nid2ln(Integer.valueOf(nid));
     }
 
-    static String nid2ln(Integer nid) {
+    public static DERObjectIdentifier nid2obj(int nid) {
+        return NID_TO_OID.get(nid);
+    }
+
+    public static String nid2ln(Integer nid) {
         return NID_TO_LN.get(nid);
     }
 

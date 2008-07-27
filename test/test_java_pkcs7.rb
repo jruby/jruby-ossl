@@ -337,25 +337,25 @@ module PKCS7Test
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_enveloped
       assert_raises NativeException do 
-        p7.add_signer(SignerInfo.new)
+        p7.add_signer(SignerInfo.new(nil, nil, nil, nil, nil, nil, nil))
       end
 
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_data
       assert_raises NativeException do 
-        p7.add_signer(SignerInfo.new)
+        p7.add_signer(SignerInfo.new(nil, nil, nil, nil, nil, nil, nil))
       end
       
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_encrypted
       assert_raises NativeException do 
-        p7.add_signer(SignerInfo.new)
+        p7.add_signer(SignerInfo.new(nil, nil, nil, nil, nil, nil, nil))
       end
       
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_digest
       assert_raises NativeException do 
-        p7.add_signer(SignerInfo.new)
+        p7.add_signer(SignerInfo.new(nil, nil, nil, nil, nil, nil, nil))
       end
     end
 
@@ -363,7 +363,7 @@ module PKCS7Test
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_signed
       
-      si = SignerInfo.new
+      si = SignerInfo.new(nil, nil, nil, nil, nil, nil, nil)
       p7.add_signer(si)
       
       assert_equal 1, p7.get_sign.signer_info.size
@@ -375,38 +375,45 @@ module PKCS7Test
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
       
-      si = SignerInfo.new
+      si = SignerInfo.new(nil, nil, nil, nil, nil, nil, nil)
       p7.add_signer(si)
       
       assert_equal 1, p7.get_signed_and_enveloped.signer_info.size
       assert_equal si, p7.get_signed_and_enveloped.signer_info.iterator.next
     end
 
+    def create_signer_info_with_algo(algo)
+      md5 = AlgorithmIdentifier.new(ASN1Registry.nid2obj(4))
+      SignerInfo.new(DERInteger.new(BigInteger::ONE), 
+                     IssuerAndSerialNumber.new(X509Name.new("C=SE"), DERInteger.new(BigInteger::ONE)), 
+                     algo, 
+                     DERSet.new, 
+                     md5, 
+                     DEROctetString.new([].to_java(:byte)), 
+                     DERSet.new)
+    end
     
     def test_add_signer_to_signed_with_new_algo_should_add_that_algo_to_the_algo_list
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_signed
 
       # YES, these numbers are correct. Don't change them. They are OpenSSL internal NIDs
-      md5 = AlgorithmIdentifier.new(4, nil)
-      md4 = AlgorithmIdentifier.new(5, nil)
+      md5 = AlgorithmIdentifier.new(ASN1Registry.nid2obj(4))
+      md4 = AlgorithmIdentifier.new(ASN1Registry.nid2obj(5))
       
-      si = SignerInfo.new
-      si.digest_algorithm = md5
+      si = create_signer_info_with_algo(md5)
       p7.add_signer(si)
 
       assert_equal md5, p7.get_sign.md_algs.iterator.next
       assert_equal 1, p7.get_sign.md_algs.size
 
-      si = SignerInfo.new
-      si.digest_algorithm = md5
+      si = create_signer_info_with_algo(md5)
       p7.add_signer(si)
 
       assert_equal md5, p7.get_sign.md_algs.iterator.next
       assert_equal 1, p7.get_sign.md_algs.size
 
-      si = SignerInfo.new
-      si.digest_algorithm = md4
+      si = create_signer_info_with_algo(md4)
       p7.add_signer(si)
 
       assert_equal 2, p7.get_sign.md_algs.size
@@ -420,25 +427,22 @@ module PKCS7Test
       p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
       
       # YES, these numbers are correct. Don't change them. They are OpenSSL internal NIDs
-      md5 = AlgorithmIdentifier.new(4, nil)
-      md4 = AlgorithmIdentifier.new(5, nil)
+      md5 = AlgorithmIdentifier.new(ASN1Registry.nid2obj(4))
+      md4 = AlgorithmIdentifier.new(ASN1Registry.nid2obj(5))
 
-      si = SignerInfo.new
-      si.digest_algorithm = md5
+      si = create_signer_info_with_algo(md5)
       p7.add_signer(si)
 
       assert_equal md5, p7.get_signed_and_enveloped.md_algs.iterator.next
       assert_equal 1, p7.get_signed_and_enveloped.md_algs.size
 
-      si = SignerInfo.new
-      si.digest_algorithm = md5
+      si = create_signer_info_with_algo(md5)
       p7.add_signer(si)
 
       assert_equal md5, p7.get_signed_and_enveloped.md_algs.iterator.next
       assert_equal 1, p7.get_signed_and_enveloped.md_algs.size
 
-      si = SignerInfo.new
-      si.digest_algorithm = md4
+      si = create_signer_info_with_algo(md4)
       p7.add_signer(si)
 
       assert_equal 2, p7.get_signed_and_enveloped.md_algs.size

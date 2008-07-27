@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Set;
 import javax.crypto.Cipher;
 import org.bouncycastle.asn1.DEREncodable;
+import org.bouncycastle.asn1.pkcs.SignerInfo;
 
 /**
  *

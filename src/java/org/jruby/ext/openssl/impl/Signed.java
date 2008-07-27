@@ -30,6 +30,7 @@ package org.jruby.ext.openssl.impl;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +40,8 @@ import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.pkcs.SignerInfo;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 /** PKCS7_SIGNED
  *
@@ -226,7 +229,7 @@ public class Signed {
 
         Signed signed = new Signed();
         signed.setVersion(version.getValue().intValue());
-        signed.setMdAlgs(AlgorithmIdentifier.fromASN1Set(digestAlgos));
+        signed.setMdAlgs(algorithmIdentifiersFromASN1Set(digestAlgos));
         signed.setContents(PKCS7.fromASN1(contentInfo));
         if(certificates != null) {
             System.err.println("Certs: " + certificates);
@@ -234,8 +237,26 @@ public class Signed {
         if(crls != null) {
             System.err.println("CRLs: " + crls);
         }
-        signed.setSignerInfo(SignerInfo.fromASN1Set(signerInfos));
+        signed.setSignerInfo(signerInfosFromASN1Set(signerInfos));
 
         return signed;
+    }
+
+    private static Set<AlgorithmIdentifier> algorithmIdentifiersFromASN1Set(DEREncodable content) {
+        ASN1Set set = (ASN1Set)content;
+        Set<AlgorithmIdentifier> result = new HashSet<AlgorithmIdentifier>();
+        for(Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
+            result.add(AlgorithmIdentifier.getInstance(e.nextElement()));
+        }
+        return result;
+    }
+
+    private static Set<SignerInfo> signerInfosFromASN1Set(DEREncodable content) {
+        ASN1Set set = (ASN1Set)content;
+        Set<SignerInfo> result = new HashSet<SignerInfo>();
+        for(Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
+            result.add(SignerInfo.getInstance(e.nextElement()));
+        }
+        return result;
     }
 }// Signed
