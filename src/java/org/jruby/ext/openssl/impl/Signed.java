@@ -33,7 +33,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DEREncodable;
+import org.bouncycastle.asn1.DERInteger;
+import org.bouncycastle.asn1.DERObjectIdentifier;
+import org.bouncycastle.asn1.DERTaggedObject;
 
 /** PKCS7_SIGNED
  *
@@ -58,12 +63,12 @@ public class Signed {
     /**
      * Describe mdAlgs here.
      */
-    private Set<String> mdAlgs = new HashSet<String>();
+    private Set<AlgorithmIdentifier> mdAlgs = new HashSet<AlgorithmIdentifier>();
 
     /**
      * Describe signerInfo here.
      */
-    private List<SignerInfo> signerInfo = new ArrayList<SignerInfo>();
+    private Set<SignerInfo> signerInfo = new HashSet<SignerInfo>();
 
     PKCS7 contents;
 
@@ -88,9 +93,9 @@ public class Signed {
     /**
      * Get the <code>SignerInfo</code> value.
      *
-     * @return a <code>List<SignerInfo></code> value
+     * @return a <code>Set<SignerInfo></code> value
      */
-    public final List<SignerInfo> getSignerInfo() {
+    public final Set<SignerInfo> getSignerInfo() {
         return signerInfo;
     }
 
@@ -99,16 +104,16 @@ public class Signed {
      *
      * @param newSignerInfo The new SignerInfo value.
      */
-    public final void setSignerInfo(final List<SignerInfo> newSignerInfo) {
+    public final void setSignerInfo(final Set<SignerInfo> newSignerInfo) {
         this.signerInfo = newSignerInfo;
     }
 
     /**
      * Get the <code>MdAlgs</code> value.
      *
-     * @return a <code>Set<String></code> value
+     * @return a <code>Set<AlgorithmIdentifier></code> value
      */
-    public final Set<String> getMdAlgs() {
+    public final Set<AlgorithmIdentifier> getMdAlgs() {
         return mdAlgs;
     }
 
@@ -117,7 +122,7 @@ public class Signed {
      *
      * @param newMdAlgs The new MdAlgs value.
      */
-    public final void setMdAlgs(final Set<String> newMdAlgs) {
+    public final void setMdAlgs(final Set<AlgorithmIdentifier> newMdAlgs) {
         this.mdAlgs = newMdAlgs;
     }
 
@@ -175,6 +180,11 @@ public class Signed {
         this.crl = newCrl;
     }
 
+    @Override
+    public String toString() {
+        return "#<Signed version=" + version + " mdAlgs="+mdAlgs+" content="+contents+" cert="+cert+" crls="+crl+" signerInfos="+signerInfo+">";
+    }
+
     /**
      * SignedData ::= SEQUENCE {
      *   version Version,
@@ -184,11 +194,48 @@ public class Signed {
      *   crls [1] IMPLICIT CertificateRevocationLists OPTIONAL,
      *   signerInfos SignerInfos }
      *
+     * Version ::= INTEGER
+     *
      * DigestAlgorithmIdentifiers ::= SET OF DigestAlgorithmIdentifier
      *
      * SignerInfos ::= SET OF SignerInfo
      */
     public static Signed fromASN1(DEREncodable content) {
-        throw new UnsupportedOperationException("TODO: can't create Signed from ASN1 yet");
+        ASN1Sequence sequence = (ASN1Sequence)content;
+        DERInteger version = (DERInteger)sequence.getObjectAt(0);
+        ASN1Set digestAlgos = (ASN1Set)sequence.getObjectAt(1);
+        DEREncodable contentInfo = sequence.getObjectAt(2);
+
+        DEREncodable certificates = null;
+        DEREncodable crls = null;
+
+        int index = 3;
+        DEREncodable tmp = sequence.getObjectAt(index);
+        if((tmp instanceof DERTaggedObject) && ((DERTaggedObject)tmp).getTagNo() == 0) {
+            certificates = ((DERTaggedObject)tmp).getObject();
+            index++;
+        }
+
+        tmp = sequence.getObjectAt(index);
+        if((tmp instanceof DERTaggedObject) && ((DERTaggedObject)tmp).getTagNo() == 1) {
+            crls = ((DERTaggedObject)tmp).getObject();
+            index++;
+        }
+
+        ASN1Set signerInfos = (ASN1Set)sequence.getObjectAt(index);
+
+        Signed signed = new Signed();
+        signed.setVersion(version.getValue().intValue());
+        signed.setMdAlgs(AlgorithmIdentifier.fromASN1Set(digestAlgos));
+        signed.setContents(PKCS7.fromASN1(contentInfo));
+        if(certificates != null) {
+            System.err.println("Certs: " + certificates);
+        }
+        if(crls != null) {
+            System.err.println("CRLs: " + crls);
+        }
+        signed.setSignerInfo(SignerInfo.fromASN1Set(signerInfos));
+
+        return signed;
     }
 }// Signed

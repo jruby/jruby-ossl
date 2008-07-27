@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Set;
 import javax.crypto.Cipher;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -43,6 +44,8 @@ import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERTaggedObject;
 
 /** c: PKCS7
+ *
+ * Basically equivalent of the ContentInfo structures in PKCS#7.
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
@@ -239,7 +242,7 @@ public class PKCS7 {
     /** c: PKCS7_get_signer_info
      *
      */
-    public List<SignerInfo> getSignerInfo() {
+    public Set<SignerInfo> getSignerInfo() {
         return this.data.getSignerInfo();
     }
 
@@ -256,6 +259,11 @@ public class PKCS7 {
      */
     public void dataFinal(BIO bio) {
         // TODO: implement
+    }
+
+    @Override
+    public String toString() {
+        return "#<PKCS7 " + this.data + ">";
     }
 
     public static final int S_HEADER = 0;

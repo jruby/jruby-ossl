@@ -59,12 +59,12 @@ public class SignEnvelope {
     /**
      * Describe mdAlgs here.
      */
-    private Set<String> mdAlgs = new HashSet<String>();
+    private Set<AlgorithmIdentifier> mdAlgs = new HashSet<AlgorithmIdentifier>();
 
     /**
      * Describe signerInfo here.
      */
-    private List<SignerInfo> signerInfo = new ArrayList<SignerInfo>();
+    private Set<SignerInfo> signerInfo = new HashSet<SignerInfo>();
 
     /**
      * Describe recipientInfo here.
@@ -128,9 +128,9 @@ public class SignEnvelope {
     /**
      * Get the <code>SignerInfo</code> value.
      *
-     * @return a <code>List<SignerInfo></code> value
+     * @return a <code>Set<SignerInfo></code> value
      */
-    public final List<SignerInfo> getSignerInfo() {
+    public final Set<SignerInfo> getSignerInfo() {
         return signerInfo;
     }
 
@@ -139,16 +139,16 @@ public class SignEnvelope {
      *
      * @param newSignerInfo The new SignerInfo value.
      */
-    public final void setSignerInfo(final List<SignerInfo> newSignerInfo) {
+    public final void setSignerInfo(final Set<SignerInfo> newSignerInfo) {
         this.signerInfo = newSignerInfo;
     }
 
     /**
      * Get the <code>MdAlgs</code> value.
      *
-     * @return a <code>Set<String></code> value
+     * @return a <code>Set<AlgorithmIdentifier></code> value
      */
-    public final Set<String> getMdAlgs() {
+    public final Set<AlgorithmIdentifier> getMdAlgs() {
         return mdAlgs;
     }
 
@@ -157,7 +157,7 @@ public class SignEnvelope {
      *
      * @param newMdAlgs The new MdAlgs value.
      */
-    public final void setMdAlgs(final Set<String> newMdAlgs) {
+    public final void setMdAlgs(final Set<AlgorithmIdentifier> newMdAlgs) {
         this.mdAlgs = newMdAlgs;
     }
 

@@ -30,6 +30,7 @@ if defined?(JRUBY_VERSION)
     MimeParam = org.jruby.ext.openssl.impl.MimeParam unless defined?(MimeParam)
     BIO = org.jruby.ext.openssl.impl.BIO unless defined?(BIO)
     PKCS7Exception = org.jruby.ext.openssl.impl.PKCS7Exception unless defined?(PKCS7Exception)
+    AlgorithmIdentifier = org.jruby.ext.openssl.impl.AlgorithmIdentifier unless defined?(AlgorithmIdentifier)
     
     ArrayList = java.util.ArrayList unless defined?(ArrayList)
     CertificateFactory = java.security.cert.CertificateFactory unless defined?(CertificateFactory)

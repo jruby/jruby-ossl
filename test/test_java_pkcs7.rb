@@ -367,7 +367,7 @@ module PKCS7Test
       p7.add_signer(si)
       
       assert_equal 1, p7.get_sign.signer_info.size
-      assert_equal si, p7.get_sign.signer_info.get(0)
+      assert_equal si, p7.get_sign.signer_info.iterator.next
     end
 
 
@@ -379,35 +379,39 @@ module PKCS7Test
       p7.add_signer(si)
       
       assert_equal 1, p7.get_signed_and_enveloped.signer_info.size
-      assert_equal si, p7.get_signed_and_enveloped.signer_info.get(0)
+      assert_equal si, p7.get_signed_and_enveloped.signer_info.iterator.next
     end
 
     
     def test_add_signer_to_signed_with_new_algo_should_add_that_algo_to_the_algo_list
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_signed
+
+      # YES, these numbers are correct. Don't change them. They are OpenSSL internal NIDs
+      md5 = AlgorithmIdentifier.new(4, nil)
+      md4 = AlgorithmIdentifier.new(5, nil)
       
       si = SignerInfo.new
-      si.digest_algorithm = "MD5"
+      si.digest_algorithm = md5
       p7.add_signer(si)
 
-      assert_equal "MD5", p7.get_sign.md_algs.iterator.next
+      assert_equal md5, p7.get_sign.md_algs.iterator.next
       assert_equal 1, p7.get_sign.md_algs.size
 
       si = SignerInfo.new
-      si.digest_algorithm = "MD5"
+      si.digest_algorithm = md5
       p7.add_signer(si)
 
-      assert_equal "MD5", p7.get_sign.md_algs.iterator.next
+      assert_equal md5, p7.get_sign.md_algs.iterator.next
       assert_equal 1, p7.get_sign.md_algs.size
 
       si = SignerInfo.new
-      si.digest_algorithm = "MD4"
+      si.digest_algorithm = md4
       p7.add_signer(si)
 
       assert_equal 2, p7.get_sign.md_algs.size
-      assert p7.get_sign.md_algs.contains("MD4")
-      assert p7.get_sign.md_algs.contains("MD5")
+      assert p7.get_sign.md_algs.contains(md4)
+      assert p7.get_sign.md_algs.contains(md5)
     end
 
 
@@ -415,27 +419,31 @@ module PKCS7Test
       p7 = PKCS7.new
       p7.type = PKCS7::NID_pkcs7_signedAndEnveloped
       
+      # YES, these numbers are correct. Don't change them. They are OpenSSL internal NIDs
+      md5 = AlgorithmIdentifier.new(4, nil)
+      md4 = AlgorithmIdentifier.new(5, nil)
+
       si = SignerInfo.new
-      si.digest_algorithm = "MD5"
+      si.digest_algorithm = md5
       p7.add_signer(si)
 
-      assert_equal "MD5", p7.get_signed_and_enveloped.md_algs.iterator.next
+      assert_equal md5, p7.get_signed_and_enveloped.md_algs.iterator.next
       assert_equal 1, p7.get_signed_and_enveloped.md_algs.size
 
       si = SignerInfo.new
-      si.digest_algorithm = "MD5"
+      si.digest_algorithm = md5
       p7.add_signer(si)
 
-      assert_equal "MD5", p7.get_signed_and_enveloped.md_algs.iterator.next
+      assert_equal md5, p7.get_signed_and_enveloped.md_algs.iterator.next
       assert_equal 1, p7.get_signed_and_enveloped.md_algs.size
 
       si = SignerInfo.new
-      si.digest_algorithm = "MD4"
+      si.digest_algorithm = md4
       p7.add_signer(si)
 
       assert_equal 2, p7.get_signed_and_enveloped.md_algs.size
-      assert p7.get_signed_and_enveloped.md_algs.contains("MD4")
-      assert p7.get_signed_and_enveloped.md_algs.contains("MD5")
+      assert p7.get_signed_and_enveloped.md_algs.contains(md4)
+      assert p7.get_signed_and_enveloped.md_algs.contains(md5)
     end
     
     def test_set_content_on_data_throws_exception

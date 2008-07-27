@@ -49,7 +49,7 @@ module PKCS7Test
     def test_read_pkcs7_should_set_the_second_arguments_contents_to_null_if_its_there
       mime = Mime.new
       mime.stubs(:parseHeaders).raises("getOutOfJailForFree")
-
+      
       bio2 = BIO.new
       arr = [bio2].to_java BIO
       
@@ -161,6 +161,7 @@ module PKCS7Test
       bio = BIO::from_string(MultipartSignedString)
       mime = Mime::DEFAULT
       p7 = SMIME.new(mime).readPKCS7(bio, nil)
+      puts p7
     end
   end
 end

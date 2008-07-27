@@ -27,9 +27,14 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1Set;
+import org.bouncycastle.asn1.DEREncodable;
 
 /** PKCS7_SIGNER_INFO
  *
@@ -42,14 +47,19 @@ public class SignerInfo {
     /**
      * Describe digestAlgorithm here.
      */
-    private String digestAlgorithm;
+    private AlgorithmIdentifier digestAlgorithm;
+
+    /**
+     * Describe version here.
+     */
+    private int version;
 
     /**
      * Get the <code>DigestAlgorithm</code> value.
      *
-     * @return a <code>String</code> value
+     * @return a <code>AlgorithmIdentifier</code> value
      */
-    public final String getDigestAlgorithm() {
+    public final AlgorithmIdentifier getDigestAlgorithm() {
         return digestAlgorithm;
     }
 
@@ -58,7 +68,7 @@ public class SignerInfo {
      *
      * @param newDigestAlgorithm The new DigestAlgorithm value.
      */
-    public final void setDigestAlgorithm(final String newDigestAlgorithm) {
+    public final void setDigestAlgorithm(final AlgorithmIdentifier newDigestAlgorithm) {
         this.digestAlgorithm = newDigestAlgorithm;
     }
 
@@ -131,5 +141,84 @@ public class SignerInfo {
             }
         }
         return null;
+    }
+
+    /**
+     * Get the <code>Version</code> value.
+     *
+     * @return an <code>int</code> value
+     */
+    public final int getVersion() {
+        return version;
+    }
+
+    /**
+     * Set the <code>Version</code> value.
+     *
+     * @param newVersion The new Version value.
+     */
+    public final void setVersion(final int newVersion) {
+        this.version = newVersion;
+    }
+
+
+
+    @Override
+    public boolean equals(Object other) {
+        boolean ret = this == other;
+        if(!ret && (other instanceof SignerInfo)) {
+            SignerInfo o = (SignerInfo)other;
+            ret = 
+                this.version == o.version &&
+                (this.digestAlgorithm == null) ? o.digestAlgorithm == null : (this.digestAlgorithm.equals(o.digestAlgorithm)) &&
+                this.authAttr.equals(o.authAttr) && 
+                this.unauthAttr.equals(o.unauthAttr);
+        }
+        return ret;
+    }
+
+    @Override
+    public int hashCode() {
+        int ret = 33;
+        ret = ret + 13 * version;
+        ret = ret + (digestAlgorithm == null ? 0 : 13 * digestAlgorithm.hashCode());
+        ret = ret + (authAttr == null ? 0 : 13 * authAttr.hashCode());
+        ret = ret + (unauthAttr == null ? 0 : 13 * unauthAttr.hashCode());
+        return ret;
+    }
+
+    @Override
+    public String toString() {
+        return "#<SignerInfo version="+version+" " + digestAlgorithm + " auth="+authAttr+" unauth="+unauthAttr+">";
+    }
+
+    /**
+     * SignerInfo ::= SEQUENCE {
+     *   version Version,
+     *   issuerAndSerialNumber IssuerAndSerialNumber,
+     *   digestAlgorithm DigestAlgorithmIdentifier,
+     *   authenticatedAttributes [0] IMPLICIT Attributes OPTIONAL,
+     *   digestEncryptionAlgorithm DigestEncryptionAlgorithmIdentifier,
+     *   encryptedDigest EncryptedDigest,
+     *   unauthenticatedAttributes [1] IMPLICIT Attributes OPTIONAL }
+     *
+     * EncryptedDigest ::= OCTET STRING
+     *
+     */
+    public static SignerInfo fromASN1(DEREncodable content) {
+        return null;
+    }
+
+    /**
+     * SET OF SignerInfo
+     *
+     */
+    public static Set<SignerInfo> fromASN1Set(DEREncodable content) {
+        ASN1Set set = (ASN1Set)content;
+        Set<SignerInfo> result = new HashSet<SignerInfo>();
+        for(Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
+            result.add(fromASN1((DEREncodable)(e.nextElement())));
+        }
+        return result;
     }
 }// SignerInfo

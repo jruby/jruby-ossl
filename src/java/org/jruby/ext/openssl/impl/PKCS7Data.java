@@ -30,6 +30,7 @@ package org.jruby.ext.openssl.impl;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Set;
 import javax.crypto.Cipher;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1OctetString;
@@ -120,7 +121,7 @@ public abstract class PKCS7Data {
         throw new PKCS7Exception(PKCS7.F_PKCS7_SET_CONTENT,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
-    public List<SignerInfo> getSignerInfo() {
+    public Set<SignerInfo> getSignerInfo() {
         return null;
     }
 

@@ -27,12 +27,13 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import java.util.List;
-import javax.crypto.Cipher;
+
+
 import java.security.cert.X509CRL;
-
 import java.security.cert.X509Certificate;
-
+import java.util.List;
+import java.util.Set;
+import javax.crypto.Cipher;
 import org.bouncycastle.asn1.DEREncodable;
 
 /**
@@ -74,7 +75,7 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
         this.signedAndEnveloped.getSignerInfo().add(psi);
     }
 
-    public List<SignerInfo> getSignerInfo() {
+    public Set<SignerInfo> getSignerInfo() {
         return this.signedAndEnveloped.getSignerInfo();
     }
 
