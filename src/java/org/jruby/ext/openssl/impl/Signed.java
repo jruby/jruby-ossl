@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.security.cert.CertificateParsingException;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -42,6 +43,8 @@ import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.X509CertificateStructure;
+import org.bouncycastle.jce.provider.X509CertificateObject;
 
 /** PKCS7_SIGNED
  *
@@ -56,12 +59,12 @@ public class Signed {
     /**
      * Describe crl here.
      */
-    private List<X509CRL> crl = new ArrayList<X509CRL>();
+    private Set<X509CRL> crl = new HashSet<X509CRL>();
 
     /**
      * Describe cert here.
      */
-    private List<X509Certificate> cert = new ArrayList<X509Certificate>();
+    private Set<X509Certificate> cert = new HashSet<X509Certificate>();
 
     /**
      * Describe mdAlgs here.
@@ -150,9 +153,9 @@ public class Signed {
     /**
      * Get the <code>Cert</code> value.
      *
-     * @return a <code>List<X509Certificate></code> value
+     * @return a <code>Set<X509Certificate></code> value
      */
-    public final List<X509Certificate> getCert() {
+    public final Set<X509Certificate> getCert() {
         return cert;
     }
 
@@ -161,16 +164,16 @@ public class Signed {
      *
      * @param newCert The new Cert value.
      */
-    public final void setCert(final List<X509Certificate> newCert) {
+    public final void setCert(final Set<X509Certificate> newCert) {
         this.cert = newCert;
     }
 
     /**
      * Get the <code>Crl</code> value.
      *
-     * @return a <code>List<X509CRL></code> value
+     * @return a <code>Set<X509CRL></code> value
      */
-    public final List<X509CRL> getCrl() {
+    public final Set<X509CRL> getCrl() {
         return crl;
     }
 
@@ -179,7 +182,7 @@ public class Signed {
      *
      * @param newCrl The new Crl value.
      */
-    public final void setCrl(final List<X509CRL> newCrl) {
+    public final void setCrl(final Set<X509CRL> newCrl) {
         this.crl = newCrl;
     }
 
@@ -232,14 +235,26 @@ public class Signed {
         signed.setMdAlgs(algorithmIdentifiersFromASN1Set(digestAlgos));
         signed.setContents(PKCS7.fromASN1(contentInfo));
         if(certificates != null) {
-            System.err.println("Certs: " + certificates);
+            signed.setCert(certificatesFromASN1Set(certificates));
         }
         if(crls != null) {
-            System.err.println("CRLs: " + crls);
+            throw new RuntimeException("TODO implement CRL part");
         }
         signed.setSignerInfo(signerInfosFromASN1Set(signerInfos));
 
         return signed;
+    }
+
+    private static Set<X509Certificate> certificatesFromASN1Set(DEREncodable content) {
+        Set<X509Certificate> result = new HashSet<X509Certificate>();
+        X509CertificateStructure struct = X509CertificateStructure.getInstance(content);
+        // TODO: This needs to check for the possibility of PKCS#6 ExtendedCertificate too
+        try {
+            result.add(new X509CertificateObject(struct));
+        } catch(CertificateParsingException ex) {
+            throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + ex);
+        }
+        return result;
     }
 
     private static Set<AlgorithmIdentifier> algorithmIdentifiersFromASN1Set(DEREncodable content) {

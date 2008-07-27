@@ -161,7 +161,6 @@ module PKCS7Test
       bio = BIO::from_string(MultipartSignedString)
       mime = Mime::DEFAULT
       p7 = SMIME.new(mime).readPKCS7(bio, nil)
-      puts p7
     end
   end
 end

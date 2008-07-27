@@ -626,7 +626,7 @@ module PKCS7Test
       p7.type = PKCS7::NID_pkcs7_signed
       p7.add_certificate(X509Cert)
       assert_equal 1, p7.get_sign.cert.size
-      assert_equal X509Cert, p7.get_sign.cert.get(0)
+      assert_equal X509Cert, p7.get_sign.cert.iterator.next
     end
 
     def test_add_certificate_on_signedAndEnveloped_adds_the_certificate
@@ -674,7 +674,7 @@ module PKCS7Test
       p7.type = PKCS7::NID_pkcs7_signed
       p7.add_crl(X509CRL)
       assert_equal 1, p7.get_sign.crl.size
-      assert_equal X509CRL, p7.get_sign.crl.get(0)
+      assert_equal X509CRL, p7.get_sign.crl.iterator.next
     end
 
     def test_add_crl_on_signedAndEnveloped_adds_the_crl
