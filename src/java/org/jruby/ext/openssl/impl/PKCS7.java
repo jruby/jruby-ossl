@@ -27,13 +27,14 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.IOException;
+import java.security.cert.X509CRL;
+import java.security.cert.X509Certificate;
+import java.util.List;
+import javax.crypto.Cipher;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1OctetString;
-import java.security.cert.X509Certificate;
-import javax.crypto.Cipher;
-import java.util.List;
 import org.bouncycastle.asn1.DEROctetString;
-import java.security.cert.X509CRL;
 
 /** c: PKCS7
  *
@@ -72,6 +73,13 @@ public class PKCS7 {
         return isSigned() && getDetached() != 0;
     }
 
+    /* c: d2i_PKCS7_bio
+     *
+     */
+    public static PKCS7 fromASN1(BIO bio) {
+        return null;
+    }
+
     public static PKCS7 encrypt(List<X509Certificate> certs, byte[] in, Cipher cipher, int flags) {
         PKCS7 p7 = new PKCS7();
 
@@ -91,11 +99,13 @@ public class PKCS7 {
             p7.dataFinal(p7bio);
 
             return p7;
+        } catch(IOException e) {
+            // TODO: Handle correctly
         } catch(PKCS7Exception e) {
             // Equiv of err:
             // TODO: Handle different exceptions correctly here
-            return null;
         }
+        return null;
     }
 
     /** c: PKCS7_set_type

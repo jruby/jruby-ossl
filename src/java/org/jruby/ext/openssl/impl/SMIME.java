@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -121,14 +122,15 @@ public class SMIME {
     /* c: B64_read_PKCS7
      *
      */
-    public PKCS7 readPKCS7Base64(BIO bio) {
-        return null;
+    public PKCS7 readPKCS7Base64(BIO bio) throws IOException {
+        BIO bio64 = BIO.base64Filter(bio);
+        return PKCS7.fromASN1(bio64);
     }
 
     /* c: static multi_split
      *
      */
-    public List<BIO> multiSplit(BIO bio, byte[] bound) {
+    private List<BIO> multiSplit(BIO bio, byte[] bound) throws IOException {
         List<BIO> parts = new ArrayList<BIO>();
         byte[] linebuf = new byte[MAX_SMLEN];
         int blen = bound.length;
@@ -161,11 +163,11 @@ public class SMIME {
                     bpart = BIO.mem();
                     bpart.setMemEofReturn(0);
                 } else if(eol) {
-                    bpart.write(NEWLINE, 2);
+                    bpart.write(NEWLINE, 0, 2);
                 }
                 eol = nextEol;
                 if(len != 0) {
-                    bpart.write(linebuf, len);
+                    bpart.write(linebuf, 0, len);
                 }
             }
         }
@@ -176,7 +178,7 @@ public class SMIME {
     /* c: SMIME_read_PKCS7
      *
      */
-    public PKCS7 readPKCS7(BIO bio, BIO[] bcont) {
+    public PKCS7 readPKCS7(BIO bio, BIO[] bcont) throws IOException {
         if(bcont != null && bcont.length > 0) {
             bcont[0] = null;
         }

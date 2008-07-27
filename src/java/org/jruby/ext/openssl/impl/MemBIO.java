@@ -27,6 +27,8 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.IOException;
+
 /**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
@@ -43,7 +45,7 @@ public class MemBIO extends BIO {
         buffer = newBuffer;
     }
 
-    public int gets(byte[] in, int len) {
+    public int gets(byte[] in, int len) throws IOException {
         if(rpointer == slen) {
             return 0;
         }
@@ -61,12 +63,12 @@ public class MemBIO extends BIO {
         return i;
     }
 
-    public int write(byte[] out, int len) {
+    public int write(byte[] out, int offset, int len) throws IOException {
         while(wpointer + len > buffer.length) {
             realloc();
         }
 
-        System.arraycopy(out, 0, buffer, wpointer, len);
+        System.arraycopy(out, offset, buffer, wpointer, len);
         wpointer += len;
         slen += len;
 
@@ -80,5 +82,9 @@ public class MemBIO extends BIO {
         } catch(Exception e) {}
 
         return null;
+    }
+
+    @Override
+    public void setMemEofReturn(int value) {
     }
 }// MemBIO

@@ -27,36 +27,47 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import org.jruby.ext.openssl.impl.utils.Base64;
+
 /**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class StringBIO extends BIO {
-    /**
-     * Describe string here.
+public class Base64BIOFilter extends BIO {
+    private OutputStream nextOutput;
+    private InputStream nextInput;
+
+    public Base64BIOFilter(BIO next) {
+        this.nextOutput = new Base64.OutputStream(BIO.asOutputStream(next));
+        this.nextInput = new Base64.InputStream(BIO.asInputStream(next));
+    }
+
+    /** c: BIO_write
+     *
      */
-    private byte[] stringBuffer;
-
-    private int index = 0;
-    private int slen;
-
-    public StringBIO(String string) {
-        try {
-            this.stringBuffer = string.getBytes("ISO8859-1");
-        } catch(Exception e) {}
-        this.slen = this.stringBuffer.length;
+    public int write(byte[] out, int offset, int len) throws IOException {
+        this.nextOutput.write(out, offset, len);
+        return len;
     }
 
-    public int gets(byte[] in, int len) {
-        int i=0;
-        for(;i<len && index < slen; i++, index++) {
-            in[i] = stringBuffer[index];
-
-            if(in[i] == '\n' || in[i] == '\r') {
-                i++; index++;
-                break;
-            }
+    /** c: BIO_read
+     *
+     */
+    public int read(byte[] into, int offset, int len) throws IOException {
+        int read = this.nextInput.read(into, offset, len);
+        if(read == -1) {
+            return 0;
         }
-        return i;
+        return read;
     }
-}// StringBIO
+
+    /** c: BIO_flush
+     *
+     */
+    public void flush() throws IOException {
+        this.nextOutput.flush();
+    }
+}// Base64BIOFilter

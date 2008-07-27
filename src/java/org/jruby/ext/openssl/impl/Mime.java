@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -108,7 +109,7 @@ public interface Mime {
                 //                System.err.println(str);
             }
 
-            public List<MimeHeader> parseHeaders(BIO bio) {
+            public List<MimeHeader> parseHeaders(BIO bio) throws IOException {
                 mimeDebug("\n!!!!!!!!!!!!!!!!!\n" + bio + "\n^^^^^^^^^^^^^^^^^^^^^^^^\n"); 
                 int state = 0;
                 byte[] linebuf = new byte[MAX_SMLEN];
@@ -230,7 +231,7 @@ public interface Mime {
     /* c: mime_parse_hdr
      *
      */
-    List<MimeHeader> parseHeaders(BIO bio); 
+    List<MimeHeader> parseHeaders(BIO bio) throws IOException; 
 
     /* c: mime_hdr_find
      *
