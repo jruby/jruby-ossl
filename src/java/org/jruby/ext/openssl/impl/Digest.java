@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 /** PKCS7_DIGEST
@@ -43,6 +44,11 @@ public class Digest {
      * Describe md here.
      */
     private AlgorithmIdentifier md;
+
+    /**
+     * Describe digest here.
+     */
+    private ASN1OctetString digest;
 
     PKCS7 contents;
 
@@ -98,5 +104,23 @@ public class Digest {
      */
     public final void setMd(final AlgorithmIdentifier newMd) {
         this.md = newMd;
+    }
+
+    /**
+     * Get the <code>Digest</code> value.
+     *
+     * @return an <code>ASN1OctetString</code> value
+     */
+    public final ASN1OctetString getDigest() {
+        return digest;
+    }
+
+    /**
+     * Set the <code>Digest</code> value.
+     *
+     * @param newDigest The new Digest value.
+     */
+    public final void setDigest(final ASN1OctetString newDigest) {
+        this.digest = newDigest;
     }
 }// Digest

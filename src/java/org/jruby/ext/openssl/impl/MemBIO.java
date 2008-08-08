@@ -104,4 +104,10 @@ public class MemBIO extends BIO {
     public int getType() {
         return TYPE_MEM;
     }
+
+    public byte[] getMemCopy() {
+        byte[] nbuf = new byte[slen];
+        System.arraycopy(buffer, 0, nbuf, 0, slen);
+        return nbuf;
+    }
 }// MemBIO

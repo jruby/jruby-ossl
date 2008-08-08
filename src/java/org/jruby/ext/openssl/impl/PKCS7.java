@@ -435,14 +435,6 @@ public class PKCS7 {
         MessageDigest mdc = null;
         MessageDigest ctx_tmp = null;
         ASN1Set sk;
-        int ret = 0;
-
-// 	BUF_MEM *buf_mem=NULL;
-// 	PKCS7_SIGNER_INFO *si;
-// 	STACK_OF(X509_ATTRIBUTE) *sk;
-// 	ASN1_OCTET_STRING *os=NULL;
-
-// 	EVP_MD_CTX_init(&ctx_tmp);
 
         int i = this.data.getType();
 
@@ -470,7 +462,7 @@ public class PKCS7 {
                 btmp = findDigest(_mdc, btmp, j);
                 mdc = _mdc[0];
                 if(btmp == null) {
-                    return ret;
+                    return 0;
                 }
 
                 try {
@@ -511,91 +503,48 @@ public class PKCS7 {
                     throw new PKCS7Exception(F_PKCS7_DATAFINAL,-1,e.toString());
                 }
             }
-        }
-// 	else if (i == NID_pkcs7_digest)
-// 		{
-//             unsigned char md_data[EVP_MAX_MD_SIZE];
-//             unsigned int md_len;
-//             if (!PKCS7_find_digest(&mdc, bio,
-//                                    OBJ_obj2nid(p7->d.digest->md->algorithm)))
-//                 goto err;
-//             EVP_DigestFinal_ex(mdc,md_data,&md_len);
-//             M_ASN1_OCTET_STRING_set(p7->d.digest->digest, md_data, md_len);
-// 		}
-
-// 	if (!PKCS7_is_detached(p7))
-// 		{
-//             btmp=BIO_find_type(bio,BIO_TYPE_MEM);
-//             if (btmp == NULL)
-//                 {
-//                     PKCS7err(PKCS7_F_PKCS7_DATAFINAL,PKCS7_R_UNABLE_TO_FIND_MEM_BIO);
-//                     goto err;
-//                 }
-//             BIO_get_mem_ptr(btmp,&buf_mem);
-//             /* Mark the BIO read only then we can use its copy of the data
-//              * instead of making an extra copy.
-//              */
-//             BIO_set_flags(btmp, BIO_FLAGS_MEM_RDONLY);
-//             BIO_set_mem_eof_return(btmp, 0);
-
-
-
-        switch(i) {
-        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
-            getSignedAndEnveloped().getEncData().setEncData(null);
-            break;
-        case ASN1Registry.NID_pkcs7_enveloped:
-            getEnveloped().getEncData().setEncData(null);
-            break;
-        case ASN1Registry.NID_pkcs7_signed:
-            break;
-        case ASN1Registry.NID_pkcs7_digest:
-            break;
-        default:
-            break;
+        } else if(i == ASN1Registry.NID_pkcs7_digest) {
+            int nid = ASN1Registry.obj2nid(getDigest().getMd().getObjectId());
+            MessageDigest[] _mdc = new MessageDigest[] {mdc};
+            bio = findDigest(_mdc, bio, nid);
+            mdc = _mdc[0];
+            byte[] md_data = mdc.digest();
+            ASN1OctetString digest = new DEROctetString(md_data);
+            getDigest().setDigest(digest);
         }
 
-// 	switch (i)
-// 		{
-//         case NID_pkcs7_signed:
-//             os=PKCS7_get_octet_string(p7->d.sign->contents);
-//             /* If detached data then the content is excluded */
-//             if(PKCS7_type_is_data(p7->d.sign->contents) && p7->detached) {
-//                 M_ASN1_OCTET_STRING_free(os);
-//                 p7->d.sign->contents->d.data = NULL;
-//             }
-//             break;
+        if(!isDetached()) {
+            btmp = bio.findType(BIO.TYPE_MEM);
+            if(null == btmp) {
+                throw new PKCS7Exception(F_PKCS7_DATAFINAL, R_UNABLE_TO_FIND_MEM_BIO);
+            }
+            buf = ((MemBIO)btmp).getMemCopy();
 
-//         case NID_pkcs7_digest:
-//             os=PKCS7_get_octet_string(p7->d.digest->contents);
-//             /* If detached data then the content is excluded */
-//             if(PKCS7_type_is_data(p7->d.digest->contents) && p7->detached)
-//                 {
-//                     M_ASN1_OCTET_STRING_free(os);
-//                     p7->d.digest->contents->d.data = NULL;
-//                 }
-//             break;
+            switch(i) {
+            case ASN1Registry.NID_pkcs7_signedAndEnveloped:
+                getSignedAndEnveloped().getEncData().setEncData(new DEROctetString(buf));
+                break;
+            case ASN1Registry.NID_pkcs7_enveloped:
+                getEnveloped().getEncData().setEncData(new DEROctetString(buf));
+                break;
+            case ASN1Registry.NID_pkcs7_signed:
+                if(getSign().getContents().isData() && getDetached() != 0) {
+                    getSign().getContents().setData(null);
+                } else {
+                    getSign().getContents().setData(new DEROctetString(buf));
+                }
+                break;
+            case ASN1Registry.NID_pkcs7_digest:
+                if(getDigest().getContents().isData() && getDetached() != 0) {
+                    getDigest().getContents().setData(null);
+                } else {
+                    getDigest().getContents().setData(new DEROctetString(buf));
+                }
+                break;
+            }
+        }
 
-// 		}
-
-
-
-
-
-//             os->data = (unsigned char *)buf_mem->data;
-//             os->length = buf_mem->length;
-// #if 0
-//             M_ASN1_OCTET_STRING_set(os,
-//                                     (unsigned char *)buf_mem->data,buf_mem->length);
-// #endif
-// 		}
-// 	ret=1;
-//  err:
-// 	EVP_MD_CTX_cleanup(&ctx_tmp);
-// 	if (buf != NULL) BUF_MEM_free(buf);
-// 	return(ret);
-       // TODO: implement
-        return -1;
+        return 1;
     }
 
     @Override
