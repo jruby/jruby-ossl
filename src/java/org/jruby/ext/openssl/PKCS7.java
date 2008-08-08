@@ -256,7 +256,21 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod(name="type")
     public IRubyObject get_type() {
-        System.err.println("WARNING: un.implemented method called PKCS7#get_type");
+        if(p7.isSigned()) {
+            return getRuntime().newSymbol("signed");
+        }
+        if(p7.isEncrypted()) {
+            return getRuntime().newSymbol("encrypted");
+        }
+        if(p7.isEnveloped()) {
+            return getRuntime().newSymbol("enveloped");
+        }
+        if(p7.isSignedAndEnveloped()) {
+            return getRuntime().newSymbol("signedAndEnveloped");
+        }
+        if(p7.isData()) {
+            return getRuntime().newSymbol("data");
+        }
         return getRuntime().getNil();
     }
 
