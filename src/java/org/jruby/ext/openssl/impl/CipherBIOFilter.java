@@ -27,7 +27,10 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.IOException;
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 
 /**
  *
@@ -38,6 +41,29 @@ public class CipherBIOFilter extends BIOFilter {
 
     public CipherBIOFilter(Cipher cipher) {
         this.cipher = cipher;
+    }
+
+    public void flush() throws IOException {
+        try {
+            byte[] result = cipher.doFinal();
+            if(result == null) {
+                return;
+            }
+            next().write(result, 0, result.length);
+        } catch(IllegalBlockSizeException e) {
+            throw new PKCS7Exception(-1, -1, e.toString());
+        } catch(BadPaddingException e) {
+            throw new PKCS7Exception(-1, -1, e.toString());
+        }
+    }
+
+    public int write(byte[] out, int offset, int len) throws IOException {
+        byte[] result = cipher.update(out, offset, len);
+        if(result == null) {
+            return len;
+        }
+        next().write(result, 0, result.length);
+        return len;
     }
 
     public int getType() {

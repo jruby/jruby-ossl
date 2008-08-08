@@ -688,7 +688,7 @@ module PKCS7Test
       certs = [X509Cert]
       cipher = Cipher.get_instance("AES", BCP.new)
       data = "aaaaa\nbbbbb\nccccc\n".to_java_bytes
-      p PKCS7::encrypt(certs, data, cipher, 0)
+      PKCS7::encrypt(certs, data, cipher, PKCS7::BINARY)
     end
   end
 end

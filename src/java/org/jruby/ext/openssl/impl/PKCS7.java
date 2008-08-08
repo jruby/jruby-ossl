@@ -292,6 +292,7 @@ public class PKCS7 {
         Cipher evpCipher = null;
         BIO out = null;
         BIO btmp = null;
+        EncContent enc = null;
 
         switch(i) {
         case ASN1Registry.NID_pkcs7_signed:
@@ -301,6 +302,7 @@ public class PKCS7 {
         case ASN1Registry.NID_pkcs7_signedAndEnveloped:
             rsk = getSignedAndEnveloped().getRecipientInfo();
             mdSk = getSignedAndEnveloped().getMdAlgs();
+            enc = getSignedAndEnveloped().getEncData();
             xalg = getSignedAndEnveloped().getEncData().getAlgorithm();
             evpCipher = getSignedAndEnveloped().getEncData().getCipher();
             if(null == evpCipher) {
@@ -309,6 +311,7 @@ public class PKCS7 {
             break;
         case ASN1Registry.NID_pkcs7_enveloped:
             rsk = getEnveloped().getRecipientInfo();
+            enc = getEnveloped().getEncData();
             xalg = getEnveloped().getEncData().getAlgorithm();
             evpCipher = getEnveloped().getEncData().getCipher();
             if(null == evpCipher) {
@@ -348,16 +351,18 @@ public class PKCS7 {
 //             }
 // 		}
         if(evpCipher != null) {
-            int keylen, ivlen;
-            int jj, max;
             byte[] tmp;
-            
+            String algorithm = evpCipher.getAlgorithm();
+
             btmp = BIO.cipherFilter(evpCipher);
+
+            int klen = -1;
 
             try {
                 KeyGenerator gen = KeyGenerator.getInstance(evpCipher.getAlgorithm());
                 gen.init(new SecureRandom());
                 SecretKey key = gen.generateKey();
+                klen = ((SecretKeySpec)key).getEncoded().length*8;
                 evpCipher.init(Cipher.ENCRYPT_MODE, key);
 
                 if(null != rsk) {
@@ -372,6 +377,23 @@ public class PKCS7 {
             } catch(Exception e) {
                 e.printStackTrace();
             }
+
+            DERObjectIdentifier encAlgo = ASN1Registry.sym2oid(algorithm);
+            if(encAlgo == null) {
+                String name = algorithm;
+                String block = "CBC";
+                if(name.indexOf('/') != -1) {
+                    String[] nameParts = name.split("/");
+                    name = nameParts[0];
+                    block = nameParts[1];
+                }
+                encAlgo = ASN1Registry.sym2oid(name + "-" + klen + "-" + block);
+                if(null == encAlgo) {
+                    throw new PKCS7Exception(-1, -1, "Couldn't find algorithm " + algorithm + ". Tried: " + (name + "-" + klen + "-" + block));
+                }
+            }
+
+            enc.setAlgorithm(new AlgorithmIdentifier(encAlgo));
 
             if(out == null) {
                 out = btmp;

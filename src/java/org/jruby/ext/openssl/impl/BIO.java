@@ -185,39 +185,70 @@ public class BIO {
     public void flush() throws IOException {
     }
 
+    private final static byte[] CONTENT_TEXT;
+    static {
+        byte[] val = null;
+        try {
+            val = "Content-Type: text/plain\r\n\r\n".getBytes("ISO8859-1");
+        } catch(Exception e) {
+            val = null;
+        }
+        CONTENT_TEXT = val;
+    }
+
     /** c: SMIME_crlf_copy
      *
      */
     public void crlfCopy(byte[] in, int flags) throws IOException {
-        throw new RuntimeException("TODO: implement");
+        byte[] linebuf = new byte[SMIME.MAX_SMLEN];
+        int[] len = new int[]{0};
+
+        if((flags & PKCS7.BINARY) > 0 ) {
+            write(in, 0, in.length);
+            return;
+        }
+        if((flags & PKCS7.TEXT) > 0) {
+            write(CONTENT_TEXT, 0, CONTENT_TEXT.length);
+        }
+        BIO inBio = memBuf(in);
+        while((len[0] = inBio.gets(linebuf, SMIME.MAX_SMLEN)) > 0) {
+            boolean eol = SMIME.stripEol(linebuf, len);
+            if(len[0] != 0) {
+                write(linebuf, 0, len[0]);
+            }
+            if(eol) {
+                write(SMIME.NEWLINE, 0, 2);
+            }
+
+        }
     }
 
     /** c: BIO_gets
      *
      */
     public int gets(byte[] in, int len) throws IOException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("for " + this.getClass().getName());
     }
 
     /** c: BIO_write
      *
      */
     public int write(byte[] out, int offset, int len) throws IOException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("for " + this.getClass().getName());
     }
 
     /** c: BIO_read
      *
      */
     public int read(byte[] into, int offset, int len) throws IOException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("for " + this.getClass().getName());
     }
 
     /** c: BIO_set_mem_eof_return
      *
      */
     public void setMemEofReturn(int value) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("for " + this.getClass().getName());
     }
 
     /** c: BIO_push

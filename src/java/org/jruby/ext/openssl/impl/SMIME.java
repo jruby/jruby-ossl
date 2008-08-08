@@ -37,8 +37,8 @@ import java.util.List;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class SMIME {
-    private final static int MAX_SMLEN = 1024;
-    private final static byte[] NEWLINE = new byte[]{'\r','\n'};
+    public final static int MAX_SMLEN = 1024;
+    public final static byte[] NEWLINE = new byte[]{'\r','\n'};
 
     private Mime mime;
 
@@ -71,7 +71,7 @@ public class SMIME {
     /* c: static strip_eol
      *
      */
-    private boolean stripEol(byte[] linebuf, int[] plen) {
+    public static boolean stripEol(byte[] linebuf, int[] plen) {
         int len = plen[0];
         boolean isEol = false;
         
