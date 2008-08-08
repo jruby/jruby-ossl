@@ -1,3 +1,8 @@
+if defined?(JRUBY_VERSION)
+  require "java"
+  $CLASSPATH << 'pkg/classes'
+  $CLASSPATH << 'lib/bcprov-jdk14-139.jar'
+end
 begin
   require "openssl"
   require File.join(File.dirname(__FILE__), "utils.rb")

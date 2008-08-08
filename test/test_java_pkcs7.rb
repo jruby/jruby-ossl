@@ -692,10 +692,77 @@ module PKCS7Test
       certs = [X509Cert]
       cipher = Cipher.get_instance("AES", BCP.new)
       data = "aaaaa\nbbbbb\nccccc\n".to_java_bytes
-      puts
-      puts PKCS7::encrypt(certs, data, cipher, PKCS7::BINARY)
-      puts 
-      puts EXISTING_PKCS7_1
+      PKCS7::encrypt(certs, data, cipher, PKCS7::BINARY)
+#       puts
+#       puts PKCS7::encrypt(certs, data, cipher, PKCS7::BINARY)
+#       puts 
+#       puts EXISTING_PKCS7_1
+    end
+    
+    EXISTING_PKCS7_PEM = <<PKCS7STR
+-----BEGIN PKCS7-----
+MIICIAYJKoZIhvcNAQcDoIICETCCAg0CAQAxggG4MIHZAgEAMEIwPTETMBEGCgmS
+JomT8ixkARkWA29yZzEZMBcGCgmSJomT8ixkARkWCXJ1YnktbGFuZzELMAkGA1UE
+AwwCQ0ECAQIwDQYJKoZIhvcNAQEBBQAEgYCPGMV4KS/8amYA2xeIjj9qLseJf7dl
+BtSDp+YAU3y1JnW7XufBCKxYw7eCuhWWA/mrxijr+wdsFDvSalM6nPX2P2NiVMWP
+a7mzErZ4WrzkKIuGczYPYPJetwBYuhik3ya4ygYygoYssVRAITOSsEKpfqHAPmI+
+AUJkqmCdGpQu9TCB2QIBADBCMD0xEzARBgoJkiaJk/IsZAEZFgNvcmcxGTAXBgoJ
+kiaJk/IsZAEZFglydWJ5LWxhbmcxCzAJBgNVBAMMAkNBAgEDMA0GCSqGSIb3DQEB
+AQUABIGAPaBX0KM3S+2jcrQrncu1jrvm1PUXlUvMfFIG2oBfPkMhiqCBvkOct1Ve
+ws1hxvGtsqyjAUn02Yx1+gQJhTN4JZZHNqkfi0TwN32nlwLxclKcrbF9bvtMiVHx
+V3LrSygblxxJsBf8reoV4yTJRa3w98bEoDhjUwjfy5xTml2cAn4wTAYJKoZIhvcN
+AQcBMB0GCWCGSAFlAwQBAgQQath+2gUo4ntkKl8FO1LLhoAg58j0Jn/OfWG3rNRH
+kTtUQfnBFk/UGbTZgExHILaGz8Y=
+-----END PKCS7-----
+PKCS7STR
+    
+    PKCS7_PEM_CONTENTS = "\347\310\364&\177\316}a\267\254\324G\221;TA\371\301\026O\324\031\264\331\200LG \266\206\317\306" 
+
+    PKCS7_PEM_FIRST_KEY = "\217\030\305x)/\374jf\000\333\027\210\216?j.\307\211\177\267e\006\324\203\247\346\000S|\265&u\273^\347\301\b\254X\303\267\202\272\025\226\003\371\253\306(\353\373\al\024;\322jS:\234\365\366?cbT\305\217k\271\263\022\266xZ\274\344(\213\206s6\017`\362^\267\000X\272\030\244\337&\270\312\0062\202\206,\261T@!3\222\260B\251~\241\300>b>\001Bd\252`\235\032\224.\365"
+
+    PKCS7_PEM_SECOND_KEY = "=\240W\320\2437K\355\243r\264+\235\313\265\216\273\346\324\365\027\225K\314|R\006\332\200_>C!\212\240\201\276C\234\267U^\302\315a\306\361\255\262\254\243\001I\364\331\214u\372\004\t\2053x%\226G6\251\037\213D\3607}\247\227\002\361rR\234\255\261}n\373L\211Q\361Wr\353K(\e\227\034I\260\027\374\255\352\025\343$\311E\255\360\367\306\304\2408cS\b\337\313\234S\232]\234\002~"
+    
+    def test_PEM_read_pkcs7_bio
+      bio = BIO::mem_buf(EXISTING_PKCS7_PEM.to_java_bytes)
+      p7 = PKCS7.read_pem(bio)
+
+      assert_equal ASN1Registry::NID_pkcs7_enveloped, p7.type
+      env = p7.get_enveloped
+      assert_equal 0, env.version
+      enc_data = env.enc_data
+      assert_equal ASN1Registry::NID_pkcs7_data, enc_data.content_type
+      assert_equal ASN1Registry::NID_aes_128_cbc, ASN1Registry::obj2nid(enc_data.algorithm.get_object_id)
+      assert_equal PKCS7_PEM_CONTENTS, String.from_java_bytes(enc_data.enc_data.octets)
+      
+      ris = env.recipient_info
+      assert_equal 2, ris.size
+      
+      first = second = nil
+      tmp = ris.iterator.next
+
+      if tmp.issuer_and_serial.certificate_serial_number.value == 2
+        first = tmp
+        iter = ris.iterator
+        iter.next
+        second = iter.next
+      else 
+        second = tmp
+        iter = ris.iterator
+        iter.next
+        first = iter.next
+      end
+      
+      assert_equal 0, first.version
+      assert_equal 0, second.version
+      
+      assert_equal "DC=org,DC=ruby-lang,CN=CA", first.issuer_and_serial.name.to_s
+      assert_equal "DC=org,DC=ruby-lang,CN=CA", second.issuer_and_serial.name.to_s
+      
+      assert_equal ASN1Registry::NID_rsaEncryption, ASN1Registry::obj2nid(first.key_enc_algor.get_object_id)
+      assert_equal ASN1Registry::NID_rsaEncryption, ASN1Registry::obj2nid(second.key_enc_algor.get_object_id)
+
+      assert_equal PKCS7_PEM_FIRST_KEY, String.from_java_bytes(first.enc_key.octets)
+      assert_equal PKCS7_PEM_SECOND_KEY, String.from_java_bytes(second.enc_key.octets)
     end
   end
 end

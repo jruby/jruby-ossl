@@ -34,6 +34,7 @@ import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Set;
@@ -43,6 +44,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -51,6 +53,7 @@ import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.DERUTCTime;
 import org.bouncycastle.asn1.pkcs.Attribute;
@@ -130,6 +133,20 @@ public class PKCS7 {
     public static PKCS7 fromASN1(BIO bio) throws IOException {
         ASN1InputStream ais = new ASN1InputStream(BIO.asInputStream(bio));
         return fromASN1(ais.readObject());
+    }
+
+    protected ASN1Encodable asASN1() {
+        ASN1EncodableVector vector = new ASN1EncodableVector();
+        DERObjectIdentifier contentType = ASN1Registry.nid2obj(getType());
+        vector.add(contentType);
+        return new DERSequence(vector);
+    }
+
+    /* c: i2d_PKCS7
+     *
+     */
+    public byte[] toASN1() throws IOException {
+        return asASN1().getEncoded();
     }
 
     /* c: PKCS7_encrypt
@@ -259,6 +276,32 @@ public class PKCS7 {
     private final static int EVP_MAX_IV_LENGTH = 16;
     private final static int EVP_MAX_BLOCK_LENGTH = 32;
 
+    private final static byte[] PEM_STRING_PKCS7_START = "-----BEGIN PKCS7-----".getBytes();
+
+    /** c: PEM_read_bio_PKCS7
+     *
+     */
+    public static PKCS7 readPEM(BIO input) {
+        try {
+            byte[] buffer = new byte[SMIME.MAX_SMLEN];
+            int read = -1;
+            read = input.gets(buffer, SMIME.MAX_SMLEN);
+            if(read > PEM_STRING_PKCS7_START.length) {
+                byte[] tmp = new byte[PEM_STRING_PKCS7_START.length];
+                System.arraycopy(buffer, 0, tmp, 0, tmp.length);
+                if(Arrays.equals(PEM_STRING_PKCS7_START, tmp)) {
+                    return fromASN1(BIO.base64Filter(input));
+                } else {
+                    /// TODO: err
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        } catch(IOException e) {
+            throw new PKCS7Exception(F_SMIME_READ_PKCS7, -1, e.toString());
+        }
+    }
 
     /** c: stati PKCS7_bio_add_digest
      *
@@ -358,8 +401,13 @@ public class PKCS7 {
 
             int klen = -1;
 
+            String algoBase = evpCipher.getAlgorithm();
+            if(algoBase.indexOf('/') != -1) {
+                algoBase = algoBase.split("/")[0];
+            }
+
             try {
-                KeyGenerator gen = KeyGenerator.getInstance(evpCipher.getAlgorithm());
+                KeyGenerator gen = KeyGenerator.getInstance(algoBase);
                 gen.init(new SecureRandom());
                 SecretKey key = gen.generateKey();
                 klen = ((SecretKeySpec)key).getEncoded().length*8;

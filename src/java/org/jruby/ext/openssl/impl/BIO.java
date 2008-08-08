@@ -166,6 +166,7 @@ public class BIO {
      *
      */
     public static BIO memBuf(byte[] arr) {
+        // TODO: create real readonly version of MemBIO.
         try {
             BIO bio = new MemBIO();
             bio.write(arr, 0, arr.length);
