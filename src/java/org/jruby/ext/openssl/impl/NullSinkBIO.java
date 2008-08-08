@@ -27,27 +27,29 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import java.security.MessageDigest;
+import java.io.IOException;
 
 /**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class MessageDigestBIOFilter extends BIOFilter {
-    private MessageDigest md;
+public class NullSinkBIO extends BIO {
+    public void crlfCopy(byte[] in, int flags) throws IOException {
+    }
 
-    public MessageDigestBIOFilter(MessageDigest md) {
-        this.md = md;
+    public int gets(byte[] in, int len) throws IOException {
+        return 0;
+    }
+
+    public int write(byte[] out, int offset, int len) throws IOException {
+        return len;
+    }
+
+    public int read(byte[] into, int offset, int len) throws IOException {
+        return 0;
     }
 
     public int getType() {
-        return TYPE_MD;
+        return TYPE_NULL;
     }
-
-    /** c: BIO_get_md_ctx
-     *
-     */
-    public MessageDigest getMessageDigest() {
-        return md;
-    }
-}// MessageDigestBIOFilter
+}// NullSinkBIO

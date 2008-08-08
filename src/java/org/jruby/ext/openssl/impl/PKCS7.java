@@ -33,8 +33,10 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -43,11 +45,14 @@ import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.DERUTCTime;
+import org.bouncycastle.asn1.pkcs.Attribute;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
@@ -58,13 +63,6 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class PKCS7 {
-    public static final int NID_pkcs7_data = 21;
-    public static final int NID_pkcs7_signed = 22;
-    public static final int NID_pkcs7_enveloped = 23;
-    public static final int NID_pkcs7_signedAndEnveloped = 24;
-    public static final int NID_pkcs7_digest = 25;
-    public static final int NID_pkcs7_encrypted = 26;
-
     // Used during processing
     private int state;
 
@@ -139,7 +137,7 @@ public class PKCS7 {
     public static PKCS7 encrypt(List<X509Certificate> certs, byte[] in, Cipher cipher, int flags) {
         PKCS7 p7 = new PKCS7();
 
-        p7.setType(NID_pkcs7_enveloped);
+        p7.setType(ASN1Registry.NID_pkcs7_enveloped);
 
         try {
             p7.setCipher(cipher);
@@ -169,22 +167,22 @@ public class PKCS7 {
      */
     public void setType(int type) {
         switch(type) {
-        case NID_pkcs7_signed:
+        case ASN1Registry.NID_pkcs7_signed:
             this.data = new PKCS7DataSigned();
             break;
-        case NID_pkcs7_data:
+        case ASN1Registry.NID_pkcs7_data:
             this.data = new PKCS7DataData();
             break;
-        case NID_pkcs7_signedAndEnveloped:
+        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
             this.data = new PKCS7DataSignedAndEnveloped();
             break;
-        case NID_pkcs7_enveloped:
+        case ASN1Registry.NID_pkcs7_enveloped:
             this.data = new PKCS7DataEnveloped();
             break;
-        case NID_pkcs7_encrypted:
+        case ASN1Registry.NID_pkcs7_encrypted:
             this.data = new PKCS7DataEncrypted();
             break;
-        case NID_pkcs7_digest:
+        case ASN1Registry.NID_pkcs7_digest:
             this.data = new PKCS7DataDigest();
             break;
         default:
@@ -221,7 +219,7 @@ public class PKCS7 {
     /** c: PKCS7_add_signer
      *
      */
-    public void addSigner(SignerInfo psi) {
+    public void addSigner(SignerInfoWithPkey psi) {
         this.data.addSigner(psi);
     }
 
@@ -256,7 +254,7 @@ public class PKCS7 {
     /** c: PKCS7_get_signer_info
      *
      */
-    public Set<SignerInfo> getSignerInfo() {
+    public Set<SignerInfoWithPkey> getSignerInfo() {
         return this.data.getSignerInfo();
     }
 
@@ -299,11 +297,11 @@ public class PKCS7 {
         BIO btmp = null;
 
         switch(i) {
-        case NID_pkcs7_signed:
+        case ASN1Registry.NID_pkcs7_signed:
             mdSk = getSign().getMdAlgs();
             os = getSign().getContents().getOctetString();
             break;
-        case NID_pkcs7_signedAndEnveloped:
+        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
             rsk = getSignedAndEnveloped().getRecipientInfo();
             mdSk = getSignedAndEnveloped().getMdAlgs();
             xalg = getSignedAndEnveloped().getEncData().getAlgorithm();
@@ -312,7 +310,7 @@ public class PKCS7 {
                 throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_NOT_INITIALIZED);
             }
             break;
-        case NID_pkcs7_enveloped:
+        case ASN1Registry.NID_pkcs7_enveloped:
             rsk = getEnveloped().getRecipientInfo();
             xalg = getEnveloped().getEncData().getAlgorithm();
             evpCipher = getEnveloped().getEncData().getCipher();
@@ -320,7 +318,7 @@ public class PKCS7 {
                 throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_NOT_INITIALIZED);
             }
             break;
-        case NID_pkcs7_digest:
+        case ASN1Registry.NID_pkcs7_digest:
             xa = getDigest().getMd();
             os = getDigest().getContents().getOctetString();
             break;
@@ -353,7 +351,6 @@ public class PKCS7 {
 //             }
 // 		}
         if(evpCipher != null) {
-            System.err.println("BLARG");
             int keylen, ivlen;
             int jj, max;
             byte[] tmp;
@@ -403,144 +400,105 @@ public class PKCS7 {
         return out;
     }
 
+    /** c: static PKCS7_find_digest
+     *
+     */
+    public BIO findDigest(MessageDigest[] pmd, BIO bio, int nid) {
+        while(true) {
+            bio = bio.findType(BIO.TYPE_MD);
+            if(bio == null) {
+                throw new PKCS7Exception(F_PKCS7_FIND_DIGEST, R_UNABLE_TO_FIND_MESSAGE_DIGEST);
+            }
+            pmd[0] = ((MessageDigestBIOFilter)bio).getMessageDigest();
+            if(pmd[0] == null) {
+                throw new PKCS7Exception(F_PKCS7_FIND_DIGEST, -1);
+            }
+            
+            if(nid == ASN1Registry.sym2nid(pmd[0].getAlgorithm())) {
+                return bio;
+            }
+
+            bio = bio.next();
+        }
+    }
+
     /** c: PKCS7_dataFinal
      *
      */
-    public void dataFinal(BIO bio) { 
-// 	int ret=0;
-// 	int i,j;
-// 	BIO *btmp;
+    public int dataFinal(BIO bio) { 
+        Set<SignerInfoWithPkey> siSk = null;
+        state = S_HEADER;
+        BIO btmp;
+        int bufLen;
+        byte[] buf;
+        MessageDigest mdc = null;
+        MessageDigest ctx_tmp = null;
+        ASN1Set sk;
+        int ret = 0;
+
 // 	BUF_MEM *buf_mem=NULL;
-// 	BUF_MEM *buf=NULL;
 // 	PKCS7_SIGNER_INFO *si;
-// 	EVP_MD_CTX *mdc,ctx_tmp;
 // 	STACK_OF(X509_ATTRIBUTE) *sk;
-// 	STACK_OF(PKCS7_SIGNER_INFO) *si_sk=NULL;
 // 	ASN1_OCTET_STRING *os=NULL;
 
 // 	EVP_MD_CTX_init(&ctx_tmp);
-// 	i=OBJ_obj2nid(p7->type);
-// 	p7->state=PKCS7_S_HEADER;
 
-// 	switch (i)
-// 		{
-//         case NID_pkcs7_signedAndEnveloped:
-//             /* XXXXXXXXXXXXXXXX */
-//             si_sk=p7->d.signed_and_enveloped->signer_info;
-//             if (!(os=M_ASN1_OCTET_STRING_new()))
-//                 {
-//                     PKCS7err(PKCS7_F_PKCS7_DATAFINAL,ERR_R_MALLOC_FAILURE);
-//                     goto err;
-//                 }
-//             p7->d.signed_and_enveloped->enc_data->enc_data=os;
-//             break;
-//         case NID_pkcs7_enveloped:
-//             /* XXXXXXXXXXXXXXXX */
-//             if (!(os=M_ASN1_OCTET_STRING_new()))
-//                 {
-//                     PKCS7err(PKCS7_F_PKCS7_DATAFINAL,ERR_R_MALLOC_FAILURE);
-//                     goto err;
-//                 }
-//             p7->d.enveloped->enc_data->enc_data=os;
-//             break;
-//         case NID_pkcs7_signed:
-//             si_sk=p7->d.sign->signer_info;
-//             os=PKCS7_get_octet_string(p7->d.sign->contents);
-//             /* If detached data then the content is excluded */
-//             if(PKCS7_type_is_data(p7->d.sign->contents) && p7->detached) {
-//                 M_ASN1_OCTET_STRING_free(os);
-//                 p7->d.sign->contents->d.data = NULL;
-//             }
-//             break;
+        int i = this.data.getType();
 
-//         case NID_pkcs7_digest:
-//             os=PKCS7_get_octet_string(p7->d.digest->contents);
-//             /* If detached data then the content is excluded */
-//             if(PKCS7_type_is_data(p7->d.digest->contents) && p7->detached)
-//                 {
-//                     M_ASN1_OCTET_STRING_free(os);
-//                     p7->d.digest->contents->d.data = NULL;
-//                 }
-//             break;
+        switch(i) {
+        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
+            siSk = getSignedAndEnveloped().getSignerInfo();
+            break;
+        case ASN1Registry.NID_pkcs7_signed:
+            siSk = getSignedAndEnveloped().getSignerInfo();
+            break;
+        case ASN1Registry.NID_pkcs7_digest:
+            break;
+        default:
+            break;
+        }
 
-// 		}
+        if(siSk != null) {
+            bufLen = 0;
+            buf = new byte[0];
 
-// 	if (si_sk != NULL)
-// 		{
-//             if ((buf=BUF_MEM_new()) == NULL)
-//                 {
-//                     PKCS7err(PKCS7_F_PKCS7_DATAFINAL,ERR_R_BIO_LIB);
-//                     goto err;
-//                 }
-//             for (i=0; i<sk_PKCS7_SIGNER_INFO_num(si_sk); i++)
-//                 {
-//                     si=sk_PKCS7_SIGNER_INFO_value(si_sk,i);
-//                     if (si->pkey == NULL) continue;
+            for(SignerInfoWithPkey si : siSk) {
+                if(si.getPkey() == null) {
+                    continue;
+                }
+                int j = ASN1Registry.obj2nid(si.getDigestAlgorithm().getObjectId());
+                btmp = bio;
+                MessageDigest[] _mdc = new MessageDigest[] {mdc};
+                btmp = findDigest(_mdc, btmp, j);
+                mdc = _mdc[0];
+                if(btmp == null) {
+                    return ret;
+                }
 
-//                     j=OBJ_obj2nid(si->digest_alg->algorithm);
+                try {
+                    ctx_tmp = (MessageDigest)mdc.clone();
+                } catch(CloneNotSupportedException e) {
+                    throw new RuntimeException(e);
+                }
+                
+                byte[] newBuf = new byte[bufLen + si.getPkey().getEncoded().length];
+                System.arraycopy(buf, 0, bufLen, 0, bufLen);
+                buf = newBuf;
 
-//                     btmp=bio;
+                sk = si.getAuthenticatedAttributes();
 
-//                     btmp = PKCS7_find_digest(&mdc, btmp, j);
+                if(sk != null && sk.size() > 0) {
+                    /* Add signing time if not already present */
+                    if(null == si.getSignedAttribute(ASN1Registry.NID_pkcs9_signingTime)) {
+                        DERUTCTime signTime = new DERUTCTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
+                        si.addSignedAttribute(ASN1Registry.NID_pkcs9_signingTime, signTime);
+                    }
 
-//                     if (btmp == NULL)
-//                         goto err;
+                    byte[] md_data = ctx_tmp.digest();
+                    ASN1OctetString digest = new DEROctetString(md_data);
+                    si.addSignedAttribute(ASN1Registry.NID_pkcs9_messageDigest, digest);
 
-//                     /* We now have the EVP_MD_CTX, lets do the
-//                      * signing. */
-//                     EVP_MD_CTX_copy_ex(&ctx_tmp,mdc);
-//                     if (!BUF_MEM_grow_clean(buf,EVP_PKEY_size(si->pkey)))
-//                         {
-//                             PKCS7err(PKCS7_F_PKCS7_DATAFINAL,ERR_R_BIO_LIB);
-//                             goto err;
-//                         }
 
-//                     sk=si->auth_attr;
-
-//                     /* If there are attributes, we add the digest
-//                      * attribute and only sign the attributes */
-//                     if ((sk != NULL) && (sk_X509_ATTRIBUTE_num(sk) != 0))
-//                         {
-//                             unsigned char md_data[EVP_MAX_MD_SIZE], *abuf=NULL;
-//                             unsigned int md_len, alen;
-//                             ASN1_OCTET_STRING *digest;
-//                             ASN1_UTCTIME *sign_time;
-//                             const EVP_MD *md_tmp;
-
-//                             /* Add signing time if not already present */
-//                             if (!PKCS7_get_signed_attribute(si,
-//                                                             NID_pkcs9_signingTime))
-//                                 {
-//                                     if (!(sign_time=X509_gmtime_adj(NULL,0)))
-//                                         {
-//                                             PKCS7err(PKCS7_F_PKCS7_DATAFINAL,
-//                                                      ERR_R_MALLOC_FAILURE);
-//                                             goto err;
-//                                         }
-//                                     PKCS7_add_signed_attribute(si,
-//                                                                NID_pkcs9_signingTime,
-//                                                                V_ASN1_UTCTIME,sign_time);
-//                                 }
-
-//                             /* Add digest */
-//                             md_tmp=EVP_MD_CTX_md(&ctx_tmp);
-//                             EVP_DigestFinal_ex(&ctx_tmp,md_data,&md_len);
-//                             if (!(digest=M_ASN1_OCTET_STRING_new()))
-//                                 {
-//                                     PKCS7err(PKCS7_F_PKCS7_DATAFINAL,
-//                                              ERR_R_MALLOC_FAILURE);
-//                                     goto err;
-//                                 }
-//                             if (!M_ASN1_OCTET_STRING_set(digest,md_data,
-//                                                          md_len))
-//                                 {
-//                                     PKCS7err(PKCS7_F_PKCS7_DATAFINAL,
-//                                              ERR_R_MALLOC_FAILURE);
-//                                     goto err;
-//                                 }
-//                             PKCS7_add_signed_attribute(si,
-//                                                        NID_pkcs9_messageDigest,
-//                                                        V_ASN1_OCTET_STRING,digest);
 
 //                             /* Now sign the attributes */
 //                             EVP_SignInit_ex(&ctx_tmp,md_tmp,NULL);
@@ -549,7 +507,8 @@ public class PKCS7 {
 //                             if(!abuf) goto err;
 //                             EVP_SignUpdate(&ctx_tmp,abuf,alen);
 //                             OPENSSL_free(abuf);
-//                         }
+                }
+
 
 // #ifndef OPENSSL_NO_DSA
 //                     if (si->pkey->type == EVP_PKEY_DSA)
@@ -572,8 +531,8 @@ public class PKCS7 {
 //                             PKCS7err(PKCS7_F_PKCS7_DATAFINAL,ERR_R_ASN1_LIB);
 //                             goto err;
 //                         }
-//                 }
-// 		}
+            }
+        }
 // 	else if (i == NID_pkcs7_digest)
 // 		{
 //             unsigned char md_data[EVP_MAX_MD_SIZE];
@@ -599,6 +558,51 @@ public class PKCS7 {
 //              */
 //             BIO_set_flags(btmp, BIO_FLAGS_MEM_RDONLY);
 //             BIO_set_mem_eof_return(btmp, 0);
+
+
+
+        switch(i) {
+        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
+            getSignedAndEnveloped().getEncData().setEncData(null);
+            break;
+        case ASN1Registry.NID_pkcs7_enveloped:
+            getEnveloped().getEncData().setEncData(null);
+            break;
+        case ASN1Registry.NID_pkcs7_signed:
+            break;
+        case ASN1Registry.NID_pkcs7_digest:
+            break;
+        default:
+            break;
+        }
+
+// 	switch (i)
+// 		{
+//         case NID_pkcs7_signed:
+//             os=PKCS7_get_octet_string(p7->d.sign->contents);
+//             /* If detached data then the content is excluded */
+//             if(PKCS7_type_is_data(p7->d.sign->contents) && p7->detached) {
+//                 M_ASN1_OCTET_STRING_free(os);
+//                 p7->d.sign->contents->d.data = NULL;
+//             }
+//             break;
+
+//         case NID_pkcs7_digest:
+//             os=PKCS7_get_octet_string(p7->d.digest->contents);
+//             /* If detached data then the content is excluded */
+//             if(PKCS7_type_is_data(p7->d.digest->contents) && p7->detached)
+//                 {
+//                     M_ASN1_OCTET_STRING_free(os);
+//                     p7->d.digest->contents->d.data = NULL;
+//                 }
+//             break;
+
+// 		}
+
+
+
+
+
 //             os->data = (unsigned char *)buf_mem->data;
 //             os->length = buf_mem->length;
 // #if 0
@@ -612,6 +616,7 @@ public class PKCS7 {
 // 	if (buf != NULL) BUF_MEM_free(buf);
 // 	return(ret);
        // TODO: implement
+        return -1;
     }
 
     @Override

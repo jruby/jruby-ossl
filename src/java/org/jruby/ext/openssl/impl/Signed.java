@@ -74,7 +74,7 @@ public class Signed {
     /**
      * Describe signerInfo here.
      */
-    private Set<SignerInfo> signerInfo = new HashSet<SignerInfo>();
+    private Set<SignerInfoWithPkey> signerInfo = new HashSet<SignerInfoWithPkey>();
 
     PKCS7 contents;
 
@@ -99,9 +99,9 @@ public class Signed {
     /**
      * Get the <code>SignerInfo</code> value.
      *
-     * @return a <code>Set<SignerInfo></code> value
+     * @return a <code>Set<SignerInfoWithPkey></code> value
      */
-    public final Set<SignerInfo> getSignerInfo() {
+    public final Set<SignerInfoWithPkey> getSignerInfo() {
         return signerInfo;
     }
 
@@ -110,7 +110,7 @@ public class Signed {
      *
      * @param newSignerInfo The new SignerInfo value.
      */
-    public final void setSignerInfo(final Set<SignerInfo> newSignerInfo) {
+    public final void setSignerInfo(final Set<SignerInfoWithPkey> newSignerInfo) {
         this.signerInfo = newSignerInfo;
     }
 
@@ -266,11 +266,11 @@ public class Signed {
         return result;
     }
 
-    private static Set<SignerInfo> signerInfosFromASN1Set(DEREncodable content) {
+    private static Set<SignerInfoWithPkey> signerInfosFromASN1Set(DEREncodable content) {
         ASN1Set set = (ASN1Set)content;
-        Set<SignerInfo> result = new HashSet<SignerInfo>();
+        Set<SignerInfoWithPkey> result = new HashSet<SignerInfoWithPkey>();
         for(Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
-            result.add(SignerInfo.getInstance(e.nextElement()));
+            result.add(SignerInfoWithPkey.getInstance(e.nextElement()));
         }
         return result;
     }

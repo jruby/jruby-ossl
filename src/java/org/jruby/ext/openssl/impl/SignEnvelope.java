@@ -66,7 +66,7 @@ public class SignEnvelope {
     /**
      * Describe signerInfo here.
      */
-    private Set<SignerInfo> signerInfo = new HashSet<SignerInfo>();
+    private Set<SignerInfoWithPkey> signerInfo = new HashSet<SignerInfoWithPkey>();
 
     /**
      * Describe recipientInfo here.
@@ -128,20 +128,20 @@ public class SignEnvelope {
     }
 
     /**
-     * Get the <code>SignerInfo</code> value.
+     * Get the <code>SignerInfoWithPkey</code> value.
      *
-     * @return a <code>Set<SignerInfo></code> value
+     * @return a <code>Set<SignerInfoWithPkey></code> value
      */
-    public final Set<SignerInfo> getSignerInfo() {
+    public final Set<SignerInfoWithPkey> getSignerInfo() {
         return signerInfo;
     }
 
     /**
-     * Set the <code>SignerInfo</code> value.
+     * Set the <code>SignerInfoWithPkey</code> value.
      *
      * @param newSignerInfo The new SignerInfo value.
      */
-    public final void setSignerInfo(final Set<SignerInfo> newSignerInfo) {
+    public final void setSignerInfo(final Set<SignerInfoWithPkey> newSignerInfo) {
         this.signerInfo = newSignerInfo;
     }
 

@@ -56,7 +56,7 @@ public class PKCS7DataSigned extends PKCS7Data {
     }
 
     public int getType() {
-        return PKCS7.NID_pkcs7_signed;
+        return ASN1Registry.NID_pkcs7_signed;
     }
 
     public Object ctrl(int cmd, Object v, Object ignored) {
@@ -94,7 +94,7 @@ public class PKCS7DataSigned extends PKCS7Data {
         return true;
     }
 
-    public void addSigner(SignerInfo psi) {
+    public void addSigner(SignerInfoWithPkey psi) {
         this.sign.getMdAlgs().add(psi.getDigestAlgorithm());
         this.sign.getSignerInfo().add(psi);
     }
@@ -103,7 +103,7 @@ public class PKCS7DataSigned extends PKCS7Data {
         this.sign.setContents(p7);
     }
 
-    public Set<SignerInfo> getSignerInfo() {
+    public Set<SignerInfoWithPkey> getSignerInfo() {
         return this.sign.getSignerInfo();
     }
 

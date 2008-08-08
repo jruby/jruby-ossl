@@ -40,11 +40,11 @@ public class PKCS7DataEncrypted extends PKCS7Data {
     public PKCS7DataEncrypted() {
         this.encrypted = new Encrypt();
         this.encrypted.setVersion(0);
-        this.encrypted.getEncData().setContentType(PKCS7.NID_pkcs7_data);
+        this.encrypted.getEncData().setContentType(ASN1Registry.NID_pkcs7_data);
     }
 
     public int getType() {
-        return PKCS7.NID_pkcs7_encrypted;
+        return ASN1Registry.NID_pkcs7_encrypted;
     }
     
     public Encrypt getEncrypted() {

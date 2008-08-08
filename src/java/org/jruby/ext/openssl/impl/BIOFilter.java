@@ -32,4 +32,7 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public abstract class BIOFilter extends BIO {
+    public int getType() {
+        return TYPE_FILTER;
+    }
 }// BIOFilter

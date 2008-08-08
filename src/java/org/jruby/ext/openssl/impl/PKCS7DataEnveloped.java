@@ -42,7 +42,7 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
     public PKCS7DataEnveloped() {
         this.enveloped = new Envelope();
         this.enveloped.setVersion(0);
-        this.enveloped.getEncData().setContentType(PKCS7.NID_pkcs7_data);
+        this.enveloped.getEncData().setContentType(ASN1Registry.NID_pkcs7_data);
     }
 
     public PKCS7DataEnveloped(Envelope enveloped) {
@@ -50,7 +50,7 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
     }
 
     public int getType() {
-        return PKCS7.NID_pkcs7_enveloped;
+        return ASN1Registry.NID_pkcs7_enveloped;
     }
 
     public Envelope getEnveloped() {

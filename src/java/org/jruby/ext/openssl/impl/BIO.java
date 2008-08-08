@@ -38,6 +38,30 @@ import javax.crypto.Cipher;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class BIO {
+    public final static int TYPE_DESCRIPTOR  = 0x0100;
+    public final static int TYPE_FILTER      = 0x0200;
+    public final static int TYPE_SOURCE_SINK = 0x0400;
+    
+    public final static int TYPE_NONE            =    0;
+    public final static int TYPE_MEM             =    1  | TYPE_SOURCE_SINK;
+    public final static int TYPE_FILE            =    2  | TYPE_SOURCE_SINK;
+    public final static int TYPE_FD              =    4  | TYPE_SOURCE_SINK | TYPE_DESCRIPTOR;
+    public final static int TYPE_SOCKET          =    5  | TYPE_SOURCE_SINK | TYPE_DESCRIPTOR;
+    public final static int TYPE_NULL            =    6  | TYPE_SOURCE_SINK;
+    public final static int TYPE_SSL             =    7  | TYPE_FILTER;
+    public final static int TYPE_MD              =    8  | TYPE_FILTER;
+    public final static int TYPE_BUFFER          =    9  | TYPE_FILTER;
+    public final static int TYPE_CIPHER          =    10 | TYPE_FILTER;
+    public final static int TYPE_BASE64          =    11 | TYPE_FILTER;
+    public final static int TYPE_CONNECT         =    12 | TYPE_SOURCE_SINK | TYPE_DESCRIPTOR;
+    public final static int TYPE_ACCEPT          =    13 | TYPE_SOURCE_SINK | TYPE_DESCRIPTOR;
+    public final static int TYPE_PROXY_CLIENT    =    14 | TYPE_FILTER;
+    public final static int TYPE_PROXY_SERVER    =    15 | TYPE_FILTER;
+    public final static int TYPE_NBIO_TEST       =    16 | TYPE_FILTER;
+    public final static int TYPE_NULL_FILTER     =    17 | TYPE_FILTER;
+    public final static int TYPE_BER             =    18 | TYPE_FILTER;
+    public final static int TYPE_BIO             =    19 | TYPE_SOURCE_SINK;
+
     private static final class BIOInputStream extends InputStream {
         private BIO bio;
 
@@ -135,7 +159,7 @@ public class BIO {
      *
      */
     public static BIO nullSink() {
-        return null;
+        return new NullSinkBIO();
     }
 
     /** c: BIO_new_mem_buf
@@ -225,5 +249,23 @@ public class BIO {
         this.nextBio = null;
         this.prevBio = null;
         return ret;
+    }
+
+    /** c: BIO_find_type
+     *
+     */
+    public BIO findType(int type) {
+        return null;
+    }
+
+    /** c: BIO_next
+     *
+     */
+    public BIO next() {
+        return this.nextBio;
+    }
+
+    public int getType() {
+        return TYPE_BIO;
     }
 }// BIO

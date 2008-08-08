@@ -48,11 +48,11 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
     public PKCS7DataSignedAndEnveloped() {
         this.signedAndEnveloped = new SignEnvelope();
         this.signedAndEnveloped.setVersion(1);
-        this.signedAndEnveloped.getEncData().setContentType(PKCS7.NID_pkcs7_data);
+        this.signedAndEnveloped.getEncData().setContentType(ASN1Registry.NID_pkcs7_data);
     }
 
     public int getType() {
-        return PKCS7.NID_pkcs7_signedAndEnveloped;
+        return ASN1Registry.NID_pkcs7_signedAndEnveloped;
     }
 
     public boolean isSignedAndEnveloped() {
@@ -71,12 +71,12 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
         this.signedAndEnveloped.getRecipientInfo().add(ri);
     }
 
-    public void addSigner(SignerInfo psi) {
+    public void addSigner(SignerInfoWithPkey psi) {
         this.signedAndEnveloped.getMdAlgs().add(psi.getDigestAlgorithm());
         this.signedAndEnveloped.getSignerInfo().add(psi);
     }
 
-    public Set<SignerInfo> getSignerInfo() {
+    public Set<SignerInfoWithPkey> getSignerInfo() {
         return this.signedAndEnveloped.getSignerInfo();
     }
 

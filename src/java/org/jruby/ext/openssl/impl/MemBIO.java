@@ -100,4 +100,8 @@ public class MemBIO extends BIO {
     @Override
     public void setMemEofReturn(int value) {
     }
+
+    public int getType() {
+        return TYPE_MEM;
+    }
 }// MemBIO

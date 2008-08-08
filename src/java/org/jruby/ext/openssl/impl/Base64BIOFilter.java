@@ -77,4 +77,8 @@ public class Base64BIOFilter extends BIOFilter {
         this.nextInput = new Base64.InputStream(BIO.asInputStream(this.nextBio));
         return ret;
     }
+
+    public int getType() {
+        return TYPE_BASE64;
+    }
 }// Base64BIOFilter

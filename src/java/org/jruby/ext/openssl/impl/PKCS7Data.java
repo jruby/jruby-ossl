@@ -118,7 +118,7 @@ public abstract class PKCS7Data {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_RECIPIENT_INFO,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
-    public void addSigner(SignerInfo psi) {
+    public void addSigner(SignerInfoWithPkey psi) {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_SIGNER,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
@@ -126,7 +126,7 @@ public abstract class PKCS7Data {
         throw new PKCS7Exception(PKCS7.F_PKCS7_SET_CONTENT,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
-    public Set<SignerInfo> getSignerInfo() {
+    public Set<SignerInfoWithPkey> getSignerInfo() {
         return null;
     }
 
@@ -140,17 +140,17 @@ public abstract class PKCS7Data {
 
     public static PKCS7Data fromASN1(Integer nid, DEREncodable content) {
         switch(nid) {
-        case PKCS7.NID_pkcs7_data:
+        case ASN1Registry.NID_pkcs7_data:
             return PKCS7DataData.fromASN1(content);
-        case PKCS7.NID_pkcs7_signed:
+        case ASN1Registry.NID_pkcs7_signed:
             return PKCS7DataSigned.fromASN1(content);
-        case PKCS7.NID_pkcs7_enveloped:
+        case ASN1Registry.NID_pkcs7_enveloped:
             return PKCS7DataEnveloped.fromASN1(content);
-        case PKCS7.NID_pkcs7_signedAndEnveloped:
+        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
             return PKCS7DataSignedAndEnveloped.fromASN1(content);
-        case PKCS7.NID_pkcs7_digest:
+        case ASN1Registry.NID_pkcs7_digest:
             return PKCS7DataDigest.fromASN1(content);
-        case PKCS7.NID_pkcs7_encrypted:
+        case ASN1Registry.NID_pkcs7_encrypted:
             return PKCS7DataEncrypted.fromASN1(content);
         default:
             throw new UnsupportedOperationException("can't handle PKCS#7 with content type " + ASN1Registry.nid2ln(nid));

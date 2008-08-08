@@ -39,4 +39,8 @@ public class CipherBIOFilter extends BIOFilter {
     public CipherBIOFilter(Cipher cipher) {
         this.cipher = cipher;
     }
+
+    public int getType() {
+        return TYPE_CIPHER;
+    }
 }// CipherBIOFilter

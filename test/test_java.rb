@@ -31,7 +31,7 @@ if defined?(JRUBY_VERSION)
     PKCS7Exception = org.jruby.ext.openssl.impl.PKCS7Exception unless defined?(PKCS7Exception)
     ASN1Registry = org.jruby.ext.openssl.impl.ASN1Registry unless defined?(ASN1Registry)
     AlgorithmIdentifier = org.bouncycastle.asn1.x509.AlgorithmIdentifier unless defined?(AlgorithmIdentifier)
-    SignerInfo = org.bouncycastle.asn1.pkcs.SignerInfo unless defined?(SignerInfo)
+    SignerInfoWithPkey = org.jruby.ext.openssl.impl.SignerInfoWithPkey unless defined?(SignerInfoWithPkey)
     IssuerAndSerialNumber = org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber unless defined?(IssuerAndSerialNumber)
     
     ArrayList = java.util.ArrayList unless defined?(ArrayList)

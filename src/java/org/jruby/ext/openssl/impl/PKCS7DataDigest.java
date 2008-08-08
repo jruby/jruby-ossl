@@ -43,7 +43,7 @@ public class PKCS7DataDigest extends PKCS7Data  {
     }
 
     public int getType() {
-        return PKCS7.NID_pkcs7_digest;
+        return ASN1Registry.NID_pkcs7_digest;
     }
 
     public Digest getDigest() {

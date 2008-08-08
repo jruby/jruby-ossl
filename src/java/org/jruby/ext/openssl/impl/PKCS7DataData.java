@@ -48,7 +48,7 @@ public class PKCS7DataData extends PKCS7Data {
     }
 
     public int getType() {
-        return PKCS7.NID_pkcs7_data;
+        return ASN1Registry.NID_pkcs7_data;
     }
 
     public void setData(ASN1OctetString data) {
