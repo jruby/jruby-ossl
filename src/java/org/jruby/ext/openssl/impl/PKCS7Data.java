@@ -106,6 +106,10 @@ public abstract class PKCS7Data {
         return false;
     }
 
+    public boolean isOther() {
+        return false;
+    }
+
     public void setCipher(Cipher cipher) {
         throw new PKCS7Exception(PKCS7.F_PKCS7_SET_CIPHER,PKCS7.R_WRONG_CONTENT_TYPE);
     }

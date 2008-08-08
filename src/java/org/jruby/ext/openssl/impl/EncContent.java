@@ -134,7 +134,7 @@ public class EncContent {
 
     @Override
     public String toString() {
-        return "#<EncContent contentType="+contentType+" algorithm="+ASN1Registry.o2a(algorithm.getObjectId())+" content="+encData+">";
+        return "#<EncContent contentType="+contentType+" algorithm="+(algorithm == null ? "null" : ASN1Registry.o2a(algorithm.getObjectId()))+" content="+encData+">";
     }
 
     /**

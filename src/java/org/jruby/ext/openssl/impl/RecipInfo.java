@@ -45,11 +45,17 @@ public class RecipInfo {
     private AlgorithmIdentifier keyEncAlgor;
     private ASN1OctetString encKey;
 
+    /**
+     * Describe cert here.
+     */
+    private X509Certificate cert;
+
     /** c: PKCS7_RECIP_INFO_set
      *
      */
     public void set(X509Certificate cert) {
         // TODO: implement
+        setCert(cert);
     }
 
     @Override
@@ -152,6 +158,25 @@ public class RecipInfo {
     public final void setEncKey(final ASN1OctetString newEncKey) {
         this.encKey = newEncKey;
     }
+
+    /**
+     * Get the <code>Cert</code> value.
+     *
+     * @return a <code>X509Certificate</code> value
+     */
+    public final X509Certificate getCert() {
+        return cert;
+    }
+
+    /**
+     * Set the <code>Cert</code> value.
+     *
+     * @param newCert The new Cert value.
+     */
+    public final void setCert(final X509Certificate newCert) {
+        this.cert = newCert;
+    }
+
     /**
      * RecipientInfo ::= SEQUENCE {
      *   version Version,

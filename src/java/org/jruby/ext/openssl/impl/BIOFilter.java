@@ -27,76 +27,9 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-
-/** PKCS7_DIGEST
+/**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class Digest {
-    /**
-     * Describe version here.
-     */
-    private int version;
-
-    /**
-     * Describe md here.
-     */
-    private AlgorithmIdentifier md;
-
-    PKCS7 contents;
-
-    /**
-     * Get the <code>Version</code> value.
-     *
-     * @return an <code>int</code> value
-     */
-    public final int getVersion() {
-        return version;
-    }
-
-    /**
-     * Set the <code>Version</code> value.
-     *
-     * @param newVersion The new Version value.
-     */
-    public final void setVersion(final int newVersion) {
-        this.version = newVersion;
-    }
-
-    /**
-     * Get the <code>Contents</code> value.
-     *
-     * @return a <code>PKCS7</code> value
-     */
-    public final PKCS7 getContents() {
-        return contents;
-    }
-
-    /**
-     * Set the <code>Contents</code> value.
-     *
-     * @param newContents The new Contents value.
-     */
-    public final void setContents(final PKCS7 newContents) {
-        this.contents = newContents;
-    }
-
-    /**
-     * Get the <code>Md</code> value.
-     *
-     * @return an <code>AlgorithmIdentifier</code> value
-     */
-    public final AlgorithmIdentifier getMd() {
-        return md;
-    }
-
-    /**
-     * Set the <code>Md</code> value.
-     *
-     * @param newMd The new Md value.
-     */
-    public final void setMd(final AlgorithmIdentifier newMd) {
-        this.md = newMd;
-    }
-}// Digest
+public abstract class BIOFilter extends BIO {
+}// BIOFilter

@@ -36,14 +36,9 @@ import org.jruby.ext.openssl.impl.utils.Base64;
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class Base64BIOFilter extends BIO {
+public class Base64BIOFilter extends BIOFilter {
     private OutputStream nextOutput;
     private InputStream nextInput;
-
-    public Base64BIOFilter(BIO next) {
-        this.nextOutput = new Base64.OutputStream(BIO.asOutputStream(next));
-        this.nextInput = new Base64.InputStream(BIO.asInputStream(next));
-    }
 
     @Override
     public int write(byte[] out, int offset, int len) throws IOException {
@@ -74,5 +69,12 @@ public class Base64BIOFilter extends BIO {
     @Override
     public void flush() throws IOException {
         this.nextOutput.flush();
+    }
+
+    public BIO push(BIO bio) {
+        BIO ret = super.push(bio);
+        this.nextOutput = new Base64.OutputStream(BIO.asOutputStream(this.nextBio));
+        this.nextInput = new Base64.InputStream(BIO.asInputStream(this.nextBio));
+        return ret;
     }
 }// Base64BIOFilter

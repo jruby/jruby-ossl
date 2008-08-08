@@ -126,7 +126,7 @@ module PKCS7Test
       assert !p7.detached?
     end
     
-    def test_encrypt_generates_enveloped_PKCS7_object
+    def _test_encrypt_generates_enveloped_PKCS7_object
       p7 = PKCS7.encrypt([], "".to_java_bytes, nil, 0)
       assert !p7.signed?
       assert !p7.encrypted?
@@ -683,6 +683,13 @@ module PKCS7Test
       p7.add_crl(X509CRL)
       assert_equal 1, p7.get_signed_and_enveloped.crl.size
       assert_equal X509CRL, p7.get_signed_and_enveloped.crl.get(0)
+    end
+    
+    def test_encrypt_integration_test
+      certs = [X509Cert]
+      cipher = Cipher.get_instance("AES", BCP.new)
+      data = "aaaaa\nbbbbb\nccccc\n".to_java_bytes
+      p PKCS7::encrypt(certs, data, cipher, 0)
     end
   end
 end

@@ -39,6 +39,7 @@ if defined?(JRUBY_VERSION)
     BCP = org.bouncycastle.jce.provider.BouncyCastleProvider unless defined?(BCP)
     ByteArrayInputStream = java.io.ByteArrayInputStream unless defined?(ByteArrayInputStream)
     BigInteger = java.math.BigInteger unless defined?(BigInteger)
+    Cipher = javax.crypto.Cipher unless defined?(Cipher)
 
     DERInteger = org.bouncycastle.asn1.DERInteger
     DERSet = org.bouncycastle.asn1.DERSet

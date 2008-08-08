@@ -30,6 +30,8 @@ package org.jruby.ext.openssl.impl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.MessageDigest;
+import javax.crypto.Cipher;
 
 /** c: BIO
  *
@@ -99,7 +101,17 @@ public class BIO {
     }
 
     public static BIO base64Filter(BIO real) {
-        return new Base64BIOFilter(real);
+        BIO b64 = new Base64BIOFilter();
+        b64.push(real);
+        return b64;
+    }
+
+    public static BIO mdFilter(MessageDigest md) {
+        return new MessageDigestBIOFilter(md);
+    }
+
+    public static BIO cipherFilter(Cipher cipher) {
+        return new CipherBIOFilter(cipher);
     }
 
     public static BIO fromString(String input) {
@@ -118,6 +130,30 @@ public class BIO {
     public static BIO mem() {
         return new MemBIO();
     }
+
+    /** c: BIO_new(BIO_s_null())
+     *
+     */
+    public static BIO nullSink() {
+        return null;
+    }
+
+    /** c: BIO_new_mem_buf
+     *
+     */
+    public static BIO memBuf(byte[] arr) {
+        try {
+            BIO bio = new MemBIO();
+            bio.write(arr, 0, arr.length);
+            return bio;
+        } catch(IOException e) {
+            return null;
+        }
+    }
+
+    protected BIO nextBio;
+    protected BIO prevBio;
+    
     
     /** c: BIO_flush
      *
@@ -158,5 +194,36 @@ public class BIO {
      */
     public void setMemEofReturn(int value) {
         throw new UnsupportedOperationException();
+    }
+
+    /** c: BIO_push
+     *
+     */
+    public BIO push(BIO bio) {
+        BIO lb = this;
+        while(lb.nextBio != null) {
+            lb = lb.nextBio;
+        }
+        if(bio != null) {
+            bio.prevBio = lb;
+        }
+        lb.nextBio = bio;
+        return this;
+    }
+
+    /** c: BIO_pop
+     *
+     */
+    public BIO pop() {
+        BIO ret = this.nextBio;
+        if(this.prevBio != null) {
+            this.prevBio.nextBio = this.nextBio;
+        }
+        if(this.nextBio != null) {
+            this.nextBio.prevBio = this.prevBio;
+        }
+        this.nextBio = null;
+        this.prevBio = null;
+        return ret;
     }
 }// BIO
