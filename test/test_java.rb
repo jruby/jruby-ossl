@@ -33,6 +33,7 @@ if defined?(JRUBY_VERSION)
     AlgorithmIdentifier = org.bouncycastle.asn1.x509.AlgorithmIdentifier unless defined?(AlgorithmIdentifier)
     SignerInfoWithPkey = org.jruby.ext.openssl.impl.SignerInfoWithPkey unless defined?(SignerInfoWithPkey)
     IssuerAndSerialNumber = org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber unless defined?(IssuerAndSerialNumber)
+    ASN1InputStream = org.bouncycastle.asn1.ASN1InputStream unless defined?(ASN1InputStream)
     
     ArrayList = java.util.ArrayList unless defined?(ArrayList)
     CertificateFactory = java.security.cert.CertificateFactory unless defined?(CertificateFactory)

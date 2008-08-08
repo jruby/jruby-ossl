@@ -64,11 +64,22 @@ public class RecipInfo {
             X509Name issuer = X509Name.getInstance(new ASN1InputStream(new ByteArrayInputStream(cert.getIssuerX500Principal().getEncoded())).readObject());
             BigInteger serial = cert.getSerialNumber();
             issuerAndSerial = new IssuerAndSerialNumber(issuer, serial);
-            keyEncAlgor = new AlgorithmIdentifier(ASN1Registry.sym2oid(cert.getPublicKey().getAlgorithm()));
+            String algo = addEncryptionIfNeeded(cert.getPublicKey().getAlgorithm());
+            keyEncAlgor = new AlgorithmIdentifier(ASN1Registry.sym2oid(algo));
             this.cert = cert;
         } catch(IOException e) {
             throw new PKCS7Exception(-1, -1);
         }
+    }
+
+    private String addEncryptionIfNeeded(String input) {
+        input = input.toLowerCase();
+        if(input.equals("rsa")) {
+            return input + "Encryption";
+        } else if(input.equals("dsa")) {
+            return input + "Encryption";
+        }
+        return input;
     }
 
     @Override
@@ -97,7 +108,7 @@ public class RecipInfo {
 
     @Override
     public String toString() {
-        return "#<Recipient version="+version+" issuerAndSerial="+issuerAndSerial+" keyEncAlgor="+keyEncAlgor+" encKey="+encKey+">";
+        return "#<Recipient version="+version+" issuerAndSerial=["+issuerAndSerial.getName()+","+issuerAndSerial.getCertificateSerialNumber()+"] keyEncAlgor="+ASN1Registry.o2a(keyEncAlgor.getObjectId())+" encKey="+encKey+">";
     }
 
     /**
