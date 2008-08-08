@@ -189,7 +189,7 @@ public class BIO {
      *
      */
     public void crlfCopy(byte[] in, int flags) throws IOException {
-        //        throw new UnsupportedOperationException();
+        throw new RuntimeException("TODO: implement");
     }
 
     /** c: BIO_gets
@@ -255,6 +255,20 @@ public class BIO {
      *
      */
     public BIO findType(int type) {
+        int mask = type & 0xFF;
+        BIO bio = this;
+        do {
+            int mt = bio.getType();
+            if(mask == 0) {
+                if((mt & type) != 0) {
+                    return bio;
+                }
+            } else if(mt == type) {
+                return bio;
+            }
+            bio = bio.nextBio;
+        } while(bio != null);
+
         return null;
     }
 

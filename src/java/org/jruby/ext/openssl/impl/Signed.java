@@ -238,7 +238,7 @@ public class Signed {
             signed.setCert(certificatesFromASN1Set(certificates));
         }
         if(crls != null) {
-            throw new RuntimeException("TODO implement CRL part");
+            throw new RuntimeException("TODO: implement CRL part");
         }
         signed.setSignerInfo(signerInfosFromASN1Set(signerInfos));
 
@@ -248,7 +248,6 @@ public class Signed {
     private static Set<X509Certificate> certificatesFromASN1Set(DEREncodable content) {
         Set<X509Certificate> result = new HashSet<X509Certificate>();
         X509CertificateStructure struct = X509CertificateStructure.getInstance(content);
-        // TODO: This needs to check for the possibility of PKCS#6 ExtendedCertificate too
         try {
             result.add(new X509CertificateObject(struct));
         } catch(CertificateParsingException ex) {

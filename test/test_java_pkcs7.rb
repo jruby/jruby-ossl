@@ -122,7 +122,6 @@ module PKCS7Test
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_data
       
-      p7.detached = 1
       assert !p7.detached?
     end
     

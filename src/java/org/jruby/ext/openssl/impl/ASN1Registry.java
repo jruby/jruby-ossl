@@ -50,7 +50,7 @@ public class ASN1Registry {
     }
 
     public static String ln2oid(String ln) {
-        return SYM_TO_OID.get(ln).getId();
+        return SYM_TO_OID.get(ln.toLowerCase()).getId();
     }
 
     public static Integer obj2nid(DERObjectIdentifier oid) {
@@ -67,11 +67,11 @@ public class ASN1Registry {
     }
 
     public static DERObjectIdentifier sym2oid(String name) {
-        return SYM_TO_OID.get(name);
+        return SYM_TO_OID.get(name.toLowerCase());
     }
 
     public static int sym2nid(String name) {
-        return OID_TO_NID.get(SYM_TO_OID.get(name));
+        return OID_TO_NID.get(SYM_TO_OID.get(name.toLowerCase()));
     }
 
     public static String nid2ln(int nid) {

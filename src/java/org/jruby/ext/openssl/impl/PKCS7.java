@@ -155,12 +155,8 @@ public class PKCS7 {
 
             return p7;
         } catch(IOException e) {
-            // TODO: Handle correctly
-        } catch(PKCS7Exception e) {
-            // Equiv of err:
-            // TODO: Handle different exceptions correctly here
+            throw new PKCS7Exception(F_PKCS7_ENCRYPT, R_PKCS7_DATAFINAL_ERROR, e.toString());
         }
-        return null;
     }
 
     /** c: PKCS7_set_type

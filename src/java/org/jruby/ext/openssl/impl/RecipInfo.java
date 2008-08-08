@@ -27,13 +27,18 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.math.BigInteger;
 import java.security.cert.X509Certificate;
+import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.X509Name;
 
 /** PKCS7_RECIP_INFO
  *
@@ -53,9 +58,17 @@ public class RecipInfo {
     /** c: PKCS7_RECIP_INFO_set
      *
      */
-    public void set(X509Certificate cert) {
-        // TODO: implement
-        setCert(cert);
+    public void set(X509Certificate cert) { 
+        version = 0;
+        try {
+            X509Name issuer = X509Name.getInstance(new ASN1InputStream(new ByteArrayInputStream(cert.getIssuerX500Principal().getEncoded())).readObject());
+            BigInteger serial = cert.getSerialNumber();
+            issuerAndSerial = new IssuerAndSerialNumber(issuer, serial);
+            keyEncAlgor = new AlgorithmIdentifier(ASN1Registry.sym2oid(cert.getPublicKey().getAlgorithm()));
+            this.cert = cert;
+        } catch(IOException e) {
+            throw new PKCS7Exception(-1, -1);
+        }
     }
 
     @Override

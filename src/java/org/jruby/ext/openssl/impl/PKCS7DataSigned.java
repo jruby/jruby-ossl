@@ -76,8 +76,7 @@ public class PKCS7DataSigned extends PKCS7Data {
             }
             break;
         default:
-            // TODO: ERR
-            ret = 0;
+            throw new RuntimeException("TODO: implement error handling");
         }
         return Integer.valueOf(ret);
     }

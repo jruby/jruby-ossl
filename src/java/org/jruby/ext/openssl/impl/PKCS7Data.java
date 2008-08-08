@@ -44,8 +44,14 @@ public abstract class PKCS7Data {
     public abstract int getType();
 
     public Object ctrl(int cmd, Object v, Object ignored) {
-        // TODO: Error
-        return Integer.valueOf(0);
+        switch(cmd) {
+        case PKCS7.OP_SET_DETACHED_SIGNATURE:
+            throw new PKCS7Exception(PKCS7.F_PKCS7_CTRL,PKCS7.R_OPERATION_NOT_SUPPORTED_ON_THIS_TYPE);
+        case PKCS7.OP_GET_DETACHED_SIGNATURE:
+            throw new PKCS7Exception(PKCS7.F_PKCS7_CTRL,PKCS7.R_OPERATION_NOT_SUPPORTED_ON_THIS_TYPE);
+        default:
+            throw new PKCS7Exception(PKCS7.F_PKCS7_CTRL,PKCS7.R_UNKNOWN_OPERATION);
+        }
     }
 
     public Envelope getEnveloped() {
