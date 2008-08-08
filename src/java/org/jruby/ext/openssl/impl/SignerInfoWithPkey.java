@@ -216,6 +216,10 @@ public class SignerInfoWithPkey extends ASN1Encodable {
         this.unauthenticatedAttributes = unauthAttr;
     }
 
+    public void setEncryptedDigest(ASN1OctetString encryptedDigest) {
+        this.encryptedDigest = encryptedDigest;
+    }
+
     /** c: PKCS7_get_signed_attribute
      *
      */

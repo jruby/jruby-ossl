@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
@@ -459,9 +460,6 @@ public class PKCS7 {
         }
 
         if(siSk != null) {
-            bufLen = 0;
-            buf = new byte[0];
-
             for(SignerInfoWithPkey si : siSk) {
                 if(si.getPkey() == null) {
                     continue;
@@ -481,56 +479,37 @@ public class PKCS7 {
                     throw new RuntimeException(e);
                 }
                 
-                byte[] newBuf = new byte[bufLen + si.getPkey().getEncoded().length];
-                System.arraycopy(buf, 0, bufLen, 0, bufLen);
-                buf = newBuf;
-
                 sk = si.getAuthenticatedAttributes();
 
-                if(sk != null && sk.size() > 0) {
-                    /* Add signing time if not already present */
-                    if(null == si.getSignedAttribute(ASN1Registry.NID_pkcs9_signingTime)) {
-                        DERUTCTime signTime = new DERUTCTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
-                        si.addSignedAttribute(ASN1Registry.NID_pkcs9_signingTime, signTime);
+                Signature sign = null;
+
+                try {
+                    if(sk != null && sk.size() > 0) {
+                        /* Add signing time if not already present */
+                        if(null == si.getSignedAttribute(ASN1Registry.NID_pkcs9_signingTime)) {
+                            DERUTCTime signTime = new DERUTCTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
+                            si.addSignedAttribute(ASN1Registry.NID_pkcs9_signingTime, signTime);
+                        }
+
+                        byte[] md_data = ctx_tmp.digest();
+                        ASN1OctetString digest = new DEROctetString(md_data);
+                        si.addSignedAttribute(ASN1Registry.NID_pkcs9_messageDigest, digest);
+
+                        sk = si.getAuthenticatedAttributes();
+                        sign = Signature.getInstance(ctx_tmp.getAlgorithm());
+                        sign.initSign(si.getPkey());
+
+                        byte[] abuf = sk.getEncoded();
+                        sign.update(abuf);
                     }
 
-                    byte[] md_data = ctx_tmp.digest();
-                    ASN1OctetString digest = new DEROctetString(md_data);
-                    si.addSignedAttribute(ASN1Registry.NID_pkcs9_messageDigest, digest);
-
-
-
-//                             /* Now sign the attributes */
-//                             EVP_SignInit_ex(&ctx_tmp,md_tmp,NULL);
-//                             alen = ASN1_item_i2d((ASN1_VALUE *)sk,&abuf,
-//                                                  ASN1_ITEM_rptr(PKCS7_ATTR_SIGN));
-//                             if(!abuf) goto err;
-//                             EVP_SignUpdate(&ctx_tmp,abuf,alen);
-//                             OPENSSL_free(abuf);
+                    if(sign != null) {
+                        byte[] out = sign.sign();
+                        si.setEncryptedDigest(new DEROctetString(out));
+                    }
+                } catch(Exception e) {
+                    throw new PKCS7Exception(F_PKCS7_DATAFINAL,-1,e.toString());
                 }
-
-
-// #ifndef OPENSSL_NO_DSA
-//                     if (si->pkey->type == EVP_PKEY_DSA)
-//                         ctx_tmp.digest=EVP_dss1();
-// #endif
-// #ifndef OPENSSL_NO_ECDSA
-//                     if (si->pkey->type == EVP_PKEY_EC)
-//                         ctx_tmp.digest=EVP_ecdsa();
-// #endif
-
-//                     if (!EVP_SignFinal(&ctx_tmp,(unsigned char *)buf->data,
-//                                        (unsigned int *)&buf->length,si->pkey))
-//                         {
-//                             PKCS7err(PKCS7_F_PKCS7_DATAFINAL,ERR_R_EVP_LIB);
-//                             goto err;
-//                         }
-//                     if (!ASN1_STRING_set(si->enc_digest,
-//                                          (unsigned char *)buf->data,buf->length))
-//                         {
-//                             PKCS7err(PKCS7_F_PKCS7_DATAFINAL,ERR_R_ASN1_LIB);
-//                             goto err;
-//                         }
             }
         }
 // 	else if (i == NID_pkcs7_digest)
