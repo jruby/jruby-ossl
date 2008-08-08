@@ -27,8 +27,9 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import javax.crypto.Cipher;
 
+import javax.crypto.Cipher;
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.DEREncodable;
 
 /**
@@ -76,5 +77,9 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
 
     public static PKCS7DataEnveloped fromASN1(DEREncodable content) {
         return new PKCS7DataEnveloped(Envelope.fromASN1(content));
+    }
+
+    public ASN1Encodable asASN1() {
+        return enveloped.asASN1();
     }
 }// PKCS7DataEnveloped

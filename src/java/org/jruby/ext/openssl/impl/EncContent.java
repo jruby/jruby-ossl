@@ -28,10 +28,13 @@
 package org.jruby.ext.openssl.impl;
 
 import javax.crypto.Cipher;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERObjectIdentifier;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
@@ -162,4 +165,14 @@ public class EncContent {
         }
         return ec;
     }
+
+    public ASN1Encodable asASN1() {
+        ASN1EncodableVector vector = new ASN1EncodableVector();
+        vector.add(ASN1Registry.nid2obj(contentType).toASN1Object());
+        vector.add(algorithm.toASN1Object());
+        if(encData != null) {
+            vector.add(new DERTaggedObject(0, encData).toASN1Object());
+        }
+        return new DERSequence(vector);
+   }
 }// EncContent

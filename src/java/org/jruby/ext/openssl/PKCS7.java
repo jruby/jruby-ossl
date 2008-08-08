@@ -58,6 +58,7 @@ import org.bouncycastle.cms.SignerInformationStore;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
+import org.jruby.RubyFile;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
@@ -65,6 +66,7 @@ import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.impl.BIO;
+import org.jruby.ext.openssl.impl.MemBIO;
 import org.jruby.ext.openssl.impl.Mime;
 import org.jruby.ext.openssl.impl.SMIME;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
@@ -113,7 +115,18 @@ public class PKCS7 extends RubyObject {
     }
 
     public static BIO obj2bio(IRubyObject obj) {
-        return null;
+        if(obj instanceof RubyFile) {
+            throw new IllegalArgumentException("TODO: handle RubyFile correctly");
+//     if (TYPE(obj) == T_FILE) {
+//         OpenFile *fptr;
+//         GetOpenFile(obj, fptr);
+//         rb_io_check_readable(fptr);
+//         bio = BIO_new_fp(fptr->f, BIO_NOCLOSE);
+        } else {
+            RubyString str = obj.convertToString();
+            ByteList bl = str.getByteList();
+            return BIO.memBuf(bl.bytes, bl.begin, bl.realSize);
+        }
     }
 
     public static PKCS7 wrap(RubyClass klass, org.jruby.ext.openssl.impl.PKCS7 p7) {
@@ -123,7 +136,7 @@ public class PKCS7 extends RubyObject {
     }
 
     public static IRubyObject membio2str(Ruby runtime, BIO bio) {
-        return null;
+        return runtime.newString(new ByteList(((MemBIO)bio).getMemCopy(), false));
     }
 
     public static class ModuleMethods {
@@ -218,30 +231,14 @@ public class PKCS7 extends RubyObject {
         arg = args[0];
 
         arg = OpenSSLImpl.to_der_if_possible(arg);
-        
+        BIO input = obj2bio(arg);
+        p7 = org.jruby.ext.openssl.impl.PKCS7.readPEM(input);
+        if(p7 == null) {
+            input.reset();
+            p7 = org.jruby.ext.openssl.impl.PKCS7.fromASN1(input);
+        }
 
-//     PKCS7 *p7;
-//     BIO *in;
-//     VALUE arg;
-
-//     if(rb_scan_args(argc, argv, "01", &arg) == 0)
-//         return self;
-//     arg = ossl_to_der_if_possible(arg);
-//     in = ossl_obj2bio(arg);
-//     p7 = PEM_read_bio_PKCS7(in, (PKCS7 **)&DATA_PTR(self), NULL, NULL);
-//     if (!p7) {
-//         BIO_reset(in);
-//         p7 = d2i_PKCS7_bio(in, (PKCS7 **)&DATA_PTR(self));
-//     }
-//     BIO_free(in);
-//     ossl_pkcs7_set_data(self, Qnil);
-//     ossl_pkcs7_set_err_string(self, Qnil);
-
-//     return self;
-
-
-
-        System.err.println("WARNING: un-implemented method called PKCS7#initialize");
+        setData(getRuntime().getNil());
         return this;
     }
 

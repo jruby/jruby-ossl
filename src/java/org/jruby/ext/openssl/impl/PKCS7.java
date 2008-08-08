@@ -135,10 +135,12 @@ public class PKCS7 {
         return fromASN1(ais.readObject());
     }
 
-    protected ASN1Encodable asASN1() {
+    public ASN1Encodable asASN1() {
         ASN1EncodableVector vector = new ASN1EncodableVector();
         DERObjectIdentifier contentType = ASN1Registry.nid2obj(getType());
         vector.add(contentType);
+        vector.add(data.asASN1());
+
         return new DERSequence(vector);
     }
 
@@ -292,14 +294,13 @@ public class PKCS7 {
                 if(Arrays.equals(PEM_STRING_PKCS7_START, tmp)) {
                     return fromASN1(BIO.base64Filter(input));
                 } else {
-                    /// TODO: err
                     return null;
                 }
             } else {
                 return null;
             }
         } catch(IOException e) {
-            throw new PKCS7Exception(F_SMIME_READ_PKCS7, -1, e.toString());
+            return null;
         }
     }
 

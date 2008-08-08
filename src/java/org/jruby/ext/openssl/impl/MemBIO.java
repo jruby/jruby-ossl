@@ -110,4 +110,8 @@ public class MemBIO extends BIO {
         System.arraycopy(buffer, 0, nbuf, 0, slen);
         return nbuf;
     }
+
+    public void reset() {
+        this.rpointer = 0;
+    }
 }// MemBIO

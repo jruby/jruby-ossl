@@ -31,6 +31,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.DEREncodable;
@@ -218,5 +220,14 @@ public class RecipInfo {
         ri.setKeyEncAlgor(AlgorithmIdentifier.getInstance(sequence.getObjectAt(2)));
         ri.setEncKey((ASN1OctetString)sequence.getObjectAt(3));
         return ri;
+    }
+
+    public ASN1Encodable asASN1() {
+        ASN1EncodableVector vector = new ASN1EncodableVector();
+        vector.add(new DERInteger(getVersion()));
+        vector.add(issuerAndSerial.toASN1Object()); 
+        vector.add(keyEncAlgor.toASN1Object());
+        vector.add(encKey.toASN1Object());
+        return new DERSequence(vector);
     }
 }// RecipInfo

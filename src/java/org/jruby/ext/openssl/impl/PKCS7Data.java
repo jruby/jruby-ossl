@@ -162,4 +162,8 @@ public abstract class PKCS7Data {
             throw new UnsupportedOperationException("can't handle PKCS#7 with content type " + ASN1Registry.nid2ln(nid));
         }
     }
+
+    public ASN1Encodable asASN1() {
+        throw new UnsupportedOperationException("can't ASN1 PKCS#7 with content type " + ASN1Registry.nid2ln(getType()));
+    }
 }// PKCS7Data

@@ -32,10 +32,14 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERInteger;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.DERSet;
 
 /** PKCS7_ENVELOPE
  *
@@ -138,6 +142,21 @@ public class Envelope {
         return envelope;
     }
 
+    public ASN1Encodable asASN1() {
+        ASN1EncodableVector vector = new ASN1EncodableVector();
+        vector.add(new DERInteger(version));
+        vector.add(receipientInfosToASN1Set());
+        vector.add(encData.asASN1());
+        return new DERSequence(vector);
+    }
+
+    private ASN1Set receipientInfosToASN1Set() {
+        ASN1EncodableVector vector = new ASN1EncodableVector();
+        for(RecipInfo ri : getRecipientInfo()) {
+            vector.add(ri.asASN1());
+        }
+        return new DERSet(vector);
+    }
 
     private static Set<RecipInfo> recipientInfosFromASN1Set(DEREncodable content) {
         ASN1Set set = (ASN1Set)content;

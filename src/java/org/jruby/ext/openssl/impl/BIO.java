@@ -166,10 +166,17 @@ public class BIO {
      *
      */
     public static BIO memBuf(byte[] arr) {
+        return memBuf(arr, 0, arr.length);
+    }
+
+    /** c: BIO_new_mem_buf
+     *
+     */
+    public static BIO memBuf(byte[] arr, int offset, int length) {
         // TODO: create real readonly version of MemBIO.
         try {
             BIO bio = new MemBIO();
-            bio.write(arr, 0, arr.length);
+            bio.write(arr, offset, length);
             return bio;
         } catch(IOException e) {
             return null;
@@ -313,5 +320,12 @@ public class BIO {
 
     public int getType() {
         return TYPE_BIO;
+    }
+
+    /** c: BIO_reset
+     *
+     */
+    public void reset() {
+        throw new UnsupportedOperationException();
     }
 }// BIO
