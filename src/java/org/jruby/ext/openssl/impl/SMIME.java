@@ -88,6 +88,37 @@ public class SMIME {
         return isEol;
     }
 
+
+    /* c: SMIME_text
+     *
+     */
+    public void text(BIO input, BIO output) {
+// 	char iobuf[4096];
+// 	int len;
+// 	STACK_OF(MIME_HEADER) *headers;
+// 	MIME_HEADER *hdr;
+
+// 	if (!(headers = mime_parse_hdr(in))) {
+// 		PKCS7err(PKCS7_F_SMIME_TEXT,PKCS7_R_MIME_PARSE_ERROR);
+// 		return 0;
+// 	}
+// 	if(!(hdr = mime_hdr_find(headers, "content-type")) || !hdr->value) {
+// 		PKCS7err(PKCS7_F_SMIME_TEXT,PKCS7_R_MIME_NO_CONTENT_TYPE);
+// 		sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
+// 		return 0;
+// 	}
+// 	if (strcmp (hdr->value, "text/plain")) {
+// 		PKCS7err(PKCS7_F_SMIME_TEXT,PKCS7_R_INVALID_MIME_TYPE);
+// 		ERR_add_error_data(2, "type: ", hdr->value);
+// 		sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
+// 		return 0;
+// 	}
+// 	sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
+// 	while ((len = BIO_read(in, iobuf, sizeof(iobuf))) > 0)
+// 						BIO_write(out, iobuf, len);
+// 	return 1;
+    }
+
     /* c: static mime_bound_check
      *
      */

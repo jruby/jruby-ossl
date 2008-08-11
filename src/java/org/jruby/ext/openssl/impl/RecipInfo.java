@@ -41,6 +41,7 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
+import org.jruby.ext.openssl.x509store.Name;
 
 /** PKCS7_RECIP_INFO
  *
@@ -201,6 +202,16 @@ public class RecipInfo {
      */
     public final void setCert(final X509Certificate newCert) {
         this.cert = newCert;
+    }
+
+    /* c: static pkcs7_cmp_ri
+     *
+     */
+    public boolean compare(X509Certificate pcert) {
+        if(!new Name(issuerAndSerial.getName()).isEqual(pcert.getIssuerX500Principal())) {
+            return false;
+        }
+        return pcert.getSerialNumber().compareTo(issuerAndSerial.getCertificateSerialNumber().getValue()) == 0;
     }
 
     /**

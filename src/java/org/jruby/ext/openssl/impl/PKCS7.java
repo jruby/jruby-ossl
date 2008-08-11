@@ -29,6 +29,7 @@ package org.jruby.ext.openssl.impl;
 
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
@@ -36,12 +37,14 @@ import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -59,6 +62,7 @@ import org.bouncycastle.asn1.DERUTCTime;
 import org.bouncycastle.asn1.pkcs.Attribute;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.jruby.ext.openssl.OpenSSLReal;
 
 /** c: PKCS7
  *
@@ -175,6 +179,31 @@ public class PKCS7 {
             return p7;
         } catch(IOException e) {
             throw new PKCS7Exception(F_PKCS7_ENCRYPT, R_PKCS7_DATAFINAL_ERROR, e.toString());
+        }
+    }
+
+    /* c: PKCS7_decrypt
+     *
+     */
+    public void decrypt(PrivateKey pkey, X509Certificate cert, BIO data, int flags) {
+        if(!isEnveloped()) {
+            throw new PKCS7Exception(F_PKCS7_DECRYPT, R_WRONG_CONTENT_TYPE);
+        }
+        try {
+            BIO tmpmem = dataDecode(pkey, null, cert);
+            if((flags & TEXT) == TEXT) {
+                BIO tmpbuf = BIO.buffered();
+                BIO bread = tmpbuf.push(tmpmem);
+                new SMIME(Mime.DEFAULT).text(bread, data);
+            } else {
+                int i;
+                byte[] buf = new byte[4096];
+                while((i = tmpmem.read(buf, 0, 4096)) > 0) {
+                    data.write(buf, 0, i);
+                }
+            }
+        } catch(IOException e) {
+            throw new PKCS7Exception(F_PKCS7_DECRYPT, R_DECRYPT_ERROR, e.toString());
         }
     }
 
@@ -309,7 +338,7 @@ public class PKCS7 {
      */
     public BIO bioAddDigest(BIO pbio, AlgorithmIdentifier alg) {
         try {
-            MessageDigest md = MessageDigest.getInstance(ASN1Registry.o2a(alg.getObjectId()));
+            MessageDigest md = EVP.getDigest(alg.getObjectId());
             BIO btmp = BIO.mdFilter(md);
             if(pbio == null) {
                 return btmp;
@@ -322,6 +351,158 @@ public class PKCS7 {
         }
     }
 
+    /** c: PKCS7_dataDecode
+     *
+     */
+    public BIO dataDecode(PrivateKey pkey, BIO inBio, X509Certificate pcert) {
+        BIO out = null;
+        BIO btmp = null;
+        BIO etmp = null;
+        BIO bio = null;
+        byte[] dataBody = null;
+        Set<AlgorithmIdentifier> mdSk = null;
+        List<RecipInfo> rsk = null;
+        AlgorithmIdentifier encAlg = null;
+        AlgorithmIdentifier xalg = null;
+        Cipher evpCipher = null;
+        RecipInfo ri = null;
+
+        int i = getType();
+        state = S_HEADER;
+
+
+        switch(i) {
+        case ASN1Registry.NID_pkcs7_signed:
+            dataBody = getSign().getContents().getOctetString().getOctets();
+            mdSk = getSign().getMdAlgs();
+            break;
+        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
+            rsk = getSignedAndEnveloped().getRecipientInfo();
+            mdSk = getSignedAndEnveloped().getMdAlgs();
+            dataBody = getSignedAndEnveloped().getEncData().getEncData().getOctets();
+            encAlg = getSignedAndEnveloped().getEncData().getAlgorithm();
+            try {
+                evpCipher = EVP.getCipher(encAlg.getObjectId());
+            } catch(Exception e) {
+                throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
+            }
+            xalg = getSignedAndEnveloped().getEncData().getAlgorithm();
+            break;
+        case ASN1Registry.NID_pkcs7_enveloped: 
+            rsk = getEnveloped().getRecipientInfo();
+            dataBody = getEnveloped().getEncData().getEncData().getOctets();
+            encAlg = getEnveloped().getEncData().getAlgorithm();
+            try {
+                evpCipher = EVP.getCipher(encAlg.getObjectId());
+            } catch(Exception e) {
+                throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
+            }
+            xalg = getEnveloped().getEncData().getAlgorithm();
+            break;
+        default:
+            throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CONTENT_TYPE);
+        }
+
+        /* We will be checking the signature */
+        if(mdSk != null) {
+            for(AlgorithmIdentifier xa : mdSk) {
+                try {
+                    MessageDigest evpMd = EVP.getDigest(xa.getObjectId());
+                    btmp = BIO.mdFilter(evpMd);
+                    if(out == null) {
+                        out = btmp;
+                    } else {
+                        out.push(btmp);
+                    }
+                    btmp = null;
+                } catch(Exception e) {
+                    throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNKNOWN_DIGEST_TYPE);
+                }
+            }
+        }
+
+
+        if(evpCipher != null) {
+
+            /* It was encrypted, we need to decrypt the secret key
+             * with the private key */
+
+            /* Find the recipientInfo which matches the passed certificate
+             * (if any)
+             */
+            if(pcert != null) {
+                for(Iterator<RecipInfo> iter = rsk.iterator(); iter.hasNext();) {
+                    ri = iter.next();
+                    if(ri.compare(pcert)) {
+                        break;
+                    }
+                    ri = null;
+                }
+                if(null == ri) {
+                    throw new PKCS7Exception(F_PKCS7_DATADECODE, R_NO_RECIPIENT_MATCHES_CERTIFICATE);
+                }
+            }
+
+            byte[] tmp = null;
+            /* If we haven't got a certificate try each ri in turn */
+            if(null == pcert) {
+                for(Iterator<RecipInfo> iter = rsk.iterator(); iter.hasNext();) {
+                    ri = iter.next();
+                    try {
+                        tmp = EVP.decrypt(ri.getEncKey().getOctets(), pkey);
+                        if(tmp != null) {
+                            break;
+                        }
+                    } catch(Exception e) {
+                        tmp = null;
+                    }
+                    ri = null;
+                }
+                if(ri == null) {
+                    throw new PKCS7Exception(F_PKCS7_DATADECODE, R_NO_RECIPIENT_MATCHES_KEY);
+                }
+            } else {
+                try {
+                    tmp = EVP.decrypt(ri.getEncKey().getOctets(), pkey);
+                } catch(Exception e) {
+                    throw new PKCS7Exception(F_PKCS7_DATADECODE, -1, e.toString());
+                }
+            }
+
+            DEREncodable params = encAlg.getParameters();
+            try {
+                if(params != null && params instanceof ASN1OctetString) {
+                    evpCipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(tmp, evpCipher.getAlgorithm()), new IvParameterSpec(((ASN1OctetString)params).getOctets()));
+                } else {
+                    evpCipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(tmp, evpCipher.getAlgorithm()));
+                }
+            } catch(Exception e) {
+                throw new PKCS7Exception(F_PKCS7_DATADECODE, -1, e.toString());
+            }
+
+            etmp = BIO.cipherFilter(evpCipher);
+            if(out == null) {
+                out = etmp;
+            } else {
+                out.push(etmp);
+            }
+            etmp = null;
+        }
+        
+        if(isDetached() || inBio != null) {
+            bio = inBio;
+        } else {
+            if(dataBody != null && dataBody.length > 0) {
+                bio = BIO.memBuf(dataBody);
+            } else {
+                bio = BIO.mem();
+            }
+        }
+        out.push(bio);
+        bio = null;
+        return out;
+    }
+
     /** c: PKCS7_dataInit
      *
      */
@@ -331,7 +512,6 @@ public class PKCS7 {
         int i = this.data.getType();
         state = S_HEADER;
         List<RecipInfo> rsk = null;
-        AlgorithmIdentifier xalg = null;
         AlgorithmIdentifier xa = null;
         Cipher evpCipher = null;
         BIO out = null;
@@ -347,7 +527,6 @@ public class PKCS7 {
             rsk = getSignedAndEnveloped().getRecipientInfo();
             mdSk = getSignedAndEnveloped().getMdAlgs();
             enc = getSignedAndEnveloped().getEncData();
-            xalg = getSignedAndEnveloped().getEncData().getAlgorithm();
             evpCipher = getSignedAndEnveloped().getEncData().getCipher();
             if(null == evpCipher) {
                 throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_NOT_INITIALIZED);
@@ -356,7 +535,6 @@ public class PKCS7 {
         case ASN1Registry.NID_pkcs7_enveloped:
             rsk = getEnveloped().getRecipientInfo();
             enc = getEnveloped().getEncData();
-            xalg = getEnveloped().getEncData().getAlgorithm();
             evpCipher = getEnveloped().getEncData().getCipher();
             if(null == evpCipher) {
                 throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_NOT_INITIALIZED);
@@ -382,22 +560,9 @@ public class PKCS7 {
             return null;
         }
 
-
-// 	if (evp_cipher != NULL)
-// 		{
-
-//             xalg->algorithm = OBJ_nid2obj(EVP_CIPHER_type(evp_cipher));
-//             if (ivlen > 0) {
-//                 if (xalg->parameter == NULL) 
-//                     xalg->parameter=ASN1_TYPE_new();
-//                 if(EVP_CIPHER_param_to_asn1(ctx, xalg->parameter) < 0)
-//                     goto err;
-//             }
-// 		}
         if(evpCipher != null) {
             byte[] tmp;
             String algorithm = evpCipher.getAlgorithm();
-
             btmp = BIO.cipherFilter(evpCipher);
 
             int klen = -1;
@@ -408,7 +573,7 @@ public class PKCS7 {
             }
 
             try {
-                KeyGenerator gen = KeyGenerator.getInstance(algoBase);
+                KeyGenerator gen = KeyGenerator.getInstance(algoBase, OpenSSLReal.PROVIDER);
                 gen.init(new SecureRandom());
                 SecretKey key = gen.generateKey();
                 klen = ((SecretKeySpec)key).getEncoded().length*8;
@@ -417,7 +582,7 @@ public class PKCS7 {
                 if(null != rsk) {
                     for(RecipInfo ri : rsk) {
                         PublicKey pkey = ri.getCert().getPublicKey();
-                        Cipher cipher = Cipher.getInstance(pkey.getAlgorithm());
+                        Cipher cipher = Cipher.getInstance(pkey.getAlgorithm(), OpenSSLReal.PROVIDER);
                         cipher.init(Cipher.ENCRYPT_MODE, pkey);
                         tmp = cipher.doFinal(((SecretKeySpec)key).getEncoded());
                         ri.setEncKey(new DEROctetString(tmp));
@@ -442,7 +607,11 @@ public class PKCS7 {
                 }
             }
 
-            enc.setAlgorithm(new AlgorithmIdentifier(encAlgo));
+            if(evpCipher.getIV() != null) {
+                enc.setAlgorithm(new AlgorithmIdentifier(encAlgo, new DEROctetString(evpCipher.getIV())));
+            } else {
+                enc.setAlgorithm(new AlgorithmIdentifier(encAlgo));
+            }
 
             if(out == null) {
                 out = btmp;
@@ -555,7 +724,7 @@ public class PKCS7 {
                         si.addSignedAttribute(ASN1Registry.NID_pkcs9_messageDigest, digest);
 
                         sk = si.getAuthenticatedAttributes();
-                        sign = Signature.getInstance(ctx_tmp.getAlgorithm());
+                        sign = Signature.getInstance(ctx_tmp.getAlgorithm(), OpenSSLReal.PROVIDER);
                         sign.initSign(si.getPkey());
 
                         byte[] abuf = sk.getEncoded();

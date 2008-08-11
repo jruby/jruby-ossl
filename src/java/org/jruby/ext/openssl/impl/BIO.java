@@ -148,6 +148,13 @@ public class BIO {
         return bio;
     }
 
+    /** c: BIO_new(BIO_f_buffered())
+     *
+     */
+    public static BIO buffered() {
+        return null;
+    }
+
     /** c: BIO_new(BIO_s_mem())
      *
      */

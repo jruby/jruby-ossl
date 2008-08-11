@@ -387,8 +387,20 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod(rest=true)
     public IRubyObject decrypt(IRubyObject[] args) {
-        System.err.println("WARNING: un-implemented method called PKCS7#decrypt");
-        return getRuntime().getNil();
+        IRubyObject flags = getRuntime().getNil();
+        if(Arity.checkArgumentCount(getRuntime(), args, 2, 3) == 3) {
+            flags = args[2];
+        }
+        IRubyObject pkey = args[0];
+        IRubyObject cert = args[1];
+        PrivateKey key = ((PKey)pkey).getPrivateKey();
+        X509AuxCertificate x509 = ((X509Cert)cert).getAuxCert();
+        int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
+
+        BIO out = BIO.mem();
+        p7.decrypt(key, x509, out, flg);
+
+        return membio2str(getRuntime(), out);
     }
 
     @JRubyMethod(name={"to_pem","to_s"})
