@@ -1,5 +1,10 @@
 
-require 'java' if RUBY_PLATFORM =~ /java/
+if defined?(JRUBY_VERSION)
+  require "java"
+  base = File.join(File.dirname(__FILE__), '..')
+  $CLASSPATH << File.join(base, 'pkg', 'classes')
+  $CLASSPATH << File.join(base, 'lib', 'bcprov-jdk14-139.jar')
+end
 
 def protect_require(name)
   require name
@@ -24,3 +29,4 @@ protect_require 'openssl/test_x509name'
 protect_require 'openssl/test_x509req'
 protect_require 'openssl/test_x509store'
 protect_require 'test_cipher'
+protect_require 'test_java'

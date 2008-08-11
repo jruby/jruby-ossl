@@ -35,8 +35,16 @@ import org.jruby.RubyModule;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class OpenSSLReal {
-
     public static java.security.Provider PROVIDER;
+
+    static {
+        try {
+            PROVIDER = (java.security.Provider) 
+                Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
+        } catch (Exception exception) {
+            // no bouncy castle available
+        }
+    }
 
     public static void doWithBCProvider(final Runnable toRun) {
         getWithBCProvider(new Callable() {
@@ -64,15 +72,6 @@ public class OpenSSLReal {
     }
 
     public static void createOpenSSL(Ruby runtime) {
-        if (PROVIDER == null) {
-            try {
-                PROVIDER = (java.security.Provider) 
-                        Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
-            } catch (Exception exception) {
-                // no bouncy castle available
-            }
-        }
-
         RubyModule ossl = runtime.getOrCreateModule("OpenSSL");
         RubyClass standardError = runtime.getClass("StandardError");
         ossl.defineClassUnder("OpenSSLError", standardError, standardError.getAllocator());

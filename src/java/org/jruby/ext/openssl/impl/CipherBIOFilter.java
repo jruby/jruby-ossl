@@ -39,6 +39,14 @@ import javax.crypto.IllegalBlockSizeException;
 public class CipherBIOFilter extends BIOFilter {
     private Cipher cipher;
 
+    private byte[] bufRead = new byte[4096];
+    private int fillLen = 0;
+    private int fillOffset = 0;
+
+    private byte[] tmpBuf = new byte[1024];
+
+    private boolean finalized = false;
+
     public CipherBIOFilter(Cipher cipher) {
         this.cipher = cipher;
     }
@@ -54,6 +62,83 @@ public class CipherBIOFilter extends BIOFilter {
             throw new PKCS7Exception(-1, -1, e.toString());
         } catch(BadPaddingException e) {
             throw new PKCS7Exception(-1, -1, e.toString());
+        }
+    }
+
+    public int read(byte[] into, int offset, int len) throws IOException {
+        try {
+            int read = 0;
+            if(fillLen > 0) {
+                read = Math.min(fillLen, len);
+                System.arraycopy(bufRead, fillOffset, into, offset, read);
+                fillOffset += read;
+                fillLen -= read;
+                if(fillLen == 0) {
+                    fillOffset = 0;
+                }
+                if(read == len) {
+                    return read;
+                }
+            }
+            
+            int req = len - read;
+            int off = offset + read;
+            
+            if(finalized) {
+                return 0;
+            }
+
+            while(req > 0) {
+                int readFromNext = next().read(tmpBuf, 0, 1024);
+                if(readFromNext > 0) {
+                    int required = cipher.getOutputSize(readFromNext);
+                    if(required > (bufRead.length - (fillOffset + fillLen))) {
+                        byte[] newBuf = new byte[required + fillOffset + fillLen];
+                        System.arraycopy(bufRead, fillOffset, newBuf, 0, fillLen);
+                        fillOffset = 0;
+                        bufRead = newBuf;
+                    }
+                    int outputted = cipher.update(tmpBuf, 0, readFromNext, bufRead, fillOffset + fillLen);
+                    fillLen += outputted;
+
+                    read = Math.min(fillLen, req);
+                    System.arraycopy(bufRead, fillOffset, into, off, read);
+                    fillOffset += read;
+                    fillLen -= read;
+                    if(fillLen == 0) {
+                        fillOffset = 0;
+                    }
+
+                    req -= read;
+                    off += read;
+                } else {
+                    int required = cipher.getOutputSize(0);
+                    if(required > (bufRead.length - (fillOffset + fillLen))) {
+                        byte[] newBuf = new byte[required + fillOffset + fillLen];
+                        System.arraycopy(bufRead, fillOffset, newBuf, 0, fillLen);
+                        fillOffset = 0;
+                        bufRead = newBuf;
+                    }
+                    int outputted = cipher.doFinal(bufRead, fillOffset + fillLen);
+                    finalized = true;
+                    fillLen += outputted;
+
+                    read = Math.min(fillLen, req);
+                    System.arraycopy(bufRead, fillOffset, into, off, read);
+                    fillOffset += read;
+                    fillLen -= read;
+                    if(fillLen == 0) {
+                        fillOffset = 0;
+                    }
+
+                    req -= read;
+                    return len-req;
+                }
+            }
+
+            return len;
+        } catch(Exception e) {
+            throw new IllegalArgumentException(e);
         }
     }
 

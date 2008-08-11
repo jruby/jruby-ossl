@@ -581,7 +581,6 @@ public class ASN1 {
             IRubyObject ret = decodeObj(asnM, asis.readObject());
             return ret;
         } catch(IOException e) {
-            System.err.println("gah" + e);
             throw recv.getRuntime().newIOErrorFromException(e);
         } catch(Exception e) {
             throw recv.getRuntime().newArgumentError(e.getMessage());
