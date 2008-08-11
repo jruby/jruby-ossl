@@ -117,6 +117,29 @@ public class X509Name extends RubyObject {
         values.add(value);
         types.add(type);
     }
+    
+    public static X509Name create(Ruby runtime, org.bouncycastle.asn1.x509.X509Name realName) {
+        X509Name name = new X509Name(runtime, ((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getClass("Name"));
+        name.fromASN1Sequence((ASN1Sequence)realName.getDERObject());
+        return name;
+    }
+
+    void fromASN1Sequence(ASN1Sequence seq) {
+        oids = new ArrayList<Object>();
+        values = new ArrayList<Object>();
+        types = new ArrayList<Object>();
+        for(Enumeration enm = seq.getObjects();enm.hasMoreElements();) {
+            ASN1Sequence value = (ASN1Sequence)(((ASN1Set)enm.nextElement()).getObjectAt(0));
+            oids.add(value.getObjectAt(0));
+            if(value.getObjectAt(1) instanceof DERString) {
+                values.add(((DERString)value.getObjectAt(1)).getString());
+            } else {
+                values.add(null);
+            }
+            types.add(getRuntime().newFixnum(ASN1.idForClass(value.getObjectAt(1).getClass())));
+        }
+    }
+
 
     @JRubyMethod(rest=true, frame=true)
     public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
@@ -152,20 +175,7 @@ public class X509Name extends RubyObject {
             }
         } else {
             try {
-                ASN1Sequence seq = (ASN1Sequence)new ASN1InputStream(OpenSSLImpl.to_der_if_possible(arg).convertToString().getBytes()).readObject();
-                oids = new ArrayList<Object>();
-                values = new ArrayList<Object>();
-                types = new ArrayList<Object>();
-                for(Enumeration enm = seq.getObjects();enm.hasMoreElements();) {
-                    ASN1Sequence value = (ASN1Sequence)(((ASN1Set)enm.nextElement()).getObjectAt(0));
-                    oids.add(value.getObjectAt(0));
-                    if(value.getObjectAt(1) instanceof DERString) {
-                        values.add(((DERString)value.getObjectAt(1)).getString());
-                    } else {
-                        values.add(null);
-                    }
-                    types.add(getRuntime().newFixnum(ASN1.idForClass(value.getObjectAt(1).getClass())));
-                }
+                fromASN1Sequence((ASN1Sequence)new ASN1InputStream(OpenSSLImpl.to_der_if_possible(arg).convertToString().getBytes()).readObject());
             } catch(Exception e) {
                 System.err.println("exception in init for X509Name: " + e);
             }

@@ -56,7 +56,7 @@ public class Envelope {
     /**
      * Describe recipientInfo here.
      */
-    private Set<RecipInfo> recipientInfo = new HashSet<RecipInfo>();
+    private List<RecipInfo> recipientInfo = new ArrayList<RecipInfo>();
 
     /**
      * Get the <code>Version</code> value.
@@ -99,7 +99,7 @@ public class Envelope {
      *
      * @return a <code>Set<RecipInfo></code> value
      */
-    public final Set<RecipInfo> getRecipientInfo() {
+    public final List<RecipInfo> getRecipientInfo() {
         return recipientInfo;
     }
 
@@ -108,7 +108,7 @@ public class Envelope {
      *
      * @param newRecipientInfo The new RecipientInfo value.
      */
-    public final void setRecipientInfo(final Set<RecipInfo> newRecipientInfo) {
+    public final void setRecipientInfo(final List<RecipInfo> newRecipientInfo) {
         this.recipientInfo = newRecipientInfo;
     }
 
@@ -158,9 +158,9 @@ public class Envelope {
         return new DERSet(vector);
     }
 
-    private static Set<RecipInfo> recipientInfosFromASN1Set(DEREncodable content) {
+    private static List<RecipInfo> recipientInfosFromASN1Set(DEREncodable content) {
         ASN1Set set = (ASN1Set)content;
-        Set<RecipInfo> result = new HashSet<RecipInfo>();
+        List<RecipInfo> result = new ArrayList<RecipInfo>();
         for(Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
             result.add(RecipInfo.fromASN1((DEREncodable)e.nextElement()));
         }

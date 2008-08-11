@@ -71,7 +71,7 @@ public class SignEnvelope {
     /**
      * Describe recipientInfo here.
      */
-    private Set<RecipInfo> recipientInfo = new HashSet<RecipInfo>();
+    private List<RecipInfo> recipientInfo = new ArrayList<RecipInfo>();
 
     /**
      * Get the <code>Version</code> value.
@@ -114,7 +114,7 @@ public class SignEnvelope {
      *
      * @return a <code>Set<RecipInfo></code> value
      */
-    public final Set<RecipInfo> getRecipientInfo() {
+    public final List<RecipInfo> getRecipientInfo() {
         return recipientInfo;
     }
 
@@ -123,7 +123,7 @@ public class SignEnvelope {
      *
      * @param newRecipientInfo The new RecipientInfo value.
      */
-    public final void setRecipientInfo(final Set<RecipInfo> newRecipientInfo) {
+    public final void setRecipientInfo(final List<RecipInfo> newRecipientInfo) {
         this.recipientInfo = newRecipientInfo;
     }
 

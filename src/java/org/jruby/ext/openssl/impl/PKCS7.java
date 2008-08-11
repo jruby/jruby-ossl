@@ -330,7 +330,7 @@ public class PKCS7 {
         ASN1OctetString os = null;
         int i = this.data.getType();
         state = S_HEADER;
-        Set<RecipInfo> rsk = null;
+        List<RecipInfo> rsk = null;
         AlgorithmIdentifier xalg = null;
         AlgorithmIdentifier xa = null;
         Cipher evpCipher = null;

@@ -41,22 +41,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
-import org.bouncycastle.asn1.cms.ContentInfo;
 import org.bouncycastle.asn1.x509.TBSCertificateStructure;
-import org.bouncycastle.cms.CMSEnvelopedData;
-import org.bouncycastle.cms.CMSEnvelopedDataGenerator;
-import org.bouncycastle.cms.CMSException;
-import org.bouncycastle.cms.CMSProcessableByteArray;
-import org.bouncycastle.cms.CMSSignedData;
-import org.bouncycastle.cms.CMSSignedDataGenerator;
-import org.bouncycastle.cms.RecipientInformation;
-import org.bouncycastle.cms.SignerInformation;
-import org.bouncycastle.cms.SignerInformationStore;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
+import org.jruby.RubyBignum;
 import org.jruby.RubyClass;
 import org.jruby.RubyFile;
 import org.jruby.RubyModule;
@@ -68,7 +60,9 @@ import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.impl.BIO;
 import org.jruby.ext.openssl.impl.MemBIO;
 import org.jruby.ext.openssl.impl.Mime;
+import org.jruby.ext.openssl.impl.RecipInfo;
 import org.jruby.ext.openssl.impl.SMIME;
+import org.jruby.ext.openssl.impl.SignerInfoWithPkey;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
@@ -323,8 +317,24 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject recipients() {
-        System.err.println("WARNING: un.implemented method called PKCS7#recipients");
-        return getRuntime().getNil();
+        List<RecipInfo> sk = null;
+
+        if(p7.isEnveloped()) {
+            sk = p7.getEnveloped().getRecipientInfo();
+        } else if(p7.isSignedAndEnveloped()) {
+            sk = p7.getSignedAndEnveloped().getRecipientInfo();
+        } else {
+            sk = null;
+        }
+        if(sk == null) {
+            return getRuntime().newArray();
+        }
+
+        RubyArray ary = getRuntime().newArray(sk.size());
+        for(RecipInfo ri : sk) {
+            ary.append(RecipientInfo.create(getRuntime(), ri));
+        }
+        return ary;
     }
 
     @JRubyMethod
@@ -406,7 +416,7 @@ public class PKCS7 extends RubyObject {
             cPKCS7Signer.defineAnnotatedMethods(SignerInfo.class);
         }
 
-        public static SignerInfo create(Ruby runtime, SignerInformation info) {
+        public static SignerInfo create(Ruby runtime, SignerInfoWithPkey info) {
             SignerInfo sinfo = new SignerInfo(runtime, (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("PKCS7"))).getConstant("SignerInfo")));
             sinfo.initWithSignerInformation(info);
             return sinfo;
@@ -416,7 +426,7 @@ public class PKCS7 extends RubyObject {
             super(runtime,type);
         }
 
-        private void initWithSignerInformation(SignerInformation info) {
+        private void initWithSignerInformation(SignerInfoWithPkey info) {
         
         }
 
@@ -463,15 +473,15 @@ public class PKCS7 extends RubyObject {
         }
 
 
-        public static RecipientInfo create(Ruby runtime, RecipientInformation info) {
+        public static RecipientInfo create(Ruby runtime, RecipInfo info) {
             RecipientInfo rinfo = new RecipientInfo(runtime, (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("PKCS7"))).getConstant("RecipientInfo")));
             rinfo.initWithRecipientInformation(info);
             return rinfo;
         }
 
-        private RecipientInformation info;
+        private RecipInfo info;
 
-        private void initWithRecipientInformation(RecipientInformation info) {
+        private void initWithRecipientInformation(RecipInfo info) {
             this.info = info;
         }
 
@@ -483,14 +493,12 @@ public class PKCS7 extends RubyObject {
 
         @JRubyMethod
         public IRubyObject issuer() {
-            System.err.println("WARNING: un-implemented method called RecipientInfo#issuer");
-            return getRuntime().getNil();
+            return X509Name.create(getRuntime(), info.getIssuerAndSerial().getName());
         }
 
         @JRubyMethod
         public IRubyObject serial() {
-            System.err.println("WARNING: un-implemented method called RecipientInfo#serial");
-            return getRuntime().getNil();
+            return RubyBignum.bignorm(getRuntime(), info.getIssuerAndSerial().getCertificateSerialNumber().getValue());
         }
 
         @JRubyMethod
