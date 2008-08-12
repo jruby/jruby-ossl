@@ -34,6 +34,7 @@ if defined?(JRUBY_VERSION)
     SignerInfoWithPkey = org.jruby.ext.openssl.impl.SignerInfoWithPkey unless defined?(SignerInfoWithPkey)
     IssuerAndSerialNumber = org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber unless defined?(IssuerAndSerialNumber)
     ASN1InputStream = org.bouncycastle.asn1.ASN1InputStream unless defined?(ASN1InputStream)
+    X509AuxCertificate = org.jruby.ext.openssl.x509store.X509AuxCertificate unless defined?(X509AuxCertificate)
     
     ArrayList = java.util.ArrayList unless defined?(ArrayList)
     CertificateFactory = java.security.cert.CertificateFactory unless defined?(CertificateFactory)
@@ -85,7 +86,7 @@ WmsAXd0QV5UChfAJ2+Cz5U1bPszvIJGrzfAIoLxHv5rI5rseQzqZdPaFSe4Oehln
 -----END X509 CRL-----
 CRL
     
-    X509Cert = CertificateFactory.getInstance("X.509",BCP.new).generateCertificate(ByteArrayInputStream.new(X509CertString.to_java_bytes))
+    X509Cert = X509AuxCertificate.new(CertificateFactory.getInstance("X.509",BCP.new).generateCertificate(ByteArrayInputStream.new(X509CertString.to_java_bytes)))
     X509CRL = CertificateFactory.getInstance("X.509",BCP.new).generateCRL(ByteArrayInputStream.new(X509CRLString.to_java_bytes))
   end
   

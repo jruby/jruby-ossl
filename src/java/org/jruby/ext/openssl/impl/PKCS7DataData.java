@@ -80,6 +80,9 @@ public class PKCS7DataData extends PKCS7Data {
     }
 
     public ASN1Encodable asASN1() {
+        if(data == null) {
+            return new DEROctetString(new byte[0]).toASN1Object();
+        }
         return data.toASN1Object();
     }
 }// PKCS7DataData

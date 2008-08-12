@@ -80,7 +80,7 @@ module PKCS7Test
       
       p7.detached = 2
       assert_equal 1, p7.get_detached
-      assert_equal nil, test_p7.data
+      assert_equal nil, test_p7.get_data
     end
 
     def test_set_not_detached
@@ -98,7 +98,7 @@ module PKCS7Test
       
       p7.detached = 0
       assert_equal 0, p7.get_detached
-      assert_equal data, test_p7.data
+      assert_equal data, test_p7.get_data
     end
 
     def test_is_detached
@@ -162,7 +162,7 @@ module PKCS7Test
       p7.type = ASN1Registry::NID_pkcs7_data
 
       assert p7.data?
-      assert_equal ASN1::OctetString.new("".to_java_bytes), p7.data
+      assert_equal ASN1::OctetString.new("".to_java_bytes), p7.get_data
 
       assert_nil p7.get_sign
       assert_nil p7.get_enveloped

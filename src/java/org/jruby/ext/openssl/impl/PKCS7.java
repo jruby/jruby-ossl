@@ -274,7 +274,6 @@ public class PKCS7 {
                     throw new PKCS7Exception(F_PKCS7_SIGNATUREVERIFY, R_UNABLE_TO_FIND_MESSAGE_DIGEST);
                 }
                 if(!Arrays.equals(md_dat, message_digest.getOctets())) {
-                    System.err.println("Internal digest bad");
                     throw new NotVerifiedPKCS7Exception();
                 }
 
@@ -290,9 +289,10 @@ public class PKCS7 {
                 sign.update(currentData);
             }
             if(!sign.verify(os.getOctets())) {
-                System.err.println("verify returned false");
                 throw new NotVerifiedPKCS7Exception();
             }
+        } catch(NotVerifiedPKCS7Exception e) {
+            throw e;
         } catch(Exception e) {
             System.err.println("Other exception");
             e.printStackTrace();
