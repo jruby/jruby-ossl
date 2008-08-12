@@ -10,6 +10,7 @@ begin
 rescue LoadError
 end
 require "test/unit"
+require 'net/https'
 
 class TestIntegration < Test::Unit::TestCase
   # JRUBY-2471
@@ -22,5 +23,21 @@ class TestIntegration < Test::Unit::TestCase
     }
     p config
     DRb.start_service(nil, nil, config)
+  end
+
+  # JRUBY-2913
+  # Warning - this test actually uses the internet connection.
+  # If there is no connection, it will fail.
+  def test_ca_path_name
+    uri = URI.parse('https://www.paypal.com')
+
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+    http.ca_path = "./"
+    http.use_ssl = true
+
+    response = http.start do |s|
+      assert s.get(uri.request_uri).length > 0
+    end
   end
 end
