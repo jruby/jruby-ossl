@@ -35,7 +35,6 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.X509CRL;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -70,6 +69,9 @@ import org.bouncycastle.asn1.x509.X509Name;
 import org.jruby.ext.openssl.OpenSSLReal;
 import org.jruby.ext.openssl.x509store.Name;
 import org.jruby.ext.openssl.x509store.Store;
+import org.jruby.ext.openssl.x509store.StoreContext;
+import org.jruby.ext.openssl.x509store.X509AuxCertificate;
+import org.jruby.ext.openssl.x509store.X509Utils;
 
 /** c: PKCS7
  *
@@ -165,7 +167,7 @@ public class PKCS7 {
     /* c: PKCS7_add_signature
      *
      */
-    public SignerInfoWithPkey addSignature(X509Certificate x509, PrivateKey pkey, MessageDigest dgst) {
+    public SignerInfoWithPkey addSignature(X509AuxCertificate x509, PrivateKey pkey, MessageDigest dgst) {
         SignerInfoWithPkey si = new SignerInfoWithPkey();
         si.set(x509, pkey, dgst);
         addSigner(si);
@@ -175,9 +177,9 @@ public class PKCS7 {
     /* c: X509_find_by_issuer_and_serial
      *
      */
-    public static X509Certificate findByIssuerAndSerial(Collection<X509Certificate> certs, X509Name issuer, BigInteger serial) {
+    public static X509AuxCertificate findByIssuerAndSerial(Collection<X509AuxCertificate> certs, X509Name issuer, BigInteger serial) {
         Name name = new Name(issuer);
-        for(X509Certificate cert : certs) {
+        for(X509AuxCertificate cert : certs) {
             if(name.isEqual(cert.getIssuerX500Principal()) && serial.equals(cert.getSerialNumber())) {
                 return cert;
             }
@@ -189,8 +191,8 @@ public class PKCS7 {
     /* c: PKCS7_get0_signers
      *
      */
-    public List<X509Certificate> getSigners(Collection<X509Certificate> certs, List<SignerInfoWithPkey> sinfos, int flags) {
-        List<X509Certificate> signers = new ArrayList<X509Certificate>();
+    public List<X509AuxCertificate> getSigners(Collection<X509AuxCertificate> certs, List<SignerInfoWithPkey> sinfos, int flags) {
+        List<X509AuxCertificate> signers = new ArrayList<X509AuxCertificate>();
 
         if(!isSigned()) {
             throw new PKCS7Exception(F_PKCS7_GET0_SIGNERS,R_WRONG_CONTENT_TYPE);
@@ -202,7 +204,7 @@ public class PKCS7 {
 
         for(SignerInfoWithPkey si : sinfos) {
             IssuerAndSerialNumber ias = si.getIssuerAndSerialNumber();
-            X509Certificate signer = null;
+            X509AuxCertificate signer = null;
             if(certs != null) {
                 signer = findByIssuerAndSerial(certs, ias.getName(), ias.getCertificateSerialNumber().getValue());
             }
@@ -220,7 +222,7 @@ public class PKCS7 {
     /* c: PKCS7_signatureVerify
      *
      */
-    public void signatureVerify(BIO bio, SignerInfoWithPkey si, X509Certificate x509) {
+    public void signatureVerify(BIO bio, SignerInfoWithPkey si, X509AuxCertificate x509) {
         throw new UnsupportedOperationException("TODO: implement");
 // 	ASN1_OCTET_STRING *os;
 // 	EVP_MD_CTX mdc_tmp,*mdc;
@@ -347,7 +349,7 @@ public class PKCS7 {
     /* c: PKCS7_verify
      *
      */
-    public void verify(Collection<X509Certificate> certs, Store store, BIO indata, BIO out, int flags) {
+    public void verify(Collection<X509AuxCertificate> certs, Store store, BIO indata, BIO out, int flags) {
         if(!isSigned()) {
             throw new PKCS7Exception(F_PKCS7_VERIFY, R_WRONG_CONTENT_TYPE);
         }
@@ -361,46 +363,41 @@ public class PKCS7 {
             throw new PKCS7Exception(F_PKCS7_VERIFY, R_NO_SIGNATURES_ON_DATA);
         }
 
-        List<X509Certificate> signers = getSigners(certs, sinfos, flags);
+        List<X509AuxCertificate> signers = getSigners(certs, sinfos, flags);
         if(signers == null) {
             throw new NotVerifiedPKCS7Exception();
         }
 
-// 	X509_STORE_CTX cert_ctx;
-    
         /* Now verify the certificates */
         if((flags & NOVERIFY) == 0) {
-            for(X509Certificate signer : signers) {
-                throw new UnsupportedOperationException("TODO: implement");
-// 		if (!(flags & PKCS7_NOCHAIN)) {
-// 			if(!X509_STORE_CTX_init(&cert_ctx, store, signer,
-// 							p7->d.sign->cert))
-// 				{
-// 				PKCS7err(PKCS7_F_PKCS7_VERIFY,ERR_R_X509_LIB);
-// 				sk_X509_free(signers);
-// 				return 0;
-// 				}
-// 			X509_STORE_CTX_set_purpose(&cert_ctx,
-// 						X509_PURPOSE_SMIME_SIGN);
-// 		} else if(!X509_STORE_CTX_init (&cert_ctx, store, signer, NULL)) {
-// 			PKCS7err(PKCS7_F_PKCS7_VERIFY,ERR_R_X509_LIB);
-// 			sk_X509_free(signers);
-// 			return 0;
-// 		}
-// 		if (!(flags & PKCS7_NOCRL))
-// 			X509_STORE_CTX_set0_crls(&cert_ctx, p7->d.sign->crl);
-// 		i = X509_verify_cert(&cert_ctx);
-// 		if (i <= 0) j = X509_STORE_CTX_get_error(&cert_ctx);
-// 		X509_STORE_CTX_cleanup(&cert_ctx);
-// 		if (i <= 0) {
-// 			PKCS7err(PKCS7_F_PKCS7_VERIFY,PKCS7_R_CERTIFICATE_VERIFY_ERROR);
-// 			ERR_add_error_data(2, "Verify error:",
-// 					 X509_verify_cert_error_string(j));
-// 			sk_X509_free(signers);
-// 			return 0;
-// 		}
-// 		/* Check for revocation status here */
-                
+            for(X509AuxCertificate signer : signers) {
+                StoreContext cert_ctx = new StoreContext();
+                if((flags & NOCHAIN) == 0) {
+                    if(cert_ctx.init(store, signer, new ArrayList<X509AuxCertificate>(getSign().getCert())) == 0) {
+                        throw new PKCS7Exception(F_PKCS7_VERIFY, -1);
+                    }
+                    cert_ctx.setPurpose(X509Utils.X509_PURPOSE_SMIME_SIGN);
+                } else if(cert_ctx.init(store, signer, null) == 0) {
+                    throw new PKCS7Exception(F_PKCS7_VERIFY, -1);
+                }
+                if((flags & NOCRL) == 0) {
+                    cert_ctx.setCRLs((List<X509CRL>)getSign().getCrl());
+                }
+                try {
+                    int i = cert_ctx.verifyCertificate();
+                    int j = 0;
+                    if(i <= 0) {
+                        j = cert_ctx.getError();
+                    }
+                    cert_ctx.cleanup();
+                    if(i <= 0) {
+                        throw new PKCS7Exception(F_PKCS7_VERIFY, R_CERTIFICATE_VERIFY_ERROR, "Verify error:" + X509Utils.verifyCertificateErrorString(j));
+                    }
+                } catch(PKCS7Exception e) {
+                    throw e;
+                } catch(Exception e) {
+                    throw new PKCS7Exception(F_PKCS7_VERIFY, R_CERTIFICATE_VERIFY_ERROR, e);
+                }
             }
         }
 
@@ -435,7 +432,7 @@ public class PKCS7 {
         if((flags & NOSIGS) == 0) {
             for(int i=0; i<sinfos.size(); i++) {
                 SignerInfoWithPkey si = sinfos.get(i);
-                X509Certificate signer = signers.get(i);
+                X509AuxCertificate signer = signers.get(i);
                 signatureVerify(p7bio, si, signer);
             }
         }
@@ -450,7 +447,7 @@ public class PKCS7 {
     /* c: PKCS7_sign
      *
      */
-    public static PKCS7 sign(X509Certificate signcert, PrivateKey pkey, Collection<X509Certificate> certs, BIO data, int flags) {
+    public static PKCS7 sign(X509AuxCertificate signcert, PrivateKey pkey, Collection<X509AuxCertificate> certs, BIO data, int flags) {
         PKCS7 p7 = new PKCS7();
         p7.setType(ASN1Registry.NID_pkcs7_signed);
         p7.contentNew(ASN1Registry.NID_pkcs7_data);
@@ -458,7 +455,7 @@ public class PKCS7 {
         if((flags & NOCERTS) == 0) {
             p7.addCertificate(signcert);
             if(certs != null) {
-                for(X509Certificate c : certs) {
+                for(X509AuxCertificate c : certs) {
                     p7.addCertificate(c);
                 }
             }
@@ -501,7 +498,7 @@ public class PKCS7 {
     /* c: PKCS7_encrypt
      *
      */
-    public static PKCS7 encrypt(Collection<X509Certificate> certs, byte[] in, Cipher cipher, int flags) {
+    public static PKCS7 encrypt(Collection<X509AuxCertificate> certs, byte[] in, Cipher cipher, int flags) {
         PKCS7 p7 = new PKCS7();
 
         p7.setType(ASN1Registry.NID_pkcs7_enveloped);
@@ -509,7 +506,7 @@ public class PKCS7 {
         try {
             p7.setCipher(cipher);
 
-            for(X509Certificate x509 : certs) {
+            for(X509AuxCertificate x509 : certs) {
                 p7.addRecipient(x509);
             }
 
@@ -528,7 +525,7 @@ public class PKCS7 {
     /* c: PKCS7_decrypt
      *
      */
-    public void decrypt(PrivateKey pkey, X509Certificate cert, BIO data, int flags) {
+    public void decrypt(PrivateKey pkey, X509AuxCertificate cert, BIO data, int flags) {
         if(!isEnveloped()) {
             throw new PKCS7Exception(F_PKCS7_DECRYPT, R_WRONG_CONTENT_TYPE);
         }
@@ -588,7 +585,7 @@ public class PKCS7 {
     /** c: PKCS7_add_recipient
      *
      */
-    public RecipInfo addRecipient(X509Certificate recip) {
+    public RecipInfo addRecipient(X509AuxCertificate recip) {
         RecipInfo ri = new RecipInfo();
         ri.set(recip);
         addRecipientInfo(ri);
@@ -614,7 +611,7 @@ public class PKCS7 {
     /** c: PKCS7_add_certificate
      *
      */
-    public void addCertificate(X509Certificate cert) {
+    public void addCertificate(X509AuxCertificate cert) {
         this.data.addCertificate(cert);
     }
 
@@ -697,7 +694,7 @@ public class PKCS7 {
     /** c: PKCS7_dataDecode
      *
      */
-    public BIO dataDecode(PrivateKey pkey, BIO inBio, X509Certificate pcert) {
+    public BIO dataDecode(PrivateKey pkey, BIO inBio, X509AuxCertificate pcert) {
         BIO out = null;
         BIO btmp = null;
         BIO etmp = null;

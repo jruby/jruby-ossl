@@ -28,7 +28,6 @@
 package org.jruby.ext.openssl.impl;
 
 import java.security.cert.X509CRL;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -36,6 +35,7 @@ import java.util.List;
 import java.util.Set;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 
 /** PKCS7_SIGN_ENVELOPE
  *
@@ -57,7 +57,7 @@ public class SignEnvelope {
     /**
      * Describe cert here.
      */
-    private Collection<X509Certificate> cert = new ArrayList<X509Certificate>();
+    private Collection<X509AuxCertificate> cert = new ArrayList<X509AuxCertificate>();
 
     /**
      * Describe mdAlgs here.
@@ -167,9 +167,9 @@ public class SignEnvelope {
     /**
      * Get the <code>Cert</code> value.
      *
-     * @return a <code>Collection<X509Certificate></code> value
+     * @return a <code>Collection<X509AuxCertificate></code> value
      */
-    public final Collection<X509Certificate> getCert() {
+    public final Collection<X509AuxCertificate> getCert() {
         return cert;
     }
 
@@ -178,7 +178,7 @@ public class SignEnvelope {
      *
      * @param newCert The new Cert value.
      */
-    public final void setCert(final Collection<X509Certificate> newCert) {
+    public final void setCert(final Collection<X509AuxCertificate> newCert) {
         this.cert = newCert;
     }
 

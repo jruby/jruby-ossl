@@ -28,11 +28,11 @@
 package org.jruby.ext.openssl.impl;
 
 import java.security.cert.X509CRL;
-import java.security.cert.X509Certificate;
 import java.util.Collection;
 import javax.crypto.Cipher;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
+import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 
 /**
  *
@@ -77,7 +77,7 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
         return this.signedAndEnveloped.getSignerInfo();
     }
 
-    public void addCertificate(X509Certificate cert) {
+    public void addCertificate(X509AuxCertificate cert) {
         this.signedAndEnveloped.getCert().add(cert);
     }
 

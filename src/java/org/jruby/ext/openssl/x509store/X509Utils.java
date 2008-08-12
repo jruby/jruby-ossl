@@ -27,15 +27,17 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
-import java.util.Arrays;
 
+import java.util.Arrays;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier;
-import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
 
 /**
@@ -187,6 +189,21 @@ public abstract class X509Utils {
         }
     }
 
+    private static Object get(Object str) throws Exception {
+        return get(((DEROctetString)str).getOctets());
+    }
+
+    private static Object get(DEROctetString str) throws Exception {
+        return get(str.getOctets());
+    }
+    
+    private static Object get(byte[] str) throws Exception {
+        return new ASN1InputStream(str).readObject();
+    }
+
+    private static String p(Object obj) throws Exception {
+        return obj.toString() + " [" + obj.getClass().getName() + "]";
+    }
 
     /**
      * c: X509_check_issued
@@ -198,17 +215,26 @@ public abstract class X509Utils {
 
         if(subject.getExtensionValue("2.5.29.35") != null) { //authorityKeyID
             // I hate ASN1 and DER
-            Object key = new ASN1InputStream(subject.getExtensionValue("2.5.29.35")).readObject();
+            Object key = get(subject.getExtensionValue("2.5.29.35"));
             if(!(key instanceof ASN1Sequence)) {
-                byte[] b = ((ASN1OctetString)key).getOctets();
-                key = new ASN1InputStream(b).readObject();
+                key = get(key);
             }
-
-            AuthorityKeyIdentifier sakid = new AuthorityKeyIdentifier((ASN1Sequence)key);
+            
+            ASN1Sequence seq = (ASN1Sequence)key;
+            AuthorityKeyIdentifier sakid = null;
+            if(seq.size() == 1 && (seq.getObjectAt(0) instanceof ASN1OctetString)) {
+                sakid = new AuthorityKeyIdentifier(new DERSequence(new DERTaggedObject(0, seq.getObjectAt(0))));
+            } else {
+                sakid = new AuthorityKeyIdentifier(seq);
+            }
 
             if(sakid.getKeyIdentifier() != null) {
                 if(issuer.getExtensionValue("2.5.29.14") != null) {
-                    SubjectKeyIdentifier iskid = new SubjectKeyIdentifier(((ASN1OctetString)(new ASN1InputStream(issuer.getExtensionValue("2.5.29.14")).readObject())));
+                    DEROctetString der = (DEROctetString)get(issuer.getExtensionValue("2.5.29.14"));
+                    if(der.getOctets().length > 20) {
+                        der = (DEROctetString)get(der.getOctets());
+                    }
+                    SubjectKeyIdentifier iskid = new SubjectKeyIdentifier(der);
                     if(iskid.getKeyIdentifier() != null) {
                         if(!Arrays.equals(sakid.getKeyIdentifier(),iskid.getKeyIdentifier())) {
                             return V_ERR_AKID_SKID_MISMATCH;
@@ -243,7 +269,6 @@ public abstract class X509Utils {
         } else if(issuer.getKeyUsage() != null && !issuer.getKeyUsage()[5]) { // KU_KEY_CERT_SIGN
             return V_ERR_KEYUSAGE_NO_CERTSIGN;
         }
-
         return V_OK;
     }
 

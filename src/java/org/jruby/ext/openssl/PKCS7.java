@@ -36,7 +36,6 @@ import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.security.cert.CertStore;
 import java.security.cert.CollectionCertStoreParameters;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -138,8 +137,8 @@ public class PKCS7 extends RubyObject {
         return runtime.newString(new ByteList(((MemBIO)bio).getMemCopy(), false));
     }
 
-    private static List<X509Certificate> x509_ary2sk(IRubyObject ary) {
-        List<X509Certificate> certs = new ArrayList<X509Certificate>();
+    private static List<X509AuxCertificate> x509_ary2sk(IRubyObject ary) {
+        List<X509AuxCertificate> certs = new ArrayList<X509AuxCertificate>();
         RubyArray arr = (RubyArray)ary;
         for(int i = 0; i<arr.size(); i++) {
             certs.add(((X509Cert)arr.eltInternal(i)).getAuxCert());
@@ -194,7 +193,7 @@ public class PKCS7 extends RubyObject {
 
             BIO in = obj2bio(data);
 
-            List<X509Certificate> x509s = certs.isNil() 
+            List<X509AuxCertificate> x509s = certs.isNil() 
                 ? null 
                 : x509_ary2sk(certs); 
 
@@ -229,7 +228,7 @@ public class PKCS7 extends RubyObject {
 
             int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
             byte[] in = data.convertToString().getBytes();
-            List<X509Certificate> x509s = x509_ary2sk(certs);
+            List<X509AuxCertificate> x509s = x509_ary2sk(certs);
             org.jruby.ext.openssl.impl.PKCS7 p7 = org.jruby.ext.openssl.impl.PKCS7.encrypt(x509s, in, ciph, flg);
             PKCS7 ret = wrap(((RubyModule)(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), p7);
             ret.setData(data);
@@ -397,8 +396,8 @@ public class PKCS7 extends RubyObject {
         return getRuntime().getNil();
     }
 
-    private Collection<X509Certificate> getCertificates() {
-        Collection<X509Certificate> certs;
+    private Collection<X509AuxCertificate> getCertificates() {
+        Collection<X509AuxCertificate> certs;
         int i = p7.getType();
         switch(i) {
         case ASN1Registry.NID_pkcs7_signed:
@@ -408,15 +407,15 @@ public class PKCS7 extends RubyObject {
             certs = p7.getSignedAndEnveloped().getCert();
             break;
         default:
-            certs = new HashSet<X509Certificate>();
+            certs = new HashSet<X509AuxCertificate>();
             break;
         }
         return certs;
     }
 
-    private RubyArray certsToArray(Collection<X509Certificate> certs) throws Exception {
+    private RubyArray certsToArray(Collection<X509AuxCertificate> certs) throws Exception {
         RubyArray ary = getRuntime().newArray(certs.size());
-        for(X509Certificate x509 : certs) {
+        for(X509AuxCertificate x509 : certs) {
             ary.append(X509Cert.wrap(getRuntime(), x509));
         }
         return ary;
@@ -475,7 +474,7 @@ public class PKCS7 extends RubyObject {
 
         BIO in = indata.isNil() ? null : obj2bio(indata);
 
-        List<X509Certificate> x509s = certs.isNil() 
+        List<X509AuxCertificate> x509s = certs.isNil() 
             ? null 
             : x509_ary2sk(certs); 
 
@@ -489,6 +488,8 @@ public class PKCS7 extends RubyObject {
         } catch(NotVerifiedPKCS7Exception e) {
             result = false;
         } catch(PKCS7Exception e) {
+            System.err.println(e.toString());
+            e.printStackTrace();
             // TODO: throw exception if it's a bad thingy here
             result = false;
         }

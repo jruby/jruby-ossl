@@ -30,7 +30,6 @@ package org.jruby.ext.openssl.impl;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.security.cert.X509Certificate;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -42,6 +41,7 @@ import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
 import org.jruby.ext.openssl.x509store.Name;
+import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 
 /** PKCS7_RECIP_INFO
  *
@@ -56,12 +56,12 @@ public class RecipInfo {
     /**
      * Describe cert here.
      */
-    private X509Certificate cert;
+    private X509AuxCertificate cert;
 
     /** c: PKCS7_RECIP_INFO_set
      *
      */
-    public void set(X509Certificate cert) { 
+    public void set(X509AuxCertificate cert) { 
         version = 0;
         try {
             X509Name issuer = X509Name.getInstance(new ASN1InputStream(new ByteArrayInputStream(cert.getIssuerX500Principal().getEncoded())).readObject());
@@ -189,9 +189,9 @@ public class RecipInfo {
     /**
      * Get the <code>Cert</code> value.
      *
-     * @return a <code>X509Certificate</code> value
+     * @return a <code>X509AuxCertificate</code> value
      */
-    public final X509Certificate getCert() {
+    public final X509AuxCertificate getCert() {
         return cert;
     }
 
@@ -200,14 +200,14 @@ public class RecipInfo {
      *
      * @param newCert The new Cert value.
      */
-    public final void setCert(final X509Certificate newCert) {
+    public final void setCert(final X509AuxCertificate newCert) {
         this.cert = newCert;
     }
 
     /* c: static pkcs7_cmp_ri
      *
      */
-    public boolean compare(X509Certificate pcert) {
+    public boolean compare(X509AuxCertificate pcert) {
         if(!new Name(issuerAndSerial.getName()).isEqual(pcert.getIssuerX500Principal())) {
             return false;
         }

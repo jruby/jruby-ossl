@@ -658,15 +658,15 @@ public class StoreContext {
         num = chain.size();
         x = chain.get(num-1);
         depth = param.depth;
-
         for(;;) {
             if(depth < num) {
                 break;
             }
-            //xn = new X509_NAME(x.getIssuerX500Principal());
+
             if(checkIssued.call(this,x,x) != 0) {
                 break;
             }
+
             if(untrusted != null) {
                 xtmp = findIssuer(sktmp,x);
                 if(xtmp != null) {
@@ -683,7 +683,7 @@ public class StoreContext {
 
         i = chain.size();
         x = (X509AuxCertificate)chain.get(i-1);
-        //xn = new X509_NAME(x.getSubjectX500Principal());
+
         if(checkIssued.call(this,x,x) != 0) {
             if(chain.size() == 1) {
                 X509AuxCertificate[] p_xtmp = new X509AuxCertificate[]{xtmp};
@@ -733,7 +733,6 @@ public class StoreContext {
         }
 
         //xn = new X509_NAME(x.getIssuerX500Principal());
-
         if(checkIssued.call(this,x,x) == 0) {
             if(chain_ss == null || checkIssued.call(this,x,chain_ss) == 0) {
                 if(lastUntrusted >= num) {

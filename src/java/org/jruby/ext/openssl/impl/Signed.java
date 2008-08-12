@@ -30,7 +30,6 @@ package org.jruby.ext.openssl.impl;
 import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509CRL;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -52,6 +51,7 @@ import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.X509CertificateStructure;
 import org.bouncycastle.jce.provider.X509CertificateObject;
+import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 
 /** PKCS7_SIGNED
  *
@@ -71,7 +71,7 @@ public class Signed {
     /**
      * Describe cert here.
      */
-    private Collection<X509Certificate> cert = new ArrayList<X509Certificate>();
+    private Collection<X509AuxCertificate> cert = new ArrayList<X509AuxCertificate>();
 
     /**
      * Describe mdAlgs here.
@@ -160,9 +160,9 @@ public class Signed {
     /**
      * Get the <code>Cert</code> value.
      *
-     * @return a <code>Collection<X509Certificate></code> value
+     * @return a <code>Collection<X509AuxCertificate></code> value
      */
-    public final Collection<X509Certificate> getCert() {
+    public final Collection<X509AuxCertificate> getCert() {
         return cert;
     }
 
@@ -171,7 +171,7 @@ public class Signed {
      *
      * @param newCert The new Cert value.
      */
-    public final void setCert(final Collection<X509Certificate> newCert) {
+    public final void setCert(final Collection<X509AuxCertificate> newCert) {
         this.cert = newCert;
     }
 
@@ -225,7 +225,7 @@ public class Signed {
     private ASN1Set certificatesToASN1Set() {
         try {
             ASN1EncodableVector vector = new ASN1EncodableVector();
-            for(X509Certificate c : cert) {
+            for(X509AuxCertificate c : cert) {
                 vector.add(new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
             }
             return new DERSet(vector);
@@ -300,14 +300,14 @@ public class Signed {
         return signed;
     }
 
-    private static Collection<X509Certificate> certificatesFromASN1Set(DEREncodable content) {
-        Collection<X509Certificate> result = new ArrayList<X509Certificate>();
+    private static Collection<X509AuxCertificate> certificatesFromASN1Set(DEREncodable content) {
+        Collection<X509AuxCertificate> result = new ArrayList<X509AuxCertificate>();
         if(content instanceof DERSet) {
             for(Enumeration<?> enm = ((DERSet)content).getObjects(); enm.hasMoreElements(); ) {
                 DEREncodable current = (DEREncodable)enm.nextElement();
                 X509CertificateStructure struct = X509CertificateStructure.getInstance(current);
                 try {
-                    result.add(new X509CertificateObject(struct));
+                    result.add(new X509AuxCertificate(new X509CertificateObject(struct)));
                 } catch(CertificateParsingException ex) {
                     throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + ex);
                 }
@@ -315,7 +315,7 @@ public class Signed {
         } else {
             X509CertificateStructure struct = X509CertificateStructure.getInstance(content);
             try {
-                result.add(new X509CertificateObject(struct));
+                result.add(new X509AuxCertificate(new X509CertificateObject(struct)));
             } catch(CertificateParsingException ex) {
                 throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + ex);
             }

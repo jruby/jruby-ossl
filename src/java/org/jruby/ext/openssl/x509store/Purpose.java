@@ -253,6 +253,10 @@ public class Purpose {
      * c: purpose_smime
      */
     public static int purposeSMIME(X509AuxCertificate x, int ca) throws Exception {
+        System.err.println("purposeSMIME: " + x);
+        System.err.println("extended key usage: " + x.getExtensionValue("2.5.29.37").length);
+        System.err.println("extended key usage: " + new ASN1InputStream(x.getExtensionValue("2.5.29.37")).readObject());
+        System.err.println("extended key usage: " + new ASN1InputStream(x.getExtensionValue("2.5.29.37")).readObject().getClass().getName());
         if(x.getExtendedKeyUsage() != null && !x.getExtendedKeyUsage().contains("1.3.6.1.5.5.7.3.4")) {
             return 0; // must allow email protection
         }

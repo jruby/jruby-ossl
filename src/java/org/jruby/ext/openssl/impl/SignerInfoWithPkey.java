@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
 import java.security.interfaces.DSAPrivateKey;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateKey;
@@ -57,6 +56,7 @@ import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
+import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 
 /**
  *
@@ -79,6 +79,18 @@ public class SignerInfoWithPkey extends ASN1Encodable {
         }
 
         throw new IllegalArgumentException("unknown object in factory: " + o.getClass().getName());
+    }
+
+    public SignerInfoWithPkey dup() {
+        SignerInfoWithPkey copy = new SignerInfoWithPkey(version, 
+                                                         issuerAndSerialNumber,
+                                                         digAlgorithm,
+                                                         authenticatedAttributes,
+                                                         digEncryptionAlgorithm,
+                                                         encryptedDigest,
+                                                         unauthenticatedAttributes);
+        copy.pkey = pkey;
+        return copy;
     }
 
     SignerInfoWithPkey() {        
@@ -160,7 +172,7 @@ public class SignerInfoWithPkey extends ASN1Encodable {
     /* c: PKCS7_SIGNER_INFO_set
      *
      */
-    public void set(X509Certificate x509, PrivateKey pkey, MessageDigest dgst) {
+    public void set(X509AuxCertificate x509, PrivateKey pkey, MessageDigest dgst) {
         boolean dsa = 
             (pkey instanceof DSAPrivateKey) || 
             (pkey instanceof ECPrivateKey);
