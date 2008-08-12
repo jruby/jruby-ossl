@@ -27,15 +27,17 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+
 import java.security.MessageDigest;
 import java.util.Iterator;
 import java.util.List;
-
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DERBoolean;
+import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERIA5String;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObject;
@@ -55,6 +57,7 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.impl.ASN1Registry;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
@@ -368,6 +371,13 @@ public class X509Extensions {
                     bs[3] = (byte) (Integer.parseInt(numbers[3]) & 0xff);
                     value = new String(ByteList.plain(new GeneralNames(new GeneralName(GeneralName.iPAddress,new DEROctetString(bs))).getDEREncoded()));
                 }
+            } else if(r_oid.equals(new DERObjectIdentifier("2.5.29.37"))) { //extendedKeyUsage
+                String[] spl = valuex.split(", ?");
+                ASN1EncodableVector vector = new ASN1EncodableVector();
+                for(String name : spl) {
+                    vector.add(ASN1Registry.sym2oid(name));
+                }
+                value = new DERSequence(vector);
             } else {
                 value = new DEROctetString(new DEROctetString(ByteList.plain(valuex)).getDEREncoded());
             }
@@ -422,6 +432,8 @@ public class X509Extensions {
                 return ByteList.plain((String) value);
             } else if(value instanceof DEROctetString) {
                 return ((DEROctetString)value).getOctets();
+            } else if(value instanceof DEREncodable) {
+                return ((ASN1Encodable)value).getEncoded();
             } else {
                 return ((ASN1.ASN1Data)value).toASN1().getDEREncoded();
             }

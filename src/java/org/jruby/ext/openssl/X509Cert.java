@@ -155,7 +155,7 @@ public class X509Cert extends RubyObject {
                 String critOid = (String)iter.next();
                 byte[] value = cert.getExtensionValue(critOid);
                 IRubyObject rValue = ASN1.decode(((RubyModule)(getRuntime().getModule("OpenSSL"))).getConstant("ASN1"),RubyString.newString(getRuntime(), value)).callMethod(tc,"value");
-                if(critOid.equals("2.5.29.17") || critOid.equals("2.5.29.37")) {
+                if(critOid.equals("2.5.29.17")) {
                     add_extension(extFact.callMethod(tc,"create_ext", new IRubyObject[]{getRuntime().newString(critOid),getRuntime().newString(rValue.toString()),getRuntime().getTrue()}));
                 } else {
                     add_extension(extFact.callMethod(tc,"create_ext", new IRubyObject[]{getRuntime().newString(critOid),getRuntime().newString(rValue.toString().substring(2)),getRuntime().getTrue()}));
@@ -170,7 +170,7 @@ public class X509Cert extends RubyObject {
                 byte[] value = cert.getExtensionValue(ncritOid);
                 IRubyObject rValue = ASN1.decode(((RubyModule)(getRuntime().getModule("OpenSSL"))).getConstant("ASN1"),RubyString.newString(getRuntime(), value)).callMethod(tc,"value");
 
-                if(ncritOid.equals("2.5.29.17") || ncritOid.equals("2.5.29.37")) {
+                if(ncritOid.equals("2.5.29.17")) {
                     add_extension(extFact.callMethod(tc,"create_ext", new IRubyObject[]{getRuntime().newString(ncritOid),getRuntime().newString(rValue.toString()),getRuntime().getFalse()}));
                 } else {
                     add_extension(extFact.callMethod(tc,"create_ext", new IRubyObject[]{getRuntime().newString(ncritOid),getRuntime().newString(rValue.toString().substring(2)),getRuntime().getFalse()}));
@@ -335,13 +335,7 @@ public class X509Cert extends RubyObject {
 
         for(Iterator<IRubyObject> iter = extensions.iterator();iter.hasNext();) {
             X509Extensions.Extension ag = (X509Extensions.Extension)iter.next();
-            System.err.println("adding extension: " + ag.getRealOid() + " with value of length" + ag.getRealValueBytes().length);
             byte[] bytes = ag.getRealValueBytes();
-            if(ag.getRealOid().toString().equals("2.5.29.37")) {
-                byte[] newBytes = new byte[bytes.length-2];
-                System.arraycopy(bytes, 2, newBytes, 0, newBytes.length);
-                bytes = newBytes;
-            }
             generator.addExtension(ag.getRealOid(),ag.getRealCritical(),bytes);
         }
 
@@ -394,7 +388,8 @@ public class X509Cert extends RubyObject {
     @JRubyMethod
     public IRubyObject add_extension(IRubyObject arg) throws Exception {
         changed = true;
-        if(((X509Extensions.Extension)arg).getRealOid().equals(new DERObjectIdentifier("2.5.29.17"))) {
+        DERObjectIdentifier oid = ((X509Extensions.Extension)arg).getRealOid();
+        if(oid.equals(new DERObjectIdentifier("2.5.29.17"))) {
             boolean one = true;
             for(Iterator iter = extensions.iterator();iter.hasNext();) {
                 X509Extensions.Extension ag = (X509Extensions.Extension)iter.next();
