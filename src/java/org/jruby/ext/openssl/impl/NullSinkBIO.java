@@ -34,9 +34,6 @@ import java.io.IOException;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class NullSinkBIO extends BIO {
-    public void crlfCopy(byte[] in, int flags) throws IOException {
-    }
-
     public int gets(byte[] in, int len) throws IOException {
         return 0;
     }

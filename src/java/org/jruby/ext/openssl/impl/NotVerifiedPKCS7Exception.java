@@ -27,50 +27,12 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import java.io.IOException;
-import java.security.MessageDigest;
-
 /**
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class MessageDigestBIOFilter extends BIOFilter {
-    private MessageDigest md;
-
-    public MessageDigestBIOFilter(MessageDigest md) {
-        this.md = md;
+public class NotVerifiedPKCS7Exception extends PKCS7Exception {
+    public NotVerifiedPKCS7Exception() {
+        super(-1, -1);
     }
-
-    public int gets(byte[] in, int len) throws IOException {
-        int read = next().gets(in, len);
-        if(read > 0) {
-            md.update(in, 0, read);
-        }
-        return read;
-    }
-
-    public int read(byte[] into, int offset, int len) throws IOException {
-        int read = next().read(into, offset, len);
-        if(read > 0) {
-            md.update(into, offset, read);
-        }
-        return read;
-    }
-
-    public int write(byte[] out, int offset, int len) throws IOException {
-        int written = next().write(out, offset, len);
-        md.update(out, offset, written);
-        return written;
-    }
-
-    public int getType() {
-        return TYPE_MD;
-    }
-
-    /** c: BIO_get_md_ctx
-     *
-     */
-    public MessageDigest getMessageDigest() {
-        return md;
-    }
-}// MessageDigestBIOFilter
+}// NotVerifiedPKCS7Exception

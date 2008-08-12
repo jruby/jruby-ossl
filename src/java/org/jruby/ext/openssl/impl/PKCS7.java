@@ -28,6 +28,7 @@
 package org.jruby.ext.openssl.impl;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -35,11 +36,12 @@ import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.TimeZone;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -53,6 +55,7 @@ import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DEREncodable;
+import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
@@ -60,9 +63,13 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.DERUTCTime;
 import org.bouncycastle.asn1.pkcs.Attribute;
+import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.X509Name;
 import org.jruby.ext.openssl.OpenSSLReal;
+import org.jruby.ext.openssl.x509store.Name;
+import org.jruby.ext.openssl.x509store.Store;
 
 /** c: PKCS7
  *
@@ -155,10 +162,346 @@ public class PKCS7 {
         return asASN1().getEncoded();
     }
 
+    /* c: PKCS7_add_signature
+     *
+     */
+    public SignerInfoWithPkey addSignature(X509Certificate x509, PrivateKey pkey, MessageDigest dgst) {
+        SignerInfoWithPkey si = new SignerInfoWithPkey();
+        si.set(x509, pkey, dgst);
+        addSigner(si);
+        return si;
+    }
+
+    /* c: X509_find_by_issuer_and_serial
+     *
+     */
+    public static X509Certificate findByIssuerAndSerial(Collection<X509Certificate> certs, X509Name issuer, BigInteger serial) {
+        Name name = new Name(issuer);
+        for(X509Certificate cert : certs) {
+            if(name.isEqual(cert.getIssuerX500Principal()) && serial.equals(cert.getSerialNumber())) {
+                return cert;
+            }
+        }
+        return null;
+    }
+
+
+    /* c: PKCS7_get0_signers
+     *
+     */
+    public List<X509Certificate> getSigners(Collection<X509Certificate> certs, List<SignerInfoWithPkey> sinfos, int flags) {
+        List<X509Certificate> signers = new ArrayList<X509Certificate>();
+
+        if(!isSigned()) {
+            throw new PKCS7Exception(F_PKCS7_GET0_SIGNERS,R_WRONG_CONTENT_TYPE);
+        }
+
+        if(sinfos.size() == 0) {
+            throw new PKCS7Exception(F_PKCS7_GET0_SIGNERS,R_NO_SIGNERS);
+        }
+
+        for(SignerInfoWithPkey si : sinfos) {
+            IssuerAndSerialNumber ias = si.getIssuerAndSerialNumber();
+            X509Certificate signer = null;
+            if(certs != null) {
+                signer = findByIssuerAndSerial(certs, ias.getName(), ias.getCertificateSerialNumber().getValue());
+            }
+            if(signer == null && (flags & NOINTERN) == 0 && getSign().getCert() != null) {
+                signer = findByIssuerAndSerial(getSign().getCert(), ias.getName(), ias.getCertificateSerialNumber().getValue());
+            }
+            if(signer == null) {
+                throw new PKCS7Exception(F_PKCS7_GET0_SIGNERS,R_SIGNER_CERTIFICATE_NOT_FOUND);
+            }
+            signers.add(signer);
+        }
+        return signers;
+    }
+
+    /* c: PKCS7_signatureVerify
+     *
+     */
+    public void signatureVerify(BIO bio, SignerInfoWithPkey si, X509Certificate x509) {
+        throw new UnsupportedOperationException("TODO: implement");
+// 	ASN1_OCTET_STRING *os;
+// 	EVP_MD_CTX mdc_tmp,*mdc;
+// 	int ret=0,i;
+// 	int md_type;
+// 	STACK_OF(X509_ATTRIBUTE) *sk;
+// 	BIO *btmp;
+// 	EVP_PKEY *pkey;
+
+// 	EVP_MD_CTX_init(&mdc_tmp);
+
+// 	if (!PKCS7_type_is_signed(p7) && 
+//         !PKCS7_type_is_signedAndEnveloped(p7)) {
+// 		PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
+//                  PKCS7_R_WRONG_PKCS7_TYPE);
+// 		goto err;
+// 	}
+
+// 	md_type=OBJ_obj2nid(si->digest_alg->algorithm);
+
+// 	btmp=bio;
+// 	for (;;)
+// 		{
+//             if ((btmp == NULL) ||
+//                 ((btmp=BIO_find_type(btmp,BIO_TYPE_MD)) == NULL))
+//                 {
+//                     PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
+//                              PKCS7_R_UNABLE_TO_FIND_MESSAGE_DIGEST);
+//                     goto err;
+//                 }
+//             BIO_get_md_ctx(btmp,&mdc);
+//             if (mdc == NULL)
+//                 {
+//                     PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
+//                              ERR_R_INTERNAL_ERROR);
+//                     goto err;
+//                 }
+//             if (EVP_MD_CTX_type(mdc) == md_type)
+//                 break;
+//             /* Workaround for some broken clients that put the signature
+//              * OID instead of the digest OID in digest_alg->algorithm
+//              */
+//             if (EVP_MD_pkey_type(EVP_MD_CTX_md(mdc)) == md_type)
+//                 break;
+//             btmp=BIO_next(btmp);
+// 		}
+
+// 	/* mdc is the digest ctx that we want, unless there are attributes,
+// 	 * in which case the digest is the signed attributes */
+// 	EVP_MD_CTX_copy_ex(&mdc_tmp,mdc);
+
+// 	sk=si->auth_attr;
+// 	if ((sk != NULL) && (sk_X509_ATTRIBUTE_num(sk) != 0))
+// 		{
+//             unsigned char md_dat[EVP_MAX_MD_SIZE], *abuf = NULL;
+//             unsigned int md_len, alen;
+//             ASN1_OCTET_STRING *message_digest;
+
+//             EVP_DigestFinal_ex(&mdc_tmp,md_dat,&md_len);
+//             message_digest=PKCS7_digest_from_attributes(sk);
+//             if (!message_digest)
+//                 {
+//                     PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
+//                              PKCS7_R_UNABLE_TO_FIND_MESSAGE_DIGEST);
+//                     goto err;
+//                 }
+//             if ((message_digest->length != (int)md_len) ||
+//                 (memcmp(message_digest->data,md_dat,md_len)))
+//                 {
+// #if 0
+//                     {
+//                         int ii;
+//                         for (ii=0; ii<message_digest->length; ii++)
+//                             printf("%02X",message_digest->data[ii]); printf(" sent\n");
+//                         for (ii=0; ii<md_len; ii++) printf("%02X",md_dat[ii]); printf(" calc\n");
+//                     }
+// #endif
+//                     PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
+//                              PKCS7_R_DIGEST_FAILURE);
+//                     ret= -1;
+//                     goto err;
+//                 }
+
+//             EVP_VerifyInit_ex(&mdc_tmp,EVP_get_digestbynid(md_type), NULL);
+
+//             alen = ASN1_item_i2d((ASN1_VALUE *)sk, &abuf,
+//                                  ASN1_ITEM_rptr(PKCS7_ATTR_VERIFY));
+//             EVP_VerifyUpdate(&mdc_tmp, abuf, alen);
+
+//             OPENSSL_free(abuf);
+// 		}
+
+// 	os=si->enc_digest;
+// 	pkey = X509_get_pubkey(x509);
+// 	if (!pkey)
+// 		{
+//             ret = -1;
+//             goto err;
+// 		}
+// #ifndef OPENSSL_NO_DSA
+// 	if(pkey->type == EVP_PKEY_DSA) mdc_tmp.digest=EVP_dss1();
+// #endif
+// #ifndef OPENSSL_NO_ECDSA
+// 	if (pkey->type == EVP_PKEY_EC) mdc_tmp.digest=EVP_ecdsa();
+// #endif
+
+// 	i=EVP_VerifyFinal(&mdc_tmp,os->data,os->length, pkey);
+// 	EVP_PKEY_free(pkey);
+// 	if (i <= 0)
+// 		{
+//             PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
+//                      PKCS7_R_SIGNATURE_FAILURE);
+//             ret= -1;
+//             goto err;
+// 		}
+// 	else
+// 		ret=1;
+//  err:
+// 	EVP_MD_CTX_cleanup(&mdc_tmp);
+// 	return(ret);
+        
+    }
+
+    /* c: PKCS7_verify
+     *
+     */
+    public void verify(Collection<X509Certificate> certs, Store store, BIO indata, BIO out, int flags) {
+        if(!isSigned()) {
+            throw new PKCS7Exception(F_PKCS7_VERIFY, R_WRONG_CONTENT_TYPE);
+        }
+
+        if(getDetached() != 0 && indata == null) {
+            throw new PKCS7Exception(F_PKCS7_VERIFY, R_NO_CONTENT);
+        }
+
+        List<SignerInfoWithPkey> sinfos = new ArrayList<SignerInfoWithPkey>(getSignerInfo());
+        if(sinfos == null || sinfos.size() == 0) {
+            throw new PKCS7Exception(F_PKCS7_VERIFY, R_NO_SIGNATURES_ON_DATA);
+        }
+
+        List<X509Certificate> signers = getSigners(certs, sinfos, flags);
+        if(signers == null) {
+            throw new NotVerifiedPKCS7Exception();
+        }
+
+// 	X509_STORE_CTX cert_ctx;
+    
+        /* Now verify the certificates */
+        if((flags & NOVERIFY) == 0) {
+            for(X509Certificate signer : signers) {
+                throw new UnsupportedOperationException("TODO: implement");
+// 		if (!(flags & PKCS7_NOCHAIN)) {
+// 			if(!X509_STORE_CTX_init(&cert_ctx, store, signer,
+// 							p7->d.sign->cert))
+// 				{
+// 				PKCS7err(PKCS7_F_PKCS7_VERIFY,ERR_R_X509_LIB);
+// 				sk_X509_free(signers);
+// 				return 0;
+// 				}
+// 			X509_STORE_CTX_set_purpose(&cert_ctx,
+// 						X509_PURPOSE_SMIME_SIGN);
+// 		} else if(!X509_STORE_CTX_init (&cert_ctx, store, signer, NULL)) {
+// 			PKCS7err(PKCS7_F_PKCS7_VERIFY,ERR_R_X509_LIB);
+// 			sk_X509_free(signers);
+// 			return 0;
+// 		}
+// 		if (!(flags & PKCS7_NOCRL))
+// 			X509_STORE_CTX_set0_crls(&cert_ctx, p7->d.sign->crl);
+// 		i = X509_verify_cert(&cert_ctx);
+// 		if (i <= 0) j = X509_STORE_CTX_get_error(&cert_ctx);
+// 		X509_STORE_CTX_cleanup(&cert_ctx);
+// 		if (i <= 0) {
+// 			PKCS7err(PKCS7_F_PKCS7_VERIFY,PKCS7_R_CERTIFICATE_VERIFY_ERROR);
+// 			ERR_add_error_data(2, "Verify error:",
+// 					 X509_verify_cert_error_string(j));
+// 			sk_X509_free(signers);
+// 			return 0;
+// 		}
+// 		/* Check for revocation status here */
+                
+            }
+        }
+
+        BIO tmpin = indata;
+        BIO p7bio = dataInit(tmpin);
+        BIO tmpout = null;
+        if((flags & TEXT) != 0) {
+            tmpout = BIO.mem();
+        } else {
+            tmpout = out;
+        }
+        
+        byte[] buf = new byte[4096];
+        for(;;) {
+            try {
+                int i = p7bio.read(buf, 0, buf.length);
+                if(i <= 0) {
+                    break;
+                }
+                if(tmpout != null) {
+                    tmpout.write(buf, 0, i);
+                }
+            } catch(IOException e) {
+                throw new PKCS7Exception(F_PKCS7_VERIFY, -1, e);
+            }
+        }
+
+        if((flags & TEXT) != 0) {
+            new SMIME(Mime.DEFAULT).text(tmpout, out);
+        }
+
+        if((flags & NOSIGS) == 0) {
+            for(int i=0; i<sinfos.size(); i++) {
+                SignerInfoWithPkey si = sinfos.get(i);
+                X509Certificate signer = signers.get(i);
+                signatureVerify(p7bio, si, signer);
+            }
+        }
+
+        if(tmpin == indata) {
+            if(indata != null) {
+                p7bio.pop();
+            }
+        }
+    }
+
+    /* c: PKCS7_sign
+     *
+     */
+    public static PKCS7 sign(X509Certificate signcert, PrivateKey pkey, Collection<X509Certificate> certs, BIO data, int flags) {
+        PKCS7 p7 = new PKCS7();
+        p7.setType(ASN1Registry.NID_pkcs7_signed);
+        p7.contentNew(ASN1Registry.NID_pkcs7_data);
+        SignerInfoWithPkey si = p7.addSignature(signcert, pkey, EVP.sha1());
+        if((flags & NOCERTS) == 0) {
+            p7.addCertificate(signcert);
+            if(certs != null) {
+                for(X509Certificate c : certs) {
+                    p7.addCertificate(c);
+                }
+            }
+        }
+
+        if((flags & NOATTR) == 0) {
+            si.addSignedAttribute(ASN1Registry.NID_pkcs9_contentType, ASN1Registry.nid2obj(ASN1Registry.NID_pkcs7_data));
+            if((flags & NOSMIMECAP) == 0) {
+                ASN1EncodableVector smcap = new ASN1EncodableVector();
+                smcap.add(new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_des_ede3_cbc)));
+                smcap.add(new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_rc2_cbc), new DERInteger(128)));
+                smcap.add(new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_rc2_cbc), new DERInteger(64)));
+                smcap.add(new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_rc2_cbc), new DERInteger(40)));
+                smcap.add(new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_des_cbc)));
+                si.addSignedAttribute(ASN1Registry.NID_SMIMECapabilities, new DERSequence(smcap));
+            }
+        }
+
+        if((flags & STREAM) != 0) {
+            return p7;
+        }
+
+        BIO p7bio = p7.dataInit(null);
+
+        try {
+            data.crlfCopy(p7bio, flags);
+        } catch(IOException e) {
+            throw new PKCS7Exception(F_PKCS7_SIGN, R_PKCS7_DATAFINAL_ERROR, e.toString());
+        }
+
+        if((flags & DETACHED) != 0) {
+            p7.setDetached(1);
+        }
+
+        p7.dataFinal(p7bio);
+
+        return p7;
+    } 
+
     /* c: PKCS7_encrypt
      *
      */
-    public static PKCS7 encrypt(List<X509Certificate> certs, byte[] in, Cipher cipher, int flags) {
+    public static PKCS7 encrypt(Collection<X509Certificate> certs, byte[] in, Cipher cipher, int flags) {
         PKCS7 p7 = new PKCS7();
 
         p7.setType(ASN1Registry.NID_pkcs7_enveloped);
@@ -172,7 +515,7 @@ public class PKCS7 {
 
             BIO p7bio = p7.dataInit(null);
 
-            p7bio.crlfCopy(in, flags);
+            BIO.memBuf(in).crlfCopy(p7bio, flags);
             p7bio.flush();
             p7.dataFinal(p7bio);
 
@@ -299,7 +642,7 @@ public class PKCS7 {
     /** c: PKCS7_get_signer_info
      *
      */
-    public Set<SignerInfoWithPkey> getSignerInfo() {
+    public Collection<SignerInfoWithPkey> getSignerInfo() {
         return this.data.getSignerInfo();
     }
 
@@ -347,7 +690,7 @@ public class PKCS7 {
                 return pbio;
             }
         } catch(Exception e) {
-            throw new PKCS7Exception(F_PKCS7_BIO_ADD_DIGEST, R_UNKNOWN_DIGEST_TYPE);
+            throw new PKCS7Exception(F_PKCS7_BIO_ADD_DIGEST, R_UNKNOWN_DIGEST_TYPE, e);
         }
     }
 
@@ -360,8 +703,8 @@ public class PKCS7 {
         BIO etmp = null;
         BIO bio = null;
         byte[] dataBody = null;
-        Set<AlgorithmIdentifier> mdSk = null;
-        List<RecipInfo> rsk = null;
+        Collection<AlgorithmIdentifier> mdSk = null;
+        Collection<RecipInfo> rsk = null;
         AlgorithmIdentifier encAlg = null;
         AlgorithmIdentifier xalg = null;
         Cipher evpCipher = null;
@@ -507,11 +850,11 @@ public class PKCS7 {
      *
      */
     public BIO dataInit(BIO bio) {
-        Set<AlgorithmIdentifier> mdSk = null;
+        Collection<AlgorithmIdentifier> mdSk = null;
         ASN1OctetString os = null;
         int i = this.data.getType();
         state = S_HEADER;
-        List<RecipInfo> rsk = null;
+        Collection<RecipInfo> rsk = null;
         AlgorithmIdentifier xa = null;
         Cipher evpCipher = null;
         BIO out = null;
@@ -651,7 +994,7 @@ public class PKCS7 {
                 throw new PKCS7Exception(F_PKCS7_FIND_DIGEST, -1);
             }
             
-            if(nid == ASN1Registry.sym2nid(pmd[0].getAlgorithm())) {
+            if(nid == EVP.type(pmd[0])) {
                 return bio;
             }
 
@@ -663,7 +1006,7 @@ public class PKCS7 {
      *
      */
     public int dataFinal(BIO bio) { 
-        Set<SignerInfoWithPkey> siSk = null;
+        Collection<SignerInfoWithPkey> siSk = null;
         state = S_HEADER;
         BIO btmp;
         int bufLen;
@@ -679,7 +1022,7 @@ public class PKCS7 {
             siSk = getSignedAndEnveloped().getSignerInfo();
             break;
         case ASN1Registry.NID_pkcs7_signed:
-            siSk = getSignedAndEnveloped().getSignerInfo();
+            siSk = getSign().getSignerInfo();
             break;
         case ASN1Registry.NID_pkcs7_digest:
             break;
@@ -724,7 +1067,7 @@ public class PKCS7 {
                         si.addSignedAttribute(ASN1Registry.NID_pkcs9_messageDigest, digest);
 
                         sk = si.getAuthenticatedAttributes();
-                        sign = Signature.getInstance(ctx_tmp.getAlgorithm(), OpenSSLReal.PROVIDER);
+                        sign = Signature.getInstance(EVP.signatureAlgorithm(ctx_tmp, si.getPkey()), OpenSSLReal.PROVIDER);
                         sign.initSign(si.getPkey());
 
                         byte[] abuf = sk.getEncoded();
@@ -755,7 +1098,6 @@ public class PKCS7 {
                 throw new PKCS7Exception(F_PKCS7_DATAFINAL, R_UNABLE_TO_FIND_MEM_BIO);
             }
             buf = ((MemBIO)btmp).getMemCopy();
-
             switch(i) {
             case ASN1Registry.NID_pkcs7_signedAndEnveloped:
                 getSignedAndEnveloped().getEncData().setEncData(new DEROctetString(buf));

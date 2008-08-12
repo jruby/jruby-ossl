@@ -27,19 +27,26 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObjectIdentifier;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
@@ -59,12 +66,12 @@ public class Signed {
     /**
      * Describe crl here.
      */
-    private Set<X509CRL> crl = new HashSet<X509CRL>();
+    private Collection<X509CRL> crl = new ArrayList<X509CRL>();
 
     /**
      * Describe cert here.
      */
-    private Set<X509Certificate> cert = new HashSet<X509Certificate>();
+    private Collection<X509Certificate> cert = new ArrayList<X509Certificate>();
 
     /**
      * Describe mdAlgs here.
@@ -74,7 +81,7 @@ public class Signed {
     /**
      * Describe signerInfo here.
      */
-    private Set<SignerInfoWithPkey> signerInfo = new HashSet<SignerInfoWithPkey>();
+    private Collection<SignerInfoWithPkey> signerInfo = new ArrayList<SignerInfoWithPkey>();
 
     PKCS7 contents;
 
@@ -99,9 +106,9 @@ public class Signed {
     /**
      * Get the <code>SignerInfo</code> value.
      *
-     * @return a <code>Set<SignerInfoWithPkey></code> value
+     * @return a <code>Collection<SignerInfoWithPkey></code> value
      */
-    public final Set<SignerInfoWithPkey> getSignerInfo() {
+    public final Collection<SignerInfoWithPkey> getSignerInfo() {
         return signerInfo;
     }
 
@@ -110,7 +117,7 @@ public class Signed {
      *
      * @param newSignerInfo The new SignerInfo value.
      */
-    public final void setSignerInfo(final Set<SignerInfoWithPkey> newSignerInfo) {
+    public final void setSignerInfo(final Collection<SignerInfoWithPkey> newSignerInfo) {
         this.signerInfo = newSignerInfo;
     }
 
@@ -153,9 +160,9 @@ public class Signed {
     /**
      * Get the <code>Cert</code> value.
      *
-     * @return a <code>Set<X509Certificate></code> value
+     * @return a <code>Collection<X509Certificate></code> value
      */
-    public final Set<X509Certificate> getCert() {
+    public final Collection<X509Certificate> getCert() {
         return cert;
     }
 
@@ -164,7 +171,7 @@ public class Signed {
      *
      * @param newCert The new Cert value.
      */
-    public final void setCert(final Set<X509Certificate> newCert) {
+    public final void setCert(final Collection<X509Certificate> newCert) {
         this.cert = newCert;
     }
 
@@ -173,7 +180,7 @@ public class Signed {
      *
      * @return a <code>Set<X509CRL></code> value
      */
-    public final Set<X509CRL> getCrl() {
+    public final Collection<X509CRL> getCrl() {
         return crl;
     }
 
@@ -182,13 +189,61 @@ public class Signed {
      *
      * @param newCrl The new Crl value.
      */
-    public final void setCrl(final Set<X509CRL> newCrl) {
+    public final void setCrl(final Collection<X509CRL> newCrl) {
         this.crl = newCrl;
     }
 
     @Override
     public String toString() {
         return "#<Signed version=" + version + " mdAlgs="+mdAlgs+" content="+contents+" cert="+cert+" crls="+crl+" signerInfos="+signerInfo+">";
+    }
+
+    public ASN1Encodable asASN1() {
+        ASN1EncodableVector vector = new ASN1EncodableVector();
+        vector.add(new DERInteger(version));
+        vector.add(digestAlgorithmsToASN1Set());
+        vector.add(contents.asASN1());
+        if(cert != null && cert.size() > 0) {
+            vector.add(new DERTaggedObject(0, certificatesToASN1Set()));
+        }
+        if(crl != null && crl.size() > 0) {
+            vector.add(new DERTaggedObject(1, crlsToASN1Set()));
+        }
+        vector.add(signerInfosToASN1Set());
+        return new DERSequence(vector);
+    }
+
+    private ASN1Set digestAlgorithmsToASN1Set() {
+        ASN1EncodableVector vector = new ASN1EncodableVector();
+        for(AlgorithmIdentifier ai : mdAlgs) {
+            vector.add(ai.toASN1Object());
+        }
+        return new DERSet(vector);
+    }
+
+    // This imlementation is stupid and wasteful. Ouch.
+    private ASN1Set certificatesToASN1Set() {
+        try {
+            ASN1EncodableVector vector = new ASN1EncodableVector();
+            for(X509Certificate c : cert) {
+                vector.add(new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
+            }
+            return new DERSet(vector);
+        } catch(Exception e) {
+            return null;
+        }
+    }
+
+    private ASN1Set crlsToASN1Set() {
+        throw new RuntimeException("TODO: implement CRL part");
+    }
+
+    private ASN1Set signerInfosToASN1Set() {
+        ASN1EncodableVector vector = new ASN1EncodableVector();
+        for(SignerInfoWithPkey si : signerInfo) {
+            vector.add(si.toASN1Object());
+        }
+        return new DERSet(vector);
     }
 
     /**
@@ -245,14 +300,28 @@ public class Signed {
         return signed;
     }
 
-    private static Set<X509Certificate> certificatesFromASN1Set(DEREncodable content) {
-        Set<X509Certificate> result = new HashSet<X509Certificate>();
-        X509CertificateStructure struct = X509CertificateStructure.getInstance(content);
-        try {
-            result.add(new X509CertificateObject(struct));
-        } catch(CertificateParsingException ex) {
-            throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + ex);
+    private static Collection<X509Certificate> certificatesFromASN1Set(DEREncodable content) {
+        Collection<X509Certificate> result = new ArrayList<X509Certificate>();
+        if(content instanceof DERSet) {
+            for(Enumeration<?> enm = ((DERSet)content).getObjects(); enm.hasMoreElements(); ) {
+                DEREncodable current = (DEREncodable)enm.nextElement();
+                X509CertificateStructure struct = X509CertificateStructure.getInstance(current);
+                try {
+                    result.add(new X509CertificateObject(struct));
+                } catch(CertificateParsingException ex) {
+                    throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + ex);
+                }
+            }
+        } else {
+            X509CertificateStructure struct = X509CertificateStructure.getInstance(content);
+            try {
+                result.add(new X509CertificateObject(struct));
+            } catch(CertificateParsingException ex) {
+                throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + ex);
+            }
         }
+
+
         return result;
     }
 
@@ -265,9 +334,9 @@ public class Signed {
         return result;
     }
 
-    private static Set<SignerInfoWithPkey> signerInfosFromASN1Set(DEREncodable content) {
+    private static Collection<SignerInfoWithPkey> signerInfosFromASN1Set(DEREncodable content) {
         ASN1Set set = (ASN1Set)content;
-        Set<SignerInfoWithPkey> result = new HashSet<SignerInfoWithPkey>();
+        Collection<SignerInfoWithPkey> result = new ArrayList<SignerInfoWithPkey>();
         for(Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
             result.add(SignerInfoWithPkey.getInstance(e.nextElement()));
         }

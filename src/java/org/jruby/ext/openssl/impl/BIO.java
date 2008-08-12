@@ -214,27 +214,28 @@ public class BIO {
     /** c: SMIME_crlf_copy
      *
      */
-    public void crlfCopy(byte[] in, int flags) throws IOException {
+    public void crlfCopy(BIO out, int flags) throws IOException {
+        BIO in = this;
         byte[] linebuf = new byte[SMIME.MAX_SMLEN];
         int[] len = new int[]{0};
 
         if((flags & PKCS7.BINARY) > 0 ) {
-            write(in, 0, in.length);
+            while((len[0] = in.read(linebuf, 0, SMIME.MAX_SMLEN)) > 0) {
+                out.write(linebuf, 0, len[0]);
+            }
             return;
         }
         if((flags & PKCS7.TEXT) > 0) {
-            write(CONTENT_TEXT, 0, CONTENT_TEXT.length);
+            out.write(CONTENT_TEXT, 0, CONTENT_TEXT.length);
         }
-        BIO inBio = memBuf(in);
-        while((len[0] = inBio.gets(linebuf, SMIME.MAX_SMLEN)) > 0) {
+        while((len[0] = in.gets(linebuf, SMIME.MAX_SMLEN)) > 0) {
             boolean eol = SMIME.stripEol(linebuf, len);
             if(len[0] != 0) {
-                write(linebuf, 0, len[0]);
+                out.write(linebuf, 0, len[0]);
             }
             if(eol) {
-                write(SMIME.NEWLINE, 0, 2);
+                out.write(SMIME.NEWLINE, 0, 2);
             }
-
         }
     }
 
@@ -334,5 +335,11 @@ public class BIO {
      */
     public void reset() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String toString() {
+        String[] names = getClass().getName().split("\\.");
+        return "#<BIO:" + names[names.length-1] + " next=" + next() + ">";
     }
 }// BIO

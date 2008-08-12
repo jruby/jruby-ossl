@@ -27,12 +27,13 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.security.cert.X509CRL;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
@@ -51,12 +52,12 @@ public class SignEnvelope {
     /**
      * Describe crl here.
      */
-    private List<X509CRL> crl = new ArrayList<X509CRL>();
+    private Collection<X509CRL> crl = new ArrayList<X509CRL>();
 
     /**
      * Describe cert here.
      */
-    private List<X509Certificate> cert = new ArrayList<X509Certificate>();
+    private Collection<X509Certificate> cert = new ArrayList<X509Certificate>();
 
     /**
      * Describe mdAlgs here.
@@ -66,12 +67,12 @@ public class SignEnvelope {
     /**
      * Describe signerInfo here.
      */
-    private Set<SignerInfoWithPkey> signerInfo = new HashSet<SignerInfoWithPkey>();
+    private Collection<SignerInfoWithPkey> signerInfo = new ArrayList<SignerInfoWithPkey>();
 
     /**
      * Describe recipientInfo here.
      */
-    private List<RecipInfo> recipientInfo = new ArrayList<RecipInfo>();
+    private Collection<RecipInfo> recipientInfo = new ArrayList<RecipInfo>();
 
     /**
      * Get the <code>Version</code> value.
@@ -112,9 +113,9 @@ public class SignEnvelope {
     /**
      * Get the <code>RecipientInfo</code> value.
      *
-     * @return a <code>Set<RecipInfo></code> value
+     * @return a <code>Collection<RecipInfo></code> value
      */
-    public final List<RecipInfo> getRecipientInfo() {
+    public final Collection<RecipInfo> getRecipientInfo() {
         return recipientInfo;
     }
 
@@ -123,16 +124,16 @@ public class SignEnvelope {
      *
      * @param newRecipientInfo The new RecipientInfo value.
      */
-    public final void setRecipientInfo(final List<RecipInfo> newRecipientInfo) {
+    public final void setRecipientInfo(final Collection<RecipInfo> newRecipientInfo) {
         this.recipientInfo = newRecipientInfo;
     }
 
     /**
      * Get the <code>SignerInfoWithPkey</code> value.
      *
-     * @return a <code>Set<SignerInfoWithPkey></code> value
+     * @return a <code>Collection<SignerInfoWithPkey></code> value
      */
-    public final Set<SignerInfoWithPkey> getSignerInfo() {
+    public final Collection<SignerInfoWithPkey> getSignerInfo() {
         return signerInfo;
     }
 
@@ -141,7 +142,7 @@ public class SignEnvelope {
      *
      * @param newSignerInfo The new SignerInfo value.
      */
-    public final void setSignerInfo(final Set<SignerInfoWithPkey> newSignerInfo) {
+    public final void setSignerInfo(final Collection<SignerInfoWithPkey> newSignerInfo) {
         this.signerInfo = newSignerInfo;
     }
 
@@ -166,9 +167,9 @@ public class SignEnvelope {
     /**
      * Get the <code>Cert</code> value.
      *
-     * @return a <code>List<X509Certificate></code> value
+     * @return a <code>Collection<X509Certificate></code> value
      */
-    public final List<X509Certificate> getCert() {
+    public final Collection<X509Certificate> getCert() {
         return cert;
     }
 
@@ -177,16 +178,16 @@ public class SignEnvelope {
      *
      * @param newCert The new Cert value.
      */
-    public final void setCert(final List<X509Certificate> newCert) {
+    public final void setCert(final Collection<X509Certificate> newCert) {
         this.cert = newCert;
     }
 
     /**
      * Get the <code>Crl</code> value.
      *
-     * @return a <code>List<X509CRL></code> value
+     * @return a <code>Collection<X509CRL></code> value
      */
-    public final List<X509CRL> getCrl() {
+    public final Collection<X509CRL> getCrl() {
         return crl;
     }
 
@@ -195,7 +196,7 @@ public class SignEnvelope {
      *
      * @param newCrl The new Crl value.
      */
-    public final void setCrl(final List<X509CRL> newCrl) {
+    public final void setCrl(final Collection<X509CRL> newCrl) {
         this.crl = newCrl;
     }
 }// SignEnvelope

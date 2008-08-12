@@ -28,8 +28,8 @@
 package org.jruby.ext.openssl.impl;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.bouncycastle.asn1.ASN1Encodable;
@@ -56,7 +56,7 @@ public class Envelope {
     /**
      * Describe recipientInfo here.
      */
-    private List<RecipInfo> recipientInfo = new ArrayList<RecipInfo>();
+    private Collection<RecipInfo> recipientInfo = new ArrayList<RecipInfo>();
 
     /**
      * Get the <code>Version</code> value.
@@ -97,9 +97,9 @@ public class Envelope {
     /**
      * Get the <code>RecipientInfo</code> value.
      *
-     * @return a <code>Set<RecipInfo></code> value
+     * @return a <code>Collection<RecipInfo></code> value
      */
-    public final List<RecipInfo> getRecipientInfo() {
+    public final Collection<RecipInfo> getRecipientInfo() {
         return recipientInfo;
     }
 
@@ -108,7 +108,7 @@ public class Envelope {
      *
      * @param newRecipientInfo The new RecipientInfo value.
      */
-    public final void setRecipientInfo(final List<RecipInfo> newRecipientInfo) {
+    public final void setRecipientInfo(final Collection<RecipInfo> newRecipientInfo) {
         this.recipientInfo = newRecipientInfo;
     }
 
@@ -158,9 +158,9 @@ public class Envelope {
         return new DERSet(vector);
     }
 
-    private static List<RecipInfo> recipientInfosFromASN1Set(DEREncodable content) {
+    private static Collection<RecipInfo> recipientInfosFromASN1Set(DEREncodable content) {
         ASN1Set set = (ASN1Set)content;
-        List<RecipInfo> result = new ArrayList<RecipInfo>();
+        Collection<RecipInfo> result = new ArrayList<RecipInfo>();
         for(Enumeration<?> e = set.getObjects(); e.hasMoreElements();) {
             result.add(RecipInfo.fromASN1((DEREncodable)e.nextElement()));
         }

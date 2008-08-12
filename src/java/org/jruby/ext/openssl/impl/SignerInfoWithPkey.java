@@ -27,10 +27,19 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.DSAPrivateKey;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.RSAPrivateKey;
 import java.util.Enumeration;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
@@ -47,6 +56,7 @@ import org.bouncycastle.asn1.pkcs.Attribute;
 import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.X509Name;
 
 /**
  *
@@ -69,6 +79,9 @@ public class SignerInfoWithPkey extends ASN1Encodable {
         }
 
         throw new IllegalArgumentException("unknown object in factory: " + o.getClass().getName());
+    }
+
+    SignerInfoWithPkey() {        
     }
 
     public SignerInfoWithPkey(DERInteger              version,
@@ -142,6 +155,41 @@ public class SignerInfoWithPkey extends ASN1Encodable {
 
     public ASN1Set getUnauthenticatedAttributes() {
         return unauthenticatedAttributes;
+    }
+
+    /* c: PKCS7_SIGNER_INFO_set
+     *
+     */
+    public void set(X509Certificate x509, PrivateKey pkey, MessageDigest dgst) {
+        boolean dsa = 
+            (pkey instanceof DSAPrivateKey) || 
+            (pkey instanceof ECPrivateKey);
+
+        version = new DERInteger(1);
+
+        try {
+            X509Name issuer = X509Name.getInstance(new ASN1InputStream(new ByteArrayInputStream(x509.getIssuerX500Principal().getEncoded())).readObject());
+            BigInteger serial = x509.getSerialNumber();
+            issuerAndSerialNumber = new IssuerAndSerialNumber(issuer, serial);
+        } catch(IOException e) {
+            throw new PKCS7Exception(-1, -1);
+        }
+
+        this.pkey = pkey;
+        
+        if(dsa) {
+            digAlgorithm = new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_sha1));
+        } else {
+            digAlgorithm = new AlgorithmIdentifier(ASN1Registry.nid2obj(EVP.type(dgst)));
+        }
+        
+        if(pkey instanceof RSAPrivateKey) {
+            digEncryptionAlgorithm = new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_rsaEncryption));
+        } else if(pkey instanceof DSAPrivateKey) {
+            digEncryptionAlgorithm = new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_dsa));
+        } else if(pkey instanceof ECPrivateKey) {
+            digEncryptionAlgorithm = new AlgorithmIdentifier(ASN1Registry.nid2obj(ASN1Registry.NID_ecdsa_with_SHA1));
+        }
     }
 
     /**

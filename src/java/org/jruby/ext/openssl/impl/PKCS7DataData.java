@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DEROctetString;
@@ -76,5 +77,9 @@ public class PKCS7DataData extends PKCS7Data {
             return new PKCS7DataData();
         }
         return new PKCS7DataData((ASN1OctetString)content);
+    }
+
+    public ASN1Encodable asASN1() {
+        return data.toASN1Object();
     }
 }// PKCS7DataData

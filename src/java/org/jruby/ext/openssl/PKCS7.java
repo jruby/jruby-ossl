@@ -39,6 +39,7 @@ import java.security.cert.CollectionCertStoreParameters;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -57,13 +58,17 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.impl.ASN1Registry;
 import org.jruby.ext.openssl.impl.BIO;
 import org.jruby.ext.openssl.impl.MemBIO;
 import org.jruby.ext.openssl.impl.Mime;
+import org.jruby.ext.openssl.impl.NotVerifiedPKCS7Exception;
+import org.jruby.ext.openssl.impl.PKCS7Exception;
 import org.jruby.ext.openssl.impl.RecipInfo;
 import org.jruby.ext.openssl.impl.SMIME;
 import org.jruby.ext.openssl.impl.SignerInfoWithPkey;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
+import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.runtime.Arity;
@@ -133,6 +138,15 @@ public class PKCS7 extends RubyObject {
         return runtime.newString(new ByteList(((MemBIO)bio).getMemCopy(), false));
     }
 
+    private static List<X509Certificate> x509_ary2sk(IRubyObject ary) {
+        List<X509Certificate> certs = new ArrayList<X509Certificate>();
+        RubyArray arr = (RubyArray)ary;
+        for(int i = 0; i<arr.size(); i++) {
+            certs.add(((X509Cert)arr.eltInternal(i)).getAuxCert());
+        }
+        return certs;
+    }
+
     public static class ModuleMethods {
         @JRubyMethod(meta=true)
         public static IRubyObject read_smime(IRubyObject klass, IRubyObject arg) throws IOException {
@@ -156,17 +170,39 @@ public class PKCS7 extends RubyObject {
 
         @JRubyMethod(meta=true, rest=true)
         public static IRubyObject sign(IRubyObject recv, IRubyObject[] args) throws Exception {
-            System.err.println("WARNING: un-implemented method called PKCS7#sign");
-            return recv.getRuntime().getNil();
-        }
+            Ruby runtime = recv.getRuntime();
+            IRubyObject cert = runtime.getNil();
+            IRubyObject key = runtime.getNil();
+            IRubyObject data = runtime.getNil();
+            IRubyObject certs = runtime.getNil();
+            IRubyObject flags = runtime.getNil();
 
-        private static List<X509Certificate> x509_ary2sk(IRubyObject ary) {
-            List<X509Certificate> certs = new ArrayList<X509Certificate>();
-            RubyArray arr = (RubyArray)ary;
-            for(int i = 0; i<arr.size(); i++) {
-                certs.add(((X509Cert)arr.eltInternal(i)).getAuxCert());
+            switch(Arity.checkArgumentCount(runtime, args, 3, 5)) {
+            case 5:
+                flags = args[4];
+            case 4:
+                certs = args[3];
+            case 3:
+                cert = args[0];
+                key = args[1];
+                data = args[2];
             }
-            return certs;
+
+            X509AuxCertificate x509 = ((X509Cert)cert).getAuxCert();
+            PrivateKey pkey = ((PKey)key).getPrivateKey();
+            int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
+
+            BIO in = obj2bio(data);
+
+            List<X509Certificate> x509s = certs.isNil() 
+                ? null 
+                : x509_ary2sk(certs); 
+
+            org.jruby.ext.openssl.impl.PKCS7 p7 = org.jruby.ext.openssl.impl.PKCS7.sign(x509, pkey, x509s, in, flg);
+            PKCS7 ret = wrap(((RubyModule)(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), p7);
+            ret.setData(data);
+
+            return ret;
         }
 
         /** ossl_pkcs7_s_encrypt
@@ -294,8 +330,16 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject add_signer(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#add_signer");
-        return getRuntime().getNil();
+        SignerInfoWithPkey p7si = ((SignerInfo)obj).getSignerInfo().dup();
+
+        p7.addSigner(p7si);
+        // TODO: Handle exception here
+
+        if(p7.isSigned()) {
+            p7si.addSignedAttribute(ASN1Registry.NID_pkcs9_contentType, ASN1Registry.nid2obj(ASN1Registry.NID_pkcs7_data));
+        }
+
+        return this;
     }
 
     /** ossl_pkcs7_get_signer
@@ -305,8 +349,12 @@ public class PKCS7 extends RubyObject {
      */
     @JRubyMethod
     public IRubyObject signers() {
-        System.err.println("WARNING: un.implemented method called PKCS7#signers");
-        return getRuntime().getNil();
+        Collection<SignerInfoWithPkey> sk = p7.getSignerInfo();
+        RubyArray ary = getRuntime().newArray(sk.size());
+        for(SignerInfoWithPkey si : sk) {
+            ary.append(SignerInfo.create(getRuntime(), si));
+        }
+        return ary;
     }
 
     @JRubyMethod
@@ -317,7 +365,7 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject recipients() {
-        List<RecipInfo> sk = null;
+        Collection<RecipInfo> sk = null;
 
         if(p7.isEnveloped()) {
             sk = p7.getEnveloped().getRecipientInfo();
@@ -349,10 +397,34 @@ public class PKCS7 extends RubyObject {
         return getRuntime().getNil();
     }
 
+    private Collection<X509Certificate> getCertificates() {
+        Collection<X509Certificate> certs;
+        int i = p7.getType();
+        switch(i) {
+        case ASN1Registry.NID_pkcs7_signed:
+            certs = p7.getSign().getCert();
+            break;
+        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
+            certs = p7.getSignedAndEnveloped().getCert();
+            break;
+        default:
+            certs = new HashSet<X509Certificate>();
+            break;
+        }
+        return certs;
+    }
+
+    private RubyArray certsToArray(Collection<X509Certificate> certs) throws Exception {
+        RubyArray ary = getRuntime().newArray(certs.size());
+        for(X509Certificate x509 : certs) {
+            ary.append(X509Cert.wrap(getRuntime(), x509));
+        }
+        return ary;
+    }
+
     @JRubyMethod
     public IRubyObject certificates() throws Exception {
-        System.err.println("WARNING: un.implemented method called PKCS7#certificates");
-        return getRuntime().getNil();
+        return certsToArray(getCertificates());
     }
 
     @JRubyMethod
@@ -381,8 +453,50 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod(rest=true)
     public IRubyObject verify(IRubyObject[] args) throws Exception {
-        System.err.println("WARNING: un-implemented method called PKCS7#verify");
-        return getRuntime().getNil();
+        IRubyObject certs = null;
+        IRubyObject store = null;
+        IRubyObject indata = getRuntime().getNil();
+        IRubyObject flags = getRuntime().getNil();
+        
+        switch(Arity.checkArgumentCount(getRuntime(), args, 2, 4)) {
+        case 4:
+            flags = args[3];
+        case 3:
+            indata = args[2];
+        default:
+            store = args[1];
+            certs = args[0];
+        }
+        int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
+
+        if(indata.isNil()) {
+            indata = getData();
+        }
+
+        BIO in = indata.isNil() ? null : obj2bio(indata);
+
+        List<X509Certificate> x509s = certs.isNil() 
+            ? null 
+            : x509_ary2sk(certs); 
+
+        Store x509st = ((X509Store)store).getStore();
+        BIO out = BIO.mem();
+
+        boolean result = false;
+        try {
+            p7.verify(x509s, x509st, in, out, flg);
+            result = true;
+        } catch(NotVerifiedPKCS7Exception e) {
+            result = false;
+        } catch(PKCS7Exception e) {
+            // TODO: throw exception if it's a bad thingy here
+            result = false;
+        }
+
+        IRubyObject data = membio2str(getRuntime(), out);
+        setData(data);
+
+        return result ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
     @JRubyMethod(rest=true)
@@ -438,8 +552,14 @@ public class PKCS7 extends RubyObject {
             super(runtime,type);
         }
 
+        private SignerInfoWithPkey info;
+
         private void initWithSignerInformation(SignerInfoWithPkey info) {
-        
+            this.info = info;
+        }
+
+        SignerInfoWithPkey getSignerInfo() {
+            return info;
         }
 
         @JRubyMethod
@@ -448,16 +568,15 @@ public class PKCS7 extends RubyObject {
             return this;
         }
 
+
         @JRubyMethod(name={"issuer","name"})
         public IRubyObject issuer() {
-            System.err.println("WARNING: un-implemented method called SignerInfo#issuer");
-            return getRuntime().getNil();
+            return X509Name.create(getRuntime(), info.getIssuerAndSerialNumber().getName());
         }
 
         @JRubyMethod
         public IRubyObject serial() {
-            System.err.println("WARNING: un-implemented method called SignerInfo#serial");
-            return getRuntime().getNil();
+            return RubyBignum.bignorm(getRuntime(), info.getIssuerAndSerialNumber().getCertificateSerialNumber().getValue());
         }
 
         @JRubyMethod

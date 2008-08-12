@@ -80,6 +80,36 @@ public class EVP {
         return getDigest(ASN1Registry.nid2obj(nid));
     }
 
+    /* c: EVP_sha1
+     *
+     */
+    public static MessageDigest sha1() {
+        try {
+            return MessageDigest.getInstance("SHA1", OpenSSLReal.PROVIDER);
+        } catch(Exception e) {
+            return null;
+        }
+    }
+
+    public static int type(MessageDigest digest) {
+        String name = digest.getAlgorithm();
+        DERObjectIdentifier obj = ASN1Registry.sym2oid(name);
+        if(obj == null) {
+            name = name.toLowerCase().replace("sha-", "sha");
+            obj = ASN1Registry.sym2oid(name);
+        }
+        return ASN1Registry.obj2nid(obj);
+    }
+
+    public static String signatureAlgorithm(MessageDigest digest, Key key) {
+        String sig = digest.getAlgorithm().toLowerCase().replace("sha-", "sha");
+        String type = key.getAlgorithm().toLowerCase();
+        if(sig == null) {
+            sig = "none";
+        }
+        return sig + "with" + type;
+    }
+
     /* c: EVP_PKEY_decrypt
      *
      */

@@ -91,7 +91,7 @@ public class MemBIO extends BIO {
     @Override
     public String toString() {
         try {
-            return "<MemBIO w:" + wpointer + " r:" + rpointer + " buf:\"" + new String(buffer,rpointer,slen-rpointer) + "\">";
+            return "<MemBIO w:" + wpointer + " r:" + rpointer + " buf:\"" + new String(buffer,rpointer,slen-rpointer) + "\" next=" + next() + ">";
         } catch(Exception e) {}
 
         return null;

@@ -37,11 +37,18 @@ public class PKCS7Exception extends RuntimeException {
     private String errorData;
 
     public PKCS7Exception(int method, int reason) {
-        this(method, reason, null);
+        this(method, reason, ""+null);
     }
 
     public PKCS7Exception(int method, int reason, String errorData) {
         super("PKCS7[Method: " + method + ", Reason: " + reason + ", Data: " + errorData + "]");
+        this.method = method;
+        this.reason = reason;
+        this.errorData = errorData;
+    }
+
+    public PKCS7Exception(int method, int reason, Throwable cause) {
+        super("PKCS7[Method: " + method + ", Reason: " + reason + "]", cause);
         this.method = method;
         this.reason = reason;
         this.errorData = errorData;
