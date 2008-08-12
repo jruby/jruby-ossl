@@ -297,7 +297,7 @@ public class SignerInfoWithPkey extends ASN1Encodable {
     /** c: static get_attribute
      *
      */
-    private DEREncodable getAttribute(ASN1Set sk, int nid) {
+    public static DEREncodable getAttribute(ASN1Set sk, int nid) {
         Attribute xa = null;
         DERObjectIdentifier o = ASN1Registry.nid2obj(nid);
 
@@ -306,7 +306,13 @@ public class SignerInfoWithPkey extends ASN1Encodable {
         }
 
         for(Enumeration e = sk.getObjects(); e.hasMoreElements();) {
-            xa = (Attribute)e.nextElement();
+            Object val = e.nextElement();
+            if(val instanceof Attribute) {
+                xa = (Attribute)val;
+            } else {
+                xa = Attribute.getInstance(val);
+            }
+
             if(o.equals(xa.getAttrType())) {
                 if(xa.getAttrValues().size() > 0) {
                     return xa.getAttrValues().getObjectAt(0);
@@ -342,7 +348,12 @@ public class SignerInfoWithPkey extends ASN1Encodable {
         }
         Attribute attr = null;
         for(Enumeration e = base.getObjects(); e.hasMoreElements();) {
-            attr = (Attribute)e.nextElement();
+            Object val = e.nextElement();
+            if(val instanceof Attribute) {
+                attr = (Attribute)val;
+            } else {
+                attr = Attribute.getInstance(val);
+            }
             if(ASN1Registry.obj2nid(attr.getAttrType()) != atrType) {
                 vector.add(attr);
             }

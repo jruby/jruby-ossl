@@ -386,8 +386,8 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject add_certificate(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#add_certificate");
-        return getRuntime().getNil();
+        p7.addCertificate(((X509Cert)obj).getAuxCert());
+        return this;
     }
 
     @JRubyMethod(name="certificates=")

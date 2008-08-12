@@ -205,6 +205,9 @@ public class PKCS7 {
         for(SignerInfoWithPkey si : sinfos) {
             IssuerAndSerialNumber ias = si.getIssuerAndSerialNumber();
             X509AuxCertificate signer = null;
+//             System.err.println("looking for: " + ias.getName() + " and " + ias.getCertificateSerialNumber());
+//             System.err.println(" in: " + certs);
+//             System.err.println(" in: " + getSign().getCert());
             if(certs != null) {
                 signer = findByIssuerAndSerial(certs, ias.getName(), ias.getCertificateSerialNumber().getValue());
             }
@@ -219,131 +222,82 @@ public class PKCS7 {
         return signers;
     }
 
+    /* c: PKCS7_digest_from_attributes
+     *
+     */
+    public ASN1OctetString digestFromAttributes(ASN1Set attributes) {
+        return (ASN1OctetString)SignerInfoWithPkey.getAttribute(attributes, ASN1Registry.NID_pkcs9_messageDigest);
+    }
+
     /* c: PKCS7_signatureVerify
      *
      */
     public void signatureVerify(BIO bio, SignerInfoWithPkey si, X509AuxCertificate x509) {
-        throw new UnsupportedOperationException("TODO: implement");
-// 	ASN1_OCTET_STRING *os;
-// 	EVP_MD_CTX mdc_tmp,*mdc;
-// 	int ret=0,i;
-// 	int md_type;
-// 	STACK_OF(X509_ATTRIBUTE) *sk;
-// 	BIO *btmp;
-// 	EVP_PKEY *pkey;
+        if(!isSigned() && !isSignedAndEnveloped()) {
+            throw new PKCS7Exception(F_PKCS7_SIGNATUREVERIFY, R_WRONG_PKCS7_TYPE);
+        }
 
-// 	EVP_MD_CTX_init(&mdc_tmp);
+        int md_type = ASN1Registry.obj2nid(si.getDigestAlgorithm().getObjectId());
+        BIO btmp = bio;
+        MessageDigest mdc = null;
 
-// 	if (!PKCS7_type_is_signed(p7) && 
-//         !PKCS7_type_is_signedAndEnveloped(p7)) {
-// 		PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
-//                  PKCS7_R_WRONG_PKCS7_TYPE);
-// 		goto err;
-// 	}
+        for(;;) {
+            if(btmp == null || (btmp = bio.findType(BIO.TYPE_MD)) == null) {
+                throw new PKCS7Exception(F_PKCS7_SIGNATUREVERIFY, R_UNABLE_TO_FIND_MESSAGE_DIGEST);
+            }
 
-// 	md_type=OBJ_obj2nid(si->digest_alg->algorithm);
+            mdc = ((MessageDigestBIOFilter)btmp).getMessageDigest();
+            if(null == mdc) {
+                throw new PKCS7Exception(F_PKCS7_SIGNATUREVERIFY, -1);
+            }
 
-// 	btmp=bio;
-// 	for (;;)
-// 		{
-//             if ((btmp == NULL) ||
-//                 ((btmp=BIO_find_type(btmp,BIO_TYPE_MD)) == NULL))
-//                 {
-//                     PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
-//                              PKCS7_R_UNABLE_TO_FIND_MESSAGE_DIGEST);
-//                     goto err;
-//                 }
-//             BIO_get_md_ctx(btmp,&mdc);
-//             if (mdc == NULL)
-//                 {
-//                     PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
-//                              ERR_R_INTERNAL_ERROR);
-//                     goto err;
-//                 }
-//             if (EVP_MD_CTX_type(mdc) == md_type)
-//                 break;
-//             /* Workaround for some broken clients that put the signature
-//              * OID instead of the digest OID in digest_alg->algorithm
-//              */
-//             if (EVP_MD_pkey_type(EVP_MD_CTX_md(mdc)) == md_type)
-//                 break;
-//             btmp=BIO_next(btmp);
-// 		}
+            if(EVP.type(mdc) == md_type) {
+                break;
+            }
 
-// 	/* mdc is the digest ctx that we want, unless there are attributes,
-// 	 * in which case the digest is the signed attributes */
-// 	EVP_MD_CTX_copy_ex(&mdc_tmp,mdc);
+            btmp = btmp.next();
+        }
 
-// 	sk=si->auth_attr;
-// 	if ((sk != NULL) && (sk_X509_ATTRIBUTE_num(sk) != 0))
-// 		{
-//             unsigned char md_dat[EVP_MAX_MD_SIZE], *abuf = NULL;
-//             unsigned int md_len, alen;
-//             ASN1_OCTET_STRING *message_digest;
+        MessageDigest mdc_tmp = null;
+        try {
+            mdc_tmp = (MessageDigest)mdc.clone();
+        } catch(Exception e) {}
 
-//             EVP_DigestFinal_ex(&mdc_tmp,md_dat,&md_len);
-//             message_digest=PKCS7_digest_from_attributes(sk);
-//             if (!message_digest)
-//                 {
-//                     PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
-//                              PKCS7_R_UNABLE_TO_FIND_MESSAGE_DIGEST);
-//                     goto err;
-//                 }
-//             if ((message_digest->length != (int)md_len) ||
-//                 (memcmp(message_digest->data,md_dat,md_len)))
-//                 {
-// #if 0
-//                     {
-//                         int ii;
-//                         for (ii=0; ii<message_digest->length; ii++)
-//                             printf("%02X",message_digest->data[ii]); printf(" sent\n");
-//                         for (ii=0; ii<md_len; ii++) printf("%02X",md_dat[ii]); printf(" calc\n");
-//                     }
-// #endif
-//                     PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
-//                              PKCS7_R_DIGEST_FAILURE);
-//                     ret= -1;
-//                     goto err;
-//                 }
+        byte[] currentData = new byte[0];
 
-//             EVP_VerifyInit_ex(&mdc_tmp,EVP_get_digestbynid(md_type), NULL);
+        ASN1Set sk = si.getAuthenticatedAttributes();
+        try {
+            if(sk != null && sk.size() > 0) {
+                byte[] md_dat = mdc_tmp.digest();
+                ASN1OctetString message_digest = digestFromAttributes(sk);
+                if(message_digest == null) {
+                    throw new PKCS7Exception(F_PKCS7_SIGNATUREVERIFY, R_UNABLE_TO_FIND_MESSAGE_DIGEST);
+                }
+                if(!Arrays.equals(md_dat, message_digest.getOctets())) {
+                    System.err.println("Internal digest bad");
+                    throw new NotVerifiedPKCS7Exception();
+                }
 
-//             alen = ASN1_item_i2d((ASN1_VALUE *)sk, &abuf,
-//                                  ASN1_ITEM_rptr(PKCS7_ATTR_VERIFY));
-//             EVP_VerifyUpdate(&mdc_tmp, abuf, alen);
+                currentData = sk.getEncoded();
+            }
 
-//             OPENSSL_free(abuf);
-// 		}
+            ASN1OctetString os = si.getEncryptedDigest();
+            PublicKey pkey = x509.getPublicKey();
 
-// 	os=si->enc_digest;
-// 	pkey = X509_get_pubkey(x509);
-// 	if (!pkey)
-// 		{
-//             ret = -1;
-//             goto err;
-// 		}
-// #ifndef OPENSSL_NO_DSA
-// 	if(pkey->type == EVP_PKEY_DSA) mdc_tmp.digest=EVP_dss1();
-// #endif
-// #ifndef OPENSSL_NO_ECDSA
-// 	if (pkey->type == EVP_PKEY_EC) mdc_tmp.digest=EVP_ecdsa();
-// #endif
-
-// 	i=EVP_VerifyFinal(&mdc_tmp,os->data,os->length, pkey);
-// 	EVP_PKEY_free(pkey);
-// 	if (i <= 0)
-// 		{
-//             PKCS7err(PKCS7_F_PKCS7_SIGNATUREVERIFY,
-//                      PKCS7_R_SIGNATURE_FAILURE);
-//             ret= -1;
-//             goto err;
-// 		}
-// 	else
-// 		ret=1;
-//  err:
-// 	EVP_MD_CTX_cleanup(&mdc_tmp);
-// 	return(ret);
-        
+            Signature sign = Signature.getInstance(EVP.signatureAlgorithm(mdc_tmp, pkey));
+            sign.initVerify(pkey);
+            if(currentData.length > 0) {
+                sign.update(currentData);
+            }
+            if(!sign.verify(os.getOctets())) {
+                System.err.println("verify returned false");
+                throw new NotVerifiedPKCS7Exception();
+            }
+        } catch(Exception e) {
+            System.err.println("Other exception");
+            e.printStackTrace();
+            throw new NotVerifiedPKCS7Exception();
+        }
     }
 
     /* c: PKCS7_verify
