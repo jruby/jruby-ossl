@@ -40,4 +40,23 @@ class TestIntegration < Test::Unit::TestCase
       assert s.get(uri.request_uri).length > 0
     end
   end
+  
+  # JRUBY-1194
+  def test_des_encryption
+    iv  = "IVIVIVIV"
+    key = "KEYKEYKE"
+    alg = "des"
+    str = "string abc foo bar baxz"
+        
+    cipher = OpenSSL::Cipher::Cipher.new(alg)
+    cipher.encrypt(key, iv)
+    cipher.padding = 32
+    cipher.key = key
+    cipher.iv = iv
+    
+    encrypted = cipher.update(str)
+    encrypted << cipher.final
+ 
+    assert_equal "\253\305\306\372;\374\235\302\357/\006\360\355XO\232\312S\356* #\227\217", encrypted
+  end    
 end

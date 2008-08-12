@@ -143,7 +143,7 @@ public class Cipher extends RubyObject {
             if(split.length == 2) {
                 cryptoMode = split[1];
             } else {
-                cryptoMode = "ECB";
+                cryptoMode = "CBC";
             }
         }
 
@@ -393,7 +393,7 @@ public class Cipher extends RubyObject {
             } catch(Exception e) {}
 
             if(args.length > 1 && !args[1].isNil()) {
-                getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "key derivation by " + getMetaClass().getRealClass().getName() + "#encrypt is deprecated; use " + getMetaClass().getRealClass().getName() + "::pkcs5_keyivgen instead");
+                getRuntime().getWarnings().warning(ID.MISCELLANEOUS, "key derivation by " + getMetaClass().getRealClass().getName() + "#encrypt is deprecated; use " + getMetaClass().getRealClass().getName() + "::pkcs5_keyivgen instead");
                 iv = args[1].convertToString().getBytes();
                 if(iv.length > this.ivLen) {
                     byte[] iv2 = new byte[this.ivLen];
