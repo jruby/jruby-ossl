@@ -27,13 +27,16 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+
+
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-
+import java.util.Map;
 import javax.net.ssl.SSLEngine;
-
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
@@ -41,13 +44,13 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.anno.JRubyMethod;
-import org.jruby.ext.openssl.x509store.X509AuxCertificate;
+import org.jruby.common.IRubyWarnings.ID;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
+import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
-import org.jruby.common.IRubyWarnings.ID;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -122,6 +125,7 @@ public class SSLContext extends RubyObject {
 
     @JRubyMethod
     public IRubyObject ciphers() {
+        System.err.println("fetching ciphers");
         return this.ciphers;
     }
 
@@ -132,34 +136,25 @@ public class SSLContext extends RubyObject {
     }
 
     String[] getCipherSuites(SSLEngine engine) {
-        List<String> ciphs = new ArrayList<String>();
+        List<CipherStrings.Def> ciphs = null;
         if(this.ciphers.isNil()) {
-            return engine.getSupportedCipherSuites();
+            ciphs = CipherStrings.getMatchingCiphers(CipherStrings.SSL_DEFAULT_CIPHER_LIST, engine.getSupportedCipherSuites());
         } else if(this.ciphers instanceof RubyArray) {
+            StringBuilder builder = new StringBuilder();
+            String sep = "";
             for(Iterator iter = ((RubyArray)this.ciphers).getList().iterator();iter.hasNext();) {
-                addCipher(ciphs, iter.next().toString(),engine);
+                builder.append(sep).append(iter.next().toString());
+                sep = ":";
             }
+            ciphs = CipherStrings.getMatchingCiphers(builder.toString(), engine.getSupportedCipherSuites());
         } else {
-            addCipher(ciphs,this.ciphers.toString(),engine);
+            ciphs = CipherStrings.getMatchingCiphers(this.ciphers.toString(), engine.getSupportedCipherSuites());
         }
-        return ciphs.toArray(new String[ciphs.size()]);
-    }
-
-    private void addCipher(List<String> lst, String cipher, SSLEngine engine) {
-        String[] supported = engine.getSupportedCipherSuites();
-        if("ADH".equals(cipher)) {
-            for(int i=0;i<supported.length;i++) {
-                if(supported[i].indexOf("DH_anon") != -1) {
-                    lst.add(supported[i]);
-                }
-            }
-        } else {
-            for(int i=0;i<supported.length;i++) {
-                if(supported[i].indexOf(cipher) != -1) {
-                    lst.add(supported[i]);
-                }
-            }
+        String[] result = new String[ciphs.size()];
+        for(int i=0;i<result.length;i++) {
+            result[i] = ciphs.get(i).cipherSuite;
         }
+        return result;
     }
 
     KM getKM() {

@@ -41,6 +41,27 @@ class TestIntegration < Test::Unit::TestCase
     end
   end
   
+  # JRUBY-2178 and JRUBY-1307
+  # Warning - this test actually uses the internet connection.
+  # If there is no connection, it will fail.
+  # This test generally throws an exception
+  # about illegal_parameter when
+  # it can't use the cipher string correctly
+  def test_cipher_strings
+    socket = TCPSocket.new('rubyforge.org', 443)
+    ctx = OpenSSL::SSL::SSLContext.new
+    ctx.cert_store = OpenSSL::X509::Store.new
+    ctx.verify_mode = 0
+    ctx.cert = nil
+    ctx.key = nil
+    ctx.client_ca = nil
+    ctx.ciphers = "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"
+
+    ssl_socket = OpenSSL::SSL::SSLSocket.new(socket, ctx)
+    ssl_socket.connect
+    ssl_socket.close
+  end
+
   # JRUBY-1194
   def test_des_encryption
     iv  = "IVIVIVIV"
@@ -58,5 +79,5 @@ class TestIntegration < Test::Unit::TestCase
     encrypted << cipher.final
  
     assert_equal "\253\305\306\372;\374\235\302\357/\006\360\355XO\232\312S\356* #\227\217", encrypted
-  end    
+  end
 end
