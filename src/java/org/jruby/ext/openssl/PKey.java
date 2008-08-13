@@ -131,12 +131,14 @@ public abstract class PKey extends RubyObject {
         }
         byte[] sigBytes = ((RubyString)sig).getBytes();
         byte[] dataBytes = ((RubyString)data).getBytes();
-        String algorithm = ((Digest)digest).getName() + "with" + getAlgorithm();
+        String algorithm = ((Digest)digest).getRealName() + "with" + getAlgorithm();
         boolean valid;
         try {
             // note: not specifying "BC" provider here, as that would fail if
             // BC wasn't plugged in (as it would not be for, say, Net::SSH)
-            Signature signature = Signature.getInstance(algorithm);
+            Signature signature = OpenSSLReal.PROVIDER == null ? 
+                Signature.getInstance(algorithm) :
+                Signature.getInstance(algorithm, OpenSSLReal.PROVIDER);
             signature.initVerify(getPublicKey());
             signature.update(dataBytes);
             valid = signature.verify(sigBytes);

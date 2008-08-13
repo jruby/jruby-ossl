@@ -114,6 +114,9 @@ public class Digest extends RubyObject {
     private StringBuffer data;
     private String name;
 
+    public String getRealName() {
+        return transformDigest(name);
+    }
 
     public String getName() {
         return name;

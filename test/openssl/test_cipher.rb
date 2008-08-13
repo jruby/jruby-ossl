@@ -1,3 +1,10 @@
+if defined?(JRUBY_VERSION)
+  require "java"
+  base = File.join(File.dirname(__FILE__), '..', '..')
+  $CLASSPATH << File.join(base, 'pkg', 'classes')
+  $CLASSPATH << File.join(base, 'lib', 'bcprov-jdk14-139.jar')
+end
+
 begin
   require "openssl"
 rescue LoadError

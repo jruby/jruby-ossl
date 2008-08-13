@@ -57,7 +57,6 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Cipher extends RubyObject {
- 
     // set to enable debug output
     private static final boolean DEBUG = false;
     private static ObjectAllocator CIPHER_ALLOCATOR = new ObjectAllocator() {
@@ -197,7 +196,8 @@ public class Cipher extends RubyObject {
     //private IRubyObject[] modeParams;
     private boolean ciphInited = false;
     private byte[] key;
-    private byte[] iv;
+    private byte[] realIV;
+    private byte[] orgIV;
     private String padding;
     
     void dumpVars() {
@@ -214,8 +214,9 @@ public class Cipher extends RubyObject {
         System.out.println("encryptMode = " + encryptMode);
         System.out.println("ciphInited = " + ciphInited);
         System.out.println("key.length = " + (key == null ? 0 : key.length));
-        System.out.println("iv.length = " + (iv == null ? 0 : iv.length));
+        System.out.println("iv.length = " + (this.realIV == null ? 0 : this.realIV.length));
         System.out.println("padding = " + padding);
+        System.out.println("ciphAlgo = " + ciph.getAlgorithm());
         System.out.println("*******************************");
     }
 
@@ -293,12 +294,13 @@ public class Cipher extends RubyObject {
         } else {
             key = null;
         }
-        if(((Cipher)obj).iv != null) {
-            iv = new byte[((Cipher)obj).iv.length];
-            System.arraycopy(((Cipher)obj).iv,0,iv,0,iv.length);
+        if(((Cipher)obj).realIV != null) {
+            this.realIV = new byte[((Cipher)obj).realIV.length];
+            System.arraycopy(((Cipher)obj).realIV,0,this.realIV,0,this.realIV.length);
         } else {
-            iv = null;
+            this.realIV = null;
         }
+        this.orgIV = this.realIV;
         padding = ((Cipher)obj).padding;
 
         ciph = getCipher();
@@ -362,7 +364,8 @@ public class Cipher extends RubyObject {
         if(ivBytes.length < ivLen) {
             throw new RaiseException(getRuntime(), ciphErr, "iv length to short", true);
         }
-        this.iv = ivBytes;
+        this.realIV = ivBytes;
+        this.orgIV = this.realIV;
         return iv;
     }
 
@@ -414,24 +417,28 @@ public class Cipher extends RubyObject {
 
             OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen,ivLen,digest,iv,pass,2048);
             this.key = result.getKey();
-            this.iv = iv;
+            this.realIV = iv;
+            this.orgIV = this.realIV;
         }
     }
 
     @JRubyMethod(optional=2)
     public IRubyObject encrypt(IRubyObject[] args) {
+        this.realIV = orgIV;
         init(args, true);
         return this;
     }
 
     @JRubyMethod(optional=2)
     public IRubyObject decrypt(IRubyObject[] args) {
+        this.realIV = orgIV;
         init(args, false);
         return this;
     }
 
     @JRubyMethod
     public IRubyObject reset() {
+        this.realIV = orgIV;
         doInitialize();
         return this;
     }
@@ -501,7 +508,8 @@ public class Cipher extends RubyObject {
 
         OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen, ivLen, digest, salt, pass, iter);
         this.key = result.getKey();
-        this.iv = result.getIv();
+        this.realIV = result.getIv();
+        this.orgIV = this.realIV;
 
         doInitialize();
 
@@ -516,9 +524,9 @@ public class Cipher extends RubyObject {
         ciphInited = true;
         try {
             assert (key.length * 8 == keyLen) || (key.length == keyLen) : "Key wrong length";
-            assert (iv.length * 8 == ivLen) || (iv.length == ivLen): "IV wrong length";
-            if(!"ECB".equalsIgnoreCase(cryptoMode) && this.iv != null) {
-                this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.iv));
+            assert (this.realIV.length * 8 == ivLen) || (this.realIV.length == ivLen): "IV wrong length";
+            if(!"ECB".equalsIgnoreCase(cryptoMode) && this.realIV != null) {
+                this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.realIV));
             } else {
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
             }
@@ -528,11 +536,12 @@ public class Cipher extends RubyObject {
         }
     }
 
+    private byte[] lastIv = null;
+
     @JRubyMethod
     public IRubyObject update(IRubyObject data) {
         if (DEBUG) System.out.println("*** update ["+data+"]");
 
-        //TODO: implement correctly
         byte[] val = data.convertToString().getBytes();
         if(val.length == 0) {
             throw getRuntime().newArgumentError("data must not be empty");
@@ -547,10 +556,20 @@ public class Cipher extends RubyObject {
             byte[] out = ciph.update(val);
             if(out != null) {
                 str = out;
+
+                if(this.realIV != null) {
+                    if(lastIv == null) {
+                        lastIv = new byte[ivLen];
+                    }
+                    byte[] tmpIv = encryptMode ? out : val;
+                    if(tmpIv.length >= ivLen) {
+                        System.arraycopy(tmpIv, tmpIv.length-ivLen, lastIv, 0, ivLen);
+                    }
+                }
             }
         } catch(Exception e) {
             e.printStackTrace();
-            throw new RaiseException(getRuntime(), ciphErr, null, true);
+            throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
         }
 
         return RubyString.newString(getRuntime(), new ByteList(str,false));
@@ -568,12 +587,25 @@ public class Cipher extends RubyObject {
             doInitialize();
         }
 
-        //TODO: implement correctly
         ByteList str = new ByteList(ByteList.NULL_ARRAY);
         try {
             byte[] out = ciph.doFinal();
             if(out != null) {
                 str = new ByteList(out,false);
+                if(this.realIV != null && encryptMode) {
+                    if(lastIv == null) {
+                        lastIv = new byte[ivLen];
+                    }
+                    byte[] tmpIv = out;
+                    if(tmpIv.length >= ivLen) {
+                        System.arraycopy(tmpIv, tmpIv.length-ivLen, lastIv, 0, ivLen);
+                    }
+                }
+            }
+
+            if(this.realIV != null) {
+                this.realIV = lastIv;
+                doInitialize();
             }
         } catch(Exception e) {
             throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
