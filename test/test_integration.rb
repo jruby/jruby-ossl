@@ -80,4 +80,21 @@ class TestIntegration < Test::Unit::TestCase
  
     assert_equal "\253\305\306\372;\374\235\302\357/\006\360\355XO\232\312S\356* #\227\217", encrypted
   end
+  
+  def _test_perf_of_nil
+# require 'net/https'
+# require 'benchmark'
+
+# def request(data)
+#   connection = Net::HTTP.new("www.google.com", 443)
+#   connection.use_ssl = true
+#   connection.verify_mode = OpenSSL::SSL::VERIFY_NONE
+#   connection.start do |connection|
+#     connection.request_post("/tbproxy/spell?lang=en", data, { 'User-Agent' => "Test", 'Accept' => 'text/xml' })
+#   end
+# end
+
+# puts "is not: #{Benchmark.measure { request("") }.to_s.chomp}"
+# puts "is nil: #{Benchmark.measure { request(nil) }.to_s.chomp}"
+  end
 end

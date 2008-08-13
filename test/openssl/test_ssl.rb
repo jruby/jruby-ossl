@@ -92,8 +92,6 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
           end
           block.call(server, port.to_i)
         end
-      rescue => e
-        puts e, *(e.backtrace)
       ensure
         if server
           $stderr.puts "killing: #{pid}" if $DEBUG

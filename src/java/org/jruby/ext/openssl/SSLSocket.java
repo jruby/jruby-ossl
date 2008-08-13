@@ -320,6 +320,7 @@ public class SSLSocket extends RubyObject {
 
     private int readAndUnwrap() throws Exception {
         int bytesRead = c.read(peerNetData);
+
         if(bytesRead == -1) {
             //            engine.closeInbound();			
             if ((peerNetData.position() == 0) || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
@@ -348,7 +349,7 @@ public class SSLSocket extends RubyObject {
         if(status == SSLEngineResult.Status.CLOSED) {
             doShutdown();
             return -1;
-        }	
+        }
         peerNetData.compact();
         peerAppData.flip();
         if(!initialHandshake && (hsStatus == SSLEngineResult.HandshakeStatus.NEED_TASK ||
@@ -379,7 +380,6 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod(rest=true)
     public IRubyObject sysread(IRubyObject[] args) throws Exception {
-        //        System.err.println("WARNING: unimplemented method called: SSLSocket#sysread");
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2);
         int len = RubyNumeric.fix2int(args[0]);
         IRubyObject str = getRuntime().getNil();
@@ -392,7 +392,12 @@ public class SSLSocket extends RubyObject {
         if(len == 0) {
             return str;
         }
-        waitSelect(rsel);
+
+        // So we need to make sure to only block when there is no data left to process
+        if(engine == null || !(peerAppData.hasRemaining() || peerNetData.position() > 0)) {
+            waitSelect(rsel);
+         }
+
         ByteBuffer dst = ByteBuffer.allocate(len);
         int rr = -1;
         if(engine == null) {
@@ -413,27 +418,23 @@ public class SSLSocket extends RubyObject {
         if(eof){
             throw getRuntime().newEOFError();
         }
+
         str.callMethod(getRuntime().getCurrentContext(),"<<",RubyString.newString(getRuntime(), out));
         return str;
     }
 
     @JRubyMethod
     public IRubyObject syswrite(IRubyObject arg) throws Exception {
-        ///        System.err.println("WARNING: unimplemented method called: SSLSocket#syswrite");
-        //        System.err.println(type + ".syswrite(" + arg + ")");
+        waitSelect(wsel);
+        byte[] bls = arg.convertToString().getBytes();
+        ByteBuffer b1 = ByteBuffer.wrap(bls);
         if(engine == null) {
-            waitSelect(wsel);
-            byte[] bls = arg.convertToString().getBytes();
-            ByteBuffer b1 = ByteBuffer.wrap(bls);
             c.write(b1);
-            return getRuntime().newFixnum(bls.length);
         } else {
-            waitSelect(wsel);
-            byte[] bls = arg.convertToString().getBytes();
-            ByteBuffer b1 = ByteBuffer.wrap(bls);
             write(b1);
-            return getRuntime().newFixnum(bls.length);
         }
+        ((RubyIO)api.callMethod(this,"io")).flush();
+        return getRuntime().newFixnum(bls.length);
     }
 
     private void close() throws Exception {
@@ -448,8 +449,6 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod
     public IRubyObject sysclose() throws Exception {
-        //        System.err.println("WARNING: unimplemented method called: SSLSocket#sysclose");
-        //        System.err.println(type + ".sysclose");
         close();
         ThreadContext tc = getRuntime().getCurrentContext();
         if(callMethod(tc,"sync_close").isTrue()) {
