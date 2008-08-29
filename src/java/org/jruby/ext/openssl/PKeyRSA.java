@@ -108,8 +108,14 @@ public class PKeyRSA extends PKey {
     // (see net-ssh-1.1.2/lib/net/ssh/transport/ossl/buffer.rb #read_keyblob)
     private transient volatile BigInteger rsa_e;
     private transient volatile BigInteger rsa_n;
-    
 
+    private transient volatile BigInteger rsa_d;
+    private transient volatile BigInteger rsa_p;
+    private transient volatile BigInteger rsa_q;
+    private transient volatile BigInteger rsa_dmp1;
+    private transient volatile BigInteger rsa_dmq1;
+    private transient volatile BigInteger rsa_iqmp;
+    
     PublicKey getPublicKey() {
         return pubKey;
     }
@@ -341,24 +347,28 @@ public class PKeyRSA extends PKey {
 
     @JRubyMethod
     public IRubyObject params() throws Exception {
-//     rb_hash_aset(hash, rb_str_new2("n"), ossl_bn_new(pkey->pkey.rsa->n));
-//     rb_hash_aset(hash, rb_str_new2("e"), ossl_bn_new(pkey->pkey.rsa->e));
-//     rb_hash_aset(hash, rb_str_new2("d"), ossl_bn_new(pkey->pkey.rsa->d));
-//     rb_hash_aset(hash, rb_str_new2("p"), ossl_bn_new(pkey->pkey.rsa->p));
-//     rb_hash_aset(hash, rb_str_new2("q"), ossl_bn_new(pkey->pkey.rsa->q));
-//     rb_hash_aset(hash, rb_str_new2("dmp1"), ossl_bn_new(pkey->pkey.rsa->dmp1));
-//     rb_hash_aset(hash, rb_str_new2("dmq1"), ossl_bn_new(pkey->pkey.rsa->dmq1));
-//     rb_hash_aset(hash, rb_str_new2("iqmp"), ossl_bn_new(pkey->pkey.rsa->iqmp));
         ThreadContext ctx = getRuntime().getCurrentContext();
         RubyHash hash = RubyHash.newHash(getRuntime());
-        hash.op_aset(ctx, getRuntime().newString("iqmp"), BN.newBN(getRuntime(), privKey.getCrtCoefficient()));
-        hash.op_aset(ctx, getRuntime().newString("n"), BN.newBN(getRuntime(), privKey.getModulus()));
-        hash.op_aset(ctx, getRuntime().newString("d"), BN.newBN(getRuntime(), privKey.getPrivateExponent()));
-        hash.op_aset(ctx, getRuntime().newString("p"), BN.newBN(getRuntime(), privKey.getPrimeP()));
-        hash.op_aset(ctx, getRuntime().newString("e"), BN.newBN(getRuntime(), privKey.getPublicExponent()));
-        hash.op_aset(ctx, getRuntime().newString("q"), BN.newBN(getRuntime(), privKey.getPrimeQ()));
-        hash.op_aset(ctx, getRuntime().newString("dmq1"), BN.newBN(getRuntime(), privKey.getPrimeExponentQ()));
-        hash.op_aset(ctx, getRuntime().newString("dmp1"), BN.newBN(getRuntime(), privKey.getPrimeExponentP()));
+        if(privKey != null) {
+            hash.op_aset(ctx, getRuntime().newString("iqmp"), BN.newBN(getRuntime(), privKey.getCrtCoefficient()));
+            hash.op_aset(ctx, getRuntime().newString("n"), BN.newBN(getRuntime(), privKey.getModulus()));
+            hash.op_aset(ctx, getRuntime().newString("d"), BN.newBN(getRuntime(), privKey.getPrivateExponent()));
+            hash.op_aset(ctx, getRuntime().newString("p"), BN.newBN(getRuntime(), privKey.getPrimeP()));
+            hash.op_aset(ctx, getRuntime().newString("e"), BN.newBN(getRuntime(), privKey.getPublicExponent()));
+            hash.op_aset(ctx, getRuntime().newString("q"), BN.newBN(getRuntime(), privKey.getPrimeQ()));
+            hash.op_aset(ctx, getRuntime().newString("dmq1"), BN.newBN(getRuntime(), privKey.getPrimeExponentQ()));
+            hash.op_aset(ctx, getRuntime().newString("dmp1"), BN.newBN(getRuntime(), privKey.getPrimeExponentP()));
+            
+        } else {
+            hash.op_aset(ctx, getRuntime().newString("iqmp"), BN.newBN(getRuntime(), BigInteger.ZERO));
+            hash.op_aset(ctx, getRuntime().newString("n"), BN.newBN(getRuntime(), pubKey.getModulus()));
+            hash.op_aset(ctx, getRuntime().newString("d"), BN.newBN(getRuntime(), BigInteger.ZERO));
+            hash.op_aset(ctx, getRuntime().newString("p"), BN.newBN(getRuntime(), BigInteger.ZERO));
+            hash.op_aset(ctx, getRuntime().newString("e"), BN.newBN(getRuntime(), pubKey.getPublicExponent()));
+            hash.op_aset(ctx, getRuntime().newString("q"), BN.newBN(getRuntime(), BigInteger.ZERO));
+            hash.op_aset(ctx, getRuntime().newString("dmq1"), BN.newBN(getRuntime(), BigInteger.ZERO));
+            hash.op_aset(ctx, getRuntime().newString("dmp1"), BN.newBN(getRuntime(), BigInteger.ZERO));
+        }
         return hash;
     }
 
@@ -497,7 +507,149 @@ public class PKeyRSA extends PKey {
         return RubyString.newString(getRuntime(), outp);
     }
 
-    // d, d=, dmp1, dmp1=, dmq1, dmq1=, iqmp, iqmp=, p, p=, q, q=, params
+    @JRubyMethod(name="d=")
+    public synchronized IRubyObject set_d(IRubyObject value) {
+        if (privKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        rsa_d = BN.getBigInteger(value);
+        generatePrivateKeyIfParams();
+        return value;
+    }
+
+    @JRubyMethod(name="p=")
+    public synchronized IRubyObject set_p(IRubyObject value) {
+        if (privKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        rsa_p = BN.getBigInteger(value);
+        generatePrivateKeyIfParams();
+        return value;
+    }
+
+    @JRubyMethod(name="q=")
+    public synchronized IRubyObject set_q(IRubyObject value) {
+        if (privKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        rsa_q = BN.getBigInteger(value);
+        generatePrivateKeyIfParams();
+        return value;
+    }
+
+    @JRubyMethod(name="dmp1=")
+    public synchronized IRubyObject set_dmp1(IRubyObject value) {
+        if (privKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        rsa_dmp1 = BN.getBigInteger(value);
+        generatePrivateKeyIfParams();
+        return value;
+    }
+
+    @JRubyMethod(name="dmq1=")
+    public synchronized IRubyObject set_dmq1(IRubyObject value) {
+        if (privKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        rsa_dmq1 = BN.getBigInteger(value);
+        generatePrivateKeyIfParams();
+        return value;
+    }
+
+    @JRubyMethod(name="iqmp=")
+    public synchronized IRubyObject set_iqmp(IRubyObject value) {
+        if (privKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        rsa_iqmp = BN.getBigInteger(value);
+        generatePrivateKeyIfParams();
+        return value;
+    }
+
+    @JRubyMethod(name="iqmp")
+    public synchronized IRubyObject get_iqmp() {
+        BigInteger iqmp = null;
+        if (privKey != null) {
+            iqmp = privKey.getCrtCoefficient();
+        } else {
+            iqmp = rsa_iqmp;
+        }
+        if (iqmp != null) {
+            return BN.newBN(getRuntime(), iqmp);
+        }
+        return getRuntime().getNil();
+    }
+
+    @JRubyMethod(name="dmp1")
+    public synchronized IRubyObject get_dmp1() {
+        BigInteger dmp1 = null;
+        if (privKey != null) {
+            dmp1 = privKey.getPrimeExponentP();
+        } else {
+            dmp1 = rsa_dmp1;
+        }
+        if (dmp1 != null) {
+            return BN.newBN(getRuntime(), dmp1);
+        }
+        return getRuntime().getNil();
+    }
+
+    @JRubyMethod(name="dmq1")
+    public synchronized IRubyObject get_dmq1() {
+        BigInteger dmq1 = null;
+        if (privKey != null) {
+            dmq1 = privKey.getPrimeExponentQ();
+        } else {
+            dmq1 = rsa_dmq1;
+        }
+        if (dmq1 != null) {
+            return BN.newBN(getRuntime(), dmq1);
+        }
+        return getRuntime().getNil();
+    }
+
+    @JRubyMethod(name="d")
+    public synchronized IRubyObject get_d() {
+        BigInteger d = null;
+        if (privKey != null) {
+            d = privKey.getPrivateExponent();
+        } else {
+            d = rsa_d;
+        }
+        if (d != null) {
+            return BN.newBN(getRuntime(), d);
+        }
+        return getRuntime().getNil();
+    }
+
+    @JRubyMethod(name="p")
+    public synchronized IRubyObject get_p() {
+        BigInteger p = null;
+        if (privKey != null) {
+            p = privKey.getPrimeP();
+        } else {
+            p = rsa_p;
+        }
+        if (p != null) {
+            return BN.newBN(getRuntime(), p);
+        }
+        return getRuntime().getNil();
+    }
+
+    @JRubyMethod(name="q")
+    public synchronized IRubyObject get_q() {
+        BigInteger q = null;
+        if (privKey != null) {
+            q = privKey.getPrimeQ();
+        } else {
+            q = rsa_q;
+        }
+        if (q != null) {
+            return BN.newBN(getRuntime(), q);
+        }
+        return getRuntime().getNil();
+    }
 
     @JRubyMethod(name="e")
     public synchronized IRubyObject get_e() {
@@ -505,6 +657,8 @@ public class PKeyRSA extends PKey {
         BigInteger e;
         if ((key = pubKey) != null) {
             e = key.getPublicExponent();
+        } else if(privKey != null) {
+            e = privKey.getPublicExponent();
         } else {
             e = rsa_e;
         }
@@ -516,11 +670,15 @@ public class PKeyRSA extends PKey {
     
     @JRubyMethod(name="e=")
     public synchronized IRubyObject set_e(IRubyObject value) {
-        if (pubKey != null) {
+        rsa_e = BN.getBigInteger(value);
+
+        if(privKey == null) {
+            generatePrivateKeyIfParams();
+        } else if(pubKey == null) {
+            generatePublicKeyIfParams();
+        } else {
             throw newRSAError(getRuntime(), "illegal modification");
         }
-        rsa_e = BN.getBigInteger(value);
-        generatePublicKeyIfParams();
         return value;
     }
     
@@ -530,6 +688,8 @@ public class PKeyRSA extends PKey {
         BigInteger n;
         if ((key = pubKey) != null) {
             n = key.getModulus();
+        } else if(privKey != null) {
+            n = privKey.getModulus();
         } else {
             n = rsa_n;
         }
@@ -541,11 +701,14 @@ public class PKeyRSA extends PKey {
     
     @JRubyMethod(name="n=")
     public synchronized IRubyObject set_n(IRubyObject value) {
-        if (pubKey != null) {
+        rsa_n = BN.getBigInteger(value);
+        if(privKey == null) {
+            generatePrivateKeyIfParams();
+        } else if(pubKey == null) {
+            generatePublicKeyIfParams();
+        } else {
             throw newRSAError(getRuntime(), "illegal modification");
         }
-        rsa_n = BN.getBigInteger(value);
-        generatePublicKeyIfParams();
         return value;
     }
     
@@ -571,6 +734,30 @@ public class PKeyRSA extends PKey {
         }
     }
     
-
-
+    private void generatePrivateKeyIfParams() {
+        if (privKey != null) {
+            throw newRSAError(getRuntime(), "illegal modification");
+        }
+        if (rsa_e != null && rsa_n != null && rsa_p != null && rsa_q != null && rsa_d != null && rsa_dmp1 != null && rsa_dmq1 != null && rsa_iqmp != null) {
+            KeyFactory fact;
+            try {
+                fact = KeyFactory.getInstance("RSA", OpenSSLReal.PROVIDER);
+            } catch(Exception ex) {
+                throw getRuntime().newLoadError("unsupported key algorithm (RSA)");
+            }
+            try {
+                privKey = (RSAPrivateCrtKey)fact.generatePrivate(new RSAPrivateCrtKeySpec(rsa_n, rsa_e, rsa_d, rsa_p, rsa_q, rsa_dmp1, rsa_dmq1, rsa_iqmp));
+            } catch (InvalidKeySpecException ex) {
+                throw newRSAError(getRuntime(), "invalid parameters");
+            }
+            rsa_n = null;
+            rsa_e = null;
+            rsa_d = null;
+            rsa_p = null;
+            rsa_q = null;
+            rsa_dmp1 = null;
+            rsa_dmq1 = null;
+            rsa_iqmp = null;
+        }
+    }
 }// PKeyRSA

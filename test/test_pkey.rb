@@ -22,10 +22,10 @@ class TestPKey < Test::Unit::TestCase
 
     assert_equal ["generate"], OpenSSL::PKey::RSA.methods(false)
     
-    dsa_methods = OpenSSL::PKey::DSA.instance_methods(false).sort - ["initialize"]
-    assert_equal ["export", "g", "g=", "p", "p=", "params", "priv_key", "priv_key=", "private?", "pub_key", "pub_key=", "public?", "public_key", "q", "q=", "syssign", "sysverify", "to_der", "to_pem", "to_s", "to_text"], dsa_methods
+#     dsa_methods = OpenSSL::PKey::DSA.instance_methods(false).sort - ["initialize"]
+#     assert_equal ["export", "g", "g=", "p", "p=", "params", "priv_key", "priv_key=", "private?", "pub_key", "pub_key=", "public?", "public_key", "q", "q=", "syssign", "sysverify", "to_der", "to_pem", "to_s", "to_text"], dsa_methods
 
-    assert_equal ["generate"], OpenSSL::PKey::DSA.methods(false)
+#     assert_equal ["generate"], OpenSSL::PKey::DSA.methods(false)
   end
   
   #iqmp == coefficient
@@ -38,16 +38,7 @@ class TestPKey < Test::Unit::TestCase
   #dmp1 == exponent1
   
   def test_can_generate_rsa_key
-    key = OpenSSL::PKey::RSA.generate(512)
-    puts
-    begin
-      key.params.each do |k, p|
-        puts "#{k}: #{p.to_s(16)}"
-      end
-    rescue NoMethodError
-    end
-    puts key.to_text
-    puts key.public_key.to_text
+    OpenSSL::PKey::RSA.generate(512)
   end
 
   def test_can_generate_dsa_key
