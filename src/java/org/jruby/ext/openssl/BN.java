@@ -182,7 +182,7 @@ public class BN extends RubyObject {
             return runtime.newString(new ByteList(bytes, false));
         case 10:
         case 16:
-            return runtime.newString(value.toString(base));
+            return runtime.newString(value.toString(base).toUpperCase());
         case 0: // FIXME: not currently supporting BN_mpi2bn
             throw runtime.newArgumentError("unsupported radix: " + base);
         default:

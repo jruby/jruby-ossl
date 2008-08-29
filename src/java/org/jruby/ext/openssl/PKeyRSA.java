@@ -52,15 +52,19 @@ import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERSequence;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
+import org.jruby.RubyBignum;
 import org.jruby.RubyFixnum;
+import org.jruby.RubyHash;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
+import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
+import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
 
@@ -116,6 +120,31 @@ public class PKeyRSA extends PKey {
 
     String getAlgorithm() {
         return "RSA";
+    }
+
+    @JRubyMethod(name="generate", meta=true, rest=true)
+    public static IRubyObject generate(IRubyObject recv, IRubyObject[] args) {
+        BigInteger exp = RSAKeyGenParameterSpec.F4;
+        if(Arity.checkArgumentCount(recv.getRuntime(),args,1,2) == 2) {
+            if(args[1] instanceof RubyFixnum) {
+                exp = BigInteger.valueOf(RubyNumeric.num2long(args[1]));
+            } else {
+                exp = ((RubyBignum)args[1]).getValue();
+            }
+        }       
+        int keysize = RubyNumeric.fix2int(args[0]);
+        RSAKeyGenParameterSpec spec = new RSAKeyGenParameterSpec(keysize, exp);
+        try {
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA",OpenSSLReal.PROVIDER);
+            gen.initialize(spec);
+            KeyPair pair = gen.generateKeyPair();
+            PKeyRSA rsa = new PKeyRSA(recv.getRuntime(), (RubyClass)recv);
+            rsa.privKey = (RSAPrivateCrtKey)(pair.getPrivate());
+            rsa.pubKey = (RSAPublicKey)(pair.getPublic());
+            return rsa;
+        } catch(Exception e) {
+            throw newRSAError(recv.getRuntime(), null);
+        }
     }
 
     @JRubyMethod(frame=true, rest=true)
@@ -293,6 +322,76 @@ public class PKeyRSA extends PKey {
         return val;
     }
 
+    private static void addSplittedAndFormatted(int keylen, StringBuilder result, BigInteger value) {
+        String v = value.toString(16);
+        if((v.length() % 2) != 0) {
+            v = "0" + v;
+        }
+        String sep = "";
+        for(int i = 0; i<v.length(); i+=2) {
+            result.append(sep);
+            if((i % 30) == 0) {
+                result.append("\n    ");
+            }
+            result.append(v.substring(i, i+2));
+            sep = ":";
+        }
+        result.append("\n");
+    }
+
+    @JRubyMethod
+    public IRubyObject params() throws Exception {
+//     rb_hash_aset(hash, rb_str_new2("n"), ossl_bn_new(pkey->pkey.rsa->n));
+//     rb_hash_aset(hash, rb_str_new2("e"), ossl_bn_new(pkey->pkey.rsa->e));
+//     rb_hash_aset(hash, rb_str_new2("d"), ossl_bn_new(pkey->pkey.rsa->d));
+//     rb_hash_aset(hash, rb_str_new2("p"), ossl_bn_new(pkey->pkey.rsa->p));
+//     rb_hash_aset(hash, rb_str_new2("q"), ossl_bn_new(pkey->pkey.rsa->q));
+//     rb_hash_aset(hash, rb_str_new2("dmp1"), ossl_bn_new(pkey->pkey.rsa->dmp1));
+//     rb_hash_aset(hash, rb_str_new2("dmq1"), ossl_bn_new(pkey->pkey.rsa->dmq1));
+//     rb_hash_aset(hash, rb_str_new2("iqmp"), ossl_bn_new(pkey->pkey.rsa->iqmp));
+        ThreadContext ctx = getRuntime().getCurrentContext();
+        RubyHash hash = RubyHash.newHash(getRuntime());
+        hash.op_aset(ctx, getRuntime().newString("iqmp"), BN.newBN(getRuntime(), privKey.getCrtCoefficient()));
+        hash.op_aset(ctx, getRuntime().newString("n"), BN.newBN(getRuntime(), privKey.getModulus()));
+        hash.op_aset(ctx, getRuntime().newString("d"), BN.newBN(getRuntime(), privKey.getPrivateExponent()));
+        hash.op_aset(ctx, getRuntime().newString("p"), BN.newBN(getRuntime(), privKey.getPrimeP()));
+        hash.op_aset(ctx, getRuntime().newString("e"), BN.newBN(getRuntime(), privKey.getPublicExponent()));
+        hash.op_aset(ctx, getRuntime().newString("q"), BN.newBN(getRuntime(), privKey.getPrimeQ()));
+        hash.op_aset(ctx, getRuntime().newString("dmq1"), BN.newBN(getRuntime(), privKey.getPrimeExponentQ()));
+        hash.op_aset(ctx, getRuntime().newString("dmp1"), BN.newBN(getRuntime(), privKey.getPrimeExponentP()));
+        return hash;
+    }
+
+    @JRubyMethod
+    public IRubyObject to_text() throws Exception {
+        StringBuilder result = new StringBuilder();
+        if(privKey != null) {
+            int len = privKey.getModulus().bitLength();
+            result.append("Private-Key: (").append(len).append(" bit)").append("\n");
+            result.append("modulus:");
+            addSplittedAndFormatted(len, result, privKey.getModulus());
+            result.append("publicExponent: ").append(privKey.getPublicExponent()).append(" (0x").append(privKey.getPublicExponent().toString(16)).append(")\n");
+            result.append("privateExponent:");
+            addSplittedAndFormatted(len, result, privKey.getPrivateExponent());
+            result.append("prime1:");
+            addSplittedAndFormatted(len, result, privKey.getPrimeP());
+            result.append("prime2:");
+            addSplittedAndFormatted(len, result, privKey.getPrimeQ());
+            result.append("exponent1:");
+            addSplittedAndFormatted(len, result, privKey.getPrimeExponentP());
+            result.append("exponent2:");
+            addSplittedAndFormatted(len, result, privKey.getPrimeExponentQ());
+            result.append("coefficient:");
+            addSplittedAndFormatted(len, result, privKey.getCrtCoefficient());
+        } else {
+            int len = pubKey.getModulus().bitLength();
+            result.append("Modulus (").append(len).append(" bit):");
+            addSplittedAndFormatted(len, result, pubKey.getModulus());
+            result.append("Exponent: ").append(pubKey.getPublicExponent()).append(" (0x").append(pubKey.getPublicExponent().toString(16)).append(")\n");
+        }
+        return getRuntime().newString(result.toString());
+    }
+
     @JRubyMethod(name={"export", "to_pem", "to_s"}, rest=true)
     public IRubyObject export(IRubyObject[] args) throws Exception {
         StringWriter w = new StringWriter();
@@ -397,6 +496,8 @@ public class PKeyRSA extends PKey {
         byte[] outp = engine.doFinal(buffer.getBytes());
         return RubyString.newString(getRuntime(), outp);
     }
+
+    // d, d=, dmp1, dmp1=, dmq1, dmq1=, iqmp, iqmp=, p, p=, q, q=, params
 
     @JRubyMethod(name="e")
     public synchronized IRubyObject get_e() {
