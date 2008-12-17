@@ -32,6 +32,7 @@ import java.util.Arrays;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
@@ -250,7 +251,14 @@ public abstract class X509Utils {
                 X509Name nm = null;
                 for(int i=0;i<gens.length;i++) {
                     if(gens[i].getTagNo() == GeneralName.directoryName) {
-                        nm = (X509Name)gens[i].getName();
+                        DEREncodable nameTmp = gens[i].getName();
+                        if (nameTmp instanceof X509Name) {
+                            nm = (X509Name)nameTmp;
+                        } else if (nameTmp instanceof DERSequence) {
+                            nm = new X509Name((DERSequence)nameTmp);
+                        } else {
+                            throw new RuntimeException("unknown name type in X509Utils: " + nameTmp);
+                        }
                         break;
                     }
                 }
