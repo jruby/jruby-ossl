@@ -28,40 +28,40 @@ module PKCS7Test
       bio = BIO::from_string("Foo: bar")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      assert_equal MimeHeader.new("Foo", "bar"), result.first
-      assert_equal "foo", result.first.name
+      assert_equal MimeHeader.new("Foo", "bar"), result[0]
+      assert_equal "foo", result[0].name
     end
 
     def test_simple_parse_headers2
       bio = BIO::from_string("Foo:bar")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      assert_equal MimeHeader.new("Foo", "bar"), result.first
-      assert_equal "foo", result.first.name
+      assert_equal MimeHeader.new("Foo", "bar"), result[0]
+      assert_equal "foo", result[0].name
     end
 
     def test_simple_parse_headers3
       bio = BIO::from_string("Foo: bar")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      assert_equal MimeHeader.new("Foo", "bar"), result.first
-      assert_equal "foo", result.first.name
+      assert_equal MimeHeader.new("Foo", "bar"), result[0]
+      assert_equal "foo", result[0].name
     end
 
     def test_simple_parse_headers4
       bio = BIO::from_string("Foo: bar\n")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      assert_equal MimeHeader.new("Foo", "bar"), result.first
-      assert_equal "foo", result.first.name
+      assert_equal MimeHeader.new("Foo", "bar"), result[0]
+      assert_equal "foo", result[0].name
     end
 
     def test_simple_parse_headers5
       bio = BIO::from_string("     Foo        :                    bar    \n")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      assert_equal MimeHeader.new("Foo", "bar"), result.first
-      assert_equal "foo", result.first.name
+      assert_equal MimeHeader.new("Foo", "bar"), result[0]
+      assert_equal "foo", result[0].name
     end
 
 
@@ -69,8 +69,8 @@ module PKCS7Test
       bio = BIO::from_string("Foo: bar;\n")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      assert_equal MimeHeader.new("Foo", "bar"), result.first
-      assert_equal "foo", result.first.name
+      assert_equal MimeHeader.new("Foo", "bar"), result[0]
+      assert_equal "foo", result[0].name
     end
 
     def test_simple_parse_headers7
@@ -88,7 +88,7 @@ module PKCS7Test
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
       assert_equal MimeHeader.new("Foo", "bar"), result[0]
-      assert_equal "foo", result.first.name
+      assert_equal "foo", result[0].name
     end
 
     def test_simple_parse_headers_comment
@@ -96,14 +96,14 @@ module PKCS7Test
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
       assert_equal MimeHeader.new("Foo", "(this is the right thing)ba(and this is the wrong one)r"), result[0]
-      assert_equal "foo", result.first.name
+      assert_equal "foo", result[0].name
     end
 
     def test_parse_headers_with_param
       bio = BIO::from_string("Content-Type: Multipart/Related; boundary=MIME_boundary; type=text/xml")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      header = result.first
+      header = result[0]
       assert_equal "content-type", header.name
       assert_equal "multipart/related", header.value
       assert_equal [MimeParam.new("boundary","MIME_boundary"), 
@@ -114,7 +114,7 @@ module PKCS7Test
       bio = BIO::from_string("Content-Type: Multipart/Related\n boundary=MIME_boundary; type=text/xml")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      header = result.first
+      header = result[0]
       assert_equal "content-type", header.name
       assert_equal "multipart/related", header.value
       assert_equal [MimeParam.new("boundary","MIME_boundary"), 
@@ -125,7 +125,7 @@ module PKCS7Test
       bio = BIO::from_string("Content-Type: Multipart/Related;\n boundary=MIME_boundary;\n Type=text/xml")
       result = Mime::DEFAULT.parse_headers(bio)
       assert_equal 1, result.size
-      header = result.first
+      header = result[0]
       assert_equal "content-type", header.name
       assert_equal "multipart/related", header.value
       assert_equal [MimeParam.new("boundary","MIME_boundary"), 
