@@ -531,7 +531,7 @@ public class Cipher extends RubyObject {
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
             }
         } catch(Exception e) {
-            e.printStackTrace();
+            if (DEBUG) e.printStackTrace();
             throw new RaiseException(getRuntime(), ciphErr, null, true);
         }
     }
@@ -548,7 +548,9 @@ public class Cipher extends RubyObject {
         }
 
         if(!ciphInited) {
+            if (DEBUG) System.out.println("BEFORE INITING");
             doInitialize();
+            if (DEBUG) System.out.println("AFTER INITING");
         }
 
         byte[] str = new byte[0];
@@ -568,7 +570,7 @@ public class Cipher extends RubyObject {
                 }
             }
         } catch(Exception e) {
-            e.printStackTrace();
+            if (DEBUG) e.printStackTrace();
             throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
         }
 
