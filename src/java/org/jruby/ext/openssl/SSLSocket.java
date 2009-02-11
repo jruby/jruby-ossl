@@ -268,7 +268,7 @@ public class SSLSocket extends RubyObject {
 
     private boolean flushData() throws IOException {		
         try {
-            c.write(netData);
+            writeToChannel(c, netData);
         } catch (IOException ioe) {
             netData.position(netData.limit());
             throw ioe;
@@ -278,6 +278,14 @@ public class SSLSocket extends RubyObject {
         }  else {
             return true;
         }
+    }
+    
+    private int writeToChannel(SocketChannel channel, ByteBuffer buffer) throws IOException {
+      int totalWritten = 0;
+      while (buffer.hasRemaining()) {
+        totalWritten += channel.write(buffer);
+      }
+      return totalWritten;
     }
 
     private void finishInitialHandshake() {
@@ -428,13 +436,14 @@ public class SSLSocket extends RubyObject {
         waitSelect(wsel);
         byte[] bls = arg.convertToString().getBytes();
         ByteBuffer b1 = ByteBuffer.wrap(bls);
+        int written;
         if(engine == null) {
-            c.write(b1);
+            written = writeToChannel(c, b1);
         } else {
-            write(b1);
+            written = write(b1);
         }
         ((RubyIO)api.callMethod(this,"io")).flush();
-        return getRuntime().newFixnum(bls.length);
+        return getRuntime().newFixnum(written);
     }
 
     private void close() throws Exception {
