@@ -70,7 +70,7 @@ public class Cipher extends RubyObject {
         RubyClass cCipher = mCipher.defineClassUnder("Cipher",runtime.getObject(), CIPHER_ALLOCATOR);
 
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
-        mCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
+        ossl.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
 
         cCipher.defineAnnotatedMethods(Cipher.class);
         mCipher.defineAnnotatedMethods(CipherModule.class);
