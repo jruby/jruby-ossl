@@ -37,6 +37,7 @@ import java.util.Set;
 
 import javax.crypto.spec.IvParameterSpec;
 
+import org.jruby.CompatVersion;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
@@ -48,7 +49,6 @@ import org.jruby.common.IRubyWarnings.ID;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.anno.JRubyModule;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
@@ -70,7 +70,11 @@ public class Cipher extends RubyObject {
         RubyClass cCipher = mCipher.defineClassUnder("Cipher",runtime.getObject(), CIPHER_ALLOCATOR);
 
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
-        ossl.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
+        if (runtime.getInstanceConfig().getCompatVersion() == CompatVersion.RUBY1_9) {
+            mCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
+        } else {
+            ossl.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
+        }
 
         cCipher.defineAnnotatedMethods(Cipher.class);
         mCipher.defineAnnotatedMethods(CipherModule.class);
