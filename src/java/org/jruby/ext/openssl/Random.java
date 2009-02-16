@@ -84,6 +84,9 @@ public class Random {
     private static RubyString generate(IRubyObject recv, IRubyObject arg, int ix) {
         RandomHolder holder = (RandomHolder)recv.dataGetStruct();
         int len = RubyNumeric.fix2int(arg);
+        if (len < 0 || len > Integer.MAX_VALUE) {
+            throw recv.getRuntime().newArgumentError("negative string size (or size too big)");
+        }
         byte[] buf = new byte[len];
         holder.randomizers[ix].nextBytes(buf);
         return RubyString.newString(recv.getRuntime(), new ByteList(buf,false));
