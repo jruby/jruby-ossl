@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -41,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.io.IOException;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -627,7 +630,7 @@ public class ASN1 {
             return this;
         }
 
-        ASN1Encodable toASN1() throws Exception {
+        ASN1Encodable toASN1() {
             //            System.err.println(getMetaClass().getRealClass().getBaseName()+"#toASN1");
             ThreadContext tc = getRuntime().getCurrentContext();
             int tag = RubyNumeric.fix2int(callMethod(tc,"tag"));
@@ -649,7 +652,7 @@ public class ASN1 {
         }
 
         @JRubyMethod
-        public IRubyObject to_der() throws Exception {
+        public IRubyObject to_der() {
             return getRuntime().newString(new String(ByteList.plain(toASN1().getDEREncoded())));
         }
 
@@ -702,7 +705,7 @@ public class ASN1 {
         }
 
         @JRubyMethod
-        public IRubyObject to_der() throws Exception {
+        public IRubyObject to_der() {
             return super.to_der();
         }
 
@@ -767,7 +770,7 @@ public class ASN1 {
             return val2;
         }
 
-        ASN1Encodable toASN1() throws Exception {
+        ASN1Encodable toASN1() {
             //            System.err.println(getMetaClass().getRealClass().getBaseName()+"#toASN1");
             int tag = idForRubyName(getMetaClass().getRealClass().getBaseName());
             @SuppressWarnings("unchecked") Class<? extends ASN1Encodable> imp = (Class<? extends ASN1Encodable>)ASN1_INFO[tag][1];
@@ -805,8 +808,13 @@ public class ASN1 {
                 }
                 return new DERBitString(bs,unused);
             } else if(val instanceof RubyString) {
-                return imp.getConstructor(String.class).newInstance(val.toString());
+                try {
+                    return imp.getConstructor(String.class).newInstance(val.toString());
+                } catch (Exception ex) {
+                    throw RaiseException.createNativeRaiseException(getRuntime(), ex);
+                }
             }
+            
             System.err.println("object with tag: " + tag + " and value: " + val + " and val.class: " + val.getClass().getName() + " and impl: " + imp.getName());
             System.err.println("WARNING: unimplemented method called: asn1data#toASN1");
             return null;
@@ -829,7 +837,7 @@ public class ASN1 {
         }
 
         @JRubyMethod
-        public IRubyObject to_der() throws Exception {
+        public IRubyObject to_der() {
             return super.to_der();
         }
 
@@ -879,7 +887,7 @@ public class ASN1 {
             return this;
         }
 
-        ASN1Encodable toASN1() throws Exception {
+        ASN1Encodable toASN1() {
             //            System.err.println(getMetaClass().getRealClass().getBaseName()+"#toASN1");
             int id = idForRubyName(getMetaClass().getRealClass().getBaseName());
             if(id != -1) {
@@ -893,9 +901,13 @@ public class ASN1 {
                         vec.add(((ASN1Data)ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),OpenSSLImpl.to_der_if_possible(v))).toASN1());
                     }
                 }
-                @SuppressWarnings("unchecked")
-                ASN1Encodable result = (ASN1Encodable)(((Class<? extends ASN1Encodable>)(ASN1_INFO[id][1])).getConstructor(new Class[]{DEREncodableVector.class}).newInstance(new Object[]{vec}));
-                return result;
+                try {
+                    @SuppressWarnings("unchecked")
+                    ASN1Encodable result = (ASN1Encodable)(((Class<? extends ASN1Encodable>)(ASN1_INFO[id][1])).getConstructor(new Class[]{DEREncodableVector.class}).newInstance(new Object[]{vec}));
+                    return result;
+                } catch (Exception e) {
+                    throw RaiseException.createNativeRaiseException(getRuntime(), e);
+                }
             }
             return null;
         }

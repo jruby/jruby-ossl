@@ -28,6 +28,7 @@
 package org.jruby.ext.openssl;
 
 
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.Iterator;
 import java.util.List;
@@ -425,7 +426,7 @@ public class X509Extensions {
             return value;
         }
 
-        byte[] getRealValueBytes() throws Exception {
+        byte[] getRealValueBytes() throws IOException {
             if((value instanceof RubyString)) {
                 return ((RubyString) value).convertToString().getBytes();
             } else if(value instanceof String) {

@@ -30,6 +30,7 @@ package org.jruby.ext.openssl;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
+import org.jruby.exceptions.RaiseException;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -62,5 +63,9 @@ public class SSL {
         mSSL.setConstant("OP_PKCS1_CHECK_2",runtime.newFixnum(268435456));
         mSSL.setConstant("OP_NETSCAPE_CA_DN_BUG",runtime.newFixnum(536870912));
         mSSL.setConstant("OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG",runtime.newFixnum(-1073741824));
-    }    
+    }
+
+    public static RaiseException newSSLError(Ruby runtime, Throwable t) {
+        throw new RaiseException(runtime, (RubyClass)runtime.getClassFromPath("OpenSSL::SSL::SSLError"), t.getMessage(), true);
+    }
 }// SSL
