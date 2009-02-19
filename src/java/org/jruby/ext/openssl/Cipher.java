@@ -70,11 +70,8 @@ public class Cipher extends RubyObject {
         RubyClass cCipher = mCipher.defineClassUnder("Cipher",runtime.getObject(), CIPHER_ALLOCATOR);
 
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
-        if (runtime.getInstanceConfig().getCompatVersion() == CompatVersion.RUBY1_9) {
-            mCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
-        } else {
-            ossl.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
-        }
+        mCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
+        ossl.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
 
         cCipher.defineAnnotatedMethods(Cipher.class);
         mCipher.defineAnnotatedMethods(CipherModule.class);
