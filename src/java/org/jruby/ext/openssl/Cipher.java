@@ -595,7 +595,12 @@ public class Cipher extends RubyObject {
             byte[] out = ciph.doFinal();
             if(out != null) {
                 str = new ByteList(out,false);
-                if(this.realIV != null && encryptMode) {
+                // TODO: Modifying this line appears to fix the issue, but I do
+                // not have a good reason for why. Best I can tell, lastIv needs
+                // to be set regardless of encryptMode, so we'll go with this
+                // for now. JRUBY-3335.
+                //if(this.realIV != null && encryptMode) {
+                if(this.realIV != null) {
                     if(lastIv == null) {
                         lastIv = new byte[ivLen];
                     }
