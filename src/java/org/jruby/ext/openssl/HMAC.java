@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.security.NoSuchAlgorithmException;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -62,29 +63,48 @@ public class HMAC extends RubyObject {
 
     @JRubyMethod(name="digest", meta=true)
     public static IRubyObject s_digest(IRubyObject recv, IRubyObject digest, IRubyObject kay, IRubyObject data) {
-        String name = "HMAC" + ((Digest)digest).getAlgorithm();
+        String algoName = ((Digest)digest).getAlgorithm();
+        String name = null;
         try {
-            Mac mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            // some algorithms need the - removed; this is ugly, I know.
+            Mac mac;
+            try {
+                name = "HMAC" + algoName;
+                mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            } catch (NoSuchAlgorithmException nsae) {
+                name = "HMAC-" + algoName.replaceAll("-", "");
+                mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            }
             byte[] key = kay.convertToString().getBytes();
             SecretKey keysp = new SecretKeySpec(key,name);
             mac.init(keysp);
             return RubyString.newString(recv.getRuntime(), mac.doFinal(data.convertToString().getBytes()));
         } catch(Exception e) {
-            throw recv.getRuntime().newNotImplementedError("Unsupported HMAC algorithm (" + name + ")");
+            e.printStackTrace();
+            throw recv.getRuntime().newNotImplementedError(e.getMessage());
         }
     }
 
     @JRubyMethod(name="hexdigest", meta=true)
     public static IRubyObject s_hexdigest(IRubyObject recv, IRubyObject digest, IRubyObject kay, IRubyObject data) {
-        String name = "HMAC" + ((Digest)digest).getAlgorithm();
+        String algoName = ((Digest)digest).getAlgorithm();
+        String name = null;
         try {
-            Mac mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            // some algorithms need the - removed; this is ugly, I know.
+            Mac mac;
+            try {
+                name = "HMAC" + algoName;
+                mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            } catch (NoSuchAlgorithmException nsae) {
+                name = "HMAC-" + algoName.replaceAll("-", "");
+                mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            }
             byte[] key = kay.convertToString().getBytes();
             SecretKey keysp = new SecretKeySpec(key,name);
             mac.init(keysp);
             return RubyString.newString(recv.getRuntime(), ByteList.plain(Utils.toHex(mac.doFinal(data.convertToString().getBytes()))));
         } catch(Exception e) {
-            throw recv.getRuntime().newNotImplementedError("Unsupported HMAC algorithm (" + name + ")");
+            throw recv.getRuntime().newNotImplementedError(e.getMessage());
         }
     }
 
@@ -98,14 +118,22 @@ public class HMAC extends RubyObject {
 
     @JRubyMethod
     public IRubyObject initialize(IRubyObject kay, IRubyObject digest) {
-        String name = "HMAC" + ((Digest)digest).getAlgorithm();
+        String algoName = ((Digest)digest).getAlgorithm();
+        String name = null;
         try {
-            mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            // some algorithms need the - removed; this is ugly, I know.
+            try {
+                name = "HMAC" + algoName;
+                mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            } catch (NoSuchAlgorithmException nsae) {
+                name = "HMAC-" + algoName.replaceAll("-", "");
+                mac = Mac.getInstance(name,OpenSSLReal.PROVIDER);
+            }
             key = kay.convertToString().getBytes();
             SecretKey keysp = new SecretKeySpec(key,name);
             mac.init(keysp);
         } catch(Exception e) {
-            throw getRuntime().newNotImplementedError("Unsupported MAC algorithm (" + name + ")");
+            throw getRuntime().newNotImplementedError(e.getMessage());
         }
         return this;
     }
