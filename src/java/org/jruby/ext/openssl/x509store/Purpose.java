@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DEROctetString;
 
 /**
@@ -302,7 +303,16 @@ public class Purpose {
                     return 0;
                 }
                 byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-                boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_SSL_CLIENT) != 0;
+                DERObject derObject = new ASN1InputStream(ns1).readObject();
+                DERBitString derBitString;
+                if (derObject instanceof DEROctetString) {
+                    derBitString = new DERBitString(derObject);
+                } else if (derObject instanceof DERBitString) {
+                    derBitString = (DERBitString)derObject;
+                } else {
+                    throw new RuntimeException("unknown type from ASN1InputStream.readObject: " + derObject);
+                }
+                boolean v2 = ns1 != null && (derBitString.intValue() & X509Utils.NS_SSL_CLIENT) != 0;
                 if(v2) {
                     return 0;
                 }
