@@ -7,3 +7,5 @@ lib/jopenssl.jar
 Manifest.txt
 build.properties
 nbproject/private
+*.orig
+*.rej
