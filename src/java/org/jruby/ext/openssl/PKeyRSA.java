@@ -409,7 +409,7 @@ public class PKeyRSA extends PKey {
         char[] passwd = null;
         String algo = null;
         if(args.length > 0 && !args[0].isNil()) {
-            algo = ((Cipher)args[0]).getAlgorithm();
+            algo = ((org.jruby.ext.openssl.Cipher)args[0]).getAlgorithm();
             if(args.length > 1 && !args[1].isNil()) {
                 passwd = args[1].toString().toCharArray();
             }
