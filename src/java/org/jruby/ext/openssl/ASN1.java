@@ -556,8 +556,8 @@ public class ASN1 {
                 String av = ((DERObjectIdentifier)v).getId();
                 return c.callMethod(tc,"new",asnM.getRuntime().newString(av));
             } else if(v instanceof DEROctetString) {
-                String va = new String(ByteList.plain(((DEROctetString)v).getOctets()));
-                return c.callMethod(tc,"new",asnM.getRuntime().newString(va));
+                ByteList bl = new ByteList(((DEROctetString)v).getOctets(), false);
+                return c.callMethod(tc,"new",asnM.getRuntime().newStringShared(bl));
             } else if(v instanceof DERBoolean) {
                 return c.callMethod(tc,"new",((DERBoolean)v).isTrue() ? asnM.getRuntime().getTrue() : asnM.getRuntime().getFalse());
             } else {
