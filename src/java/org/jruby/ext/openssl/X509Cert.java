@@ -35,6 +35,7 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -423,7 +424,12 @@ public class X509Cert extends RubyObject {
 
     @JRubyMethod
     public IRubyObject check_private_key(IRubyObject arg) {
-        return getRuntime().getNil();
+        PKey key = (PKey)arg;
+        PublicKey pkey = key.getPublicKey();
+        PublicKey certPubKey = getAuxCert().getPublicKey();
+        if (certPubKey.equals(pkey))
+            return getRuntime().getTrue();
+        return getRuntime().getFalse();
     }
 
     @JRubyMethod

@@ -169,6 +169,13 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
                         nil, nil, OpenSSL::Digest::SHA1.new) 
     }
   end
+
+  def test_check_private_key
+    cert = issue_cert(@ca, @rsa2048, 1, Time.now, Time.now+3600, [],
+                      nil, nil, OpenSSL::Digest::SHA1.new)
+    assert_equal(true, cert.check_private_key(@rsa2048))
+  end
+
 end
 
 end
