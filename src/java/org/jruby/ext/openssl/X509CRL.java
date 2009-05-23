@@ -28,6 +28,7 @@
 package org.jruby.ext.openssl;
 
 import java.io.ByteArrayInputStream;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
@@ -48,6 +49,7 @@ import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.jce.provider.PEMUtil;
 import org.bouncycastle.x509.X509V2CRLGenerator;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
@@ -59,6 +61,7 @@ import org.jruby.RubyString;
 import org.jruby.RubyTime;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.impl.utils.Base64;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
@@ -123,7 +126,22 @@ public class X509CRL extends RubyObject {
         ByteArrayInputStream bis = new ByteArrayInputStream(args[0].convertToString().getBytes());
         CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
         crl = (java.security.cert.X509CRL)cf.generateCRL(bis);
-        crl_v = new ASN1InputStream(new ByteArrayInputStream(args[0].convertToString().getBytes())).readObject();
+        
+        byte[] crl_bytes = args[0].convertToString().getBytes();
+        // Parse PEM if we ever get passed some PEM contents
+        try {
+            StringReader in = new StringReader(args[0].toString());
+            byte[] bytes = PEMInputOutput.readPEMToDER(in);
+            if (bytes != null)
+                crl_bytes = bytes;
+            in.close();
+        }
+        catch(Exception e) {
+            // this is not PEM encoded, let's use the default argument
+        }
+
+        crl_v = new ASN1InputStream(new ByteArrayInputStream(crl_bytes)).readObject();
+
         DEREncodable v0 = ((DERSequence)(((DERSequence)crl_v).getObjectAt(0))).getObjectAt(0);
         if(v0 instanceof DERInteger) {
             set_version(getRuntime().newFixnum(((DERInteger)v0).getValue().intValue()));

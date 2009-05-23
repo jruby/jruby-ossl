@@ -210,6 +210,63 @@ public class PEMInputOutput {
         return null; 
     }
 
+    public static byte[] readPEMToDER(Reader in) throws IOException {
+      BufferedReader _in = makeBuffered(in);
+      String  line;
+      while ((line = _in.readLine()) != null) {
+          if(line.indexOf(BEF_G+PEM_STRING_PUBLIC) != -1) {
+              try {
+                  return readBytes(_in,BEF_E+PEM_STRING_PUBLIC);
+              } catch (Exception e) {
+                  throw new IOException("problem reading PEM public key: " + e.toString());
+              }
+          } else if(line.indexOf(BEF_G+PEM_STRING_DSA) != -1) {
+              try {
+                  return readBytes(_in, BEF_E+PEM_STRING_DSA);
+              } catch (Exception e) {
+                  throw new IOException("problem reading PEM DSA private key: " + e.toString());
+              }
+          } else if(line.indexOf(BEF_G+PEM_STRING_RSA_PUBLIC) != -1) {
+              try {
+                  return readBytes(_in,BEF_E+PEM_STRING_RSA_PUBLIC);
+              } catch (Exception e) {
+                  throw new IOException("problem reading PEM RSA public key: " + e.toString());
+              }
+          } else if(line.indexOf(BEF_G+PEM_STRING_X509_OLD) != -1) {
+              try {
+                  return readBytes(_in,BEF_E+PEM_STRING_X509_OLD);
+              } catch (Exception e) {
+                  throw new IOException("problem reading PEM X509 Aux certificate: " + e.toString());
+              }
+          } else if(line.indexOf(BEF_G+PEM_STRING_X509) != -1) {
+              try {
+                  return readBytes(_in,BEF_E+PEM_STRING_X509);
+              } catch (Exception e) {
+                  throw new IOException("problem reading PEM X509 Aux certificate: " + e.toString());
+              }
+          } else if(line.indexOf(BEF_G+PEM_STRING_X509_TRUSTED) != -1) {
+              try {
+                  return readBytes(_in,BEF_E+PEM_STRING_X509_TRUSTED);
+              } catch (Exception e) {
+                  throw new IOException("problem reading PEM X509 Aux certificate: " + e.toString());
+              }
+          } else if(line.indexOf(BEF_G+PEM_STRING_X509_CRL) != -1) {
+              try {
+                  return readBytes(_in,BEF_E+PEM_STRING_X509_CRL);
+              } catch (Exception e) {
+                  throw new IOException("problem reading PEM X509 CRL: " + e.toString());
+              }
+          } else if(line.indexOf(BEF_G+PEM_STRING_X509_REQ) != -1) {
+              try {
+                  return readBytes(_in,BEF_E+PEM_STRING_X509_REQ);
+              } catch (Exception e) {
+                  throw new IOException("problem reading PEM X509 REQ: " + e.toString());
+              }
+          }
+      }
+      return null; 
+  }
+
     public static DSAPublicKey readDSAPubKey(Reader in, char[] f) throws IOException {
         //        System.out.println("WARNING: read_DSA_PUBKEY");
         return null;
