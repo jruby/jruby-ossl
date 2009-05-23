@@ -27,6 +27,11 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.StringReader;
+
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
@@ -36,6 +41,7 @@ import org.jruby.RubyObject;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.Function2;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
@@ -139,8 +145,30 @@ public class X509Store extends RubyObject {
 
     @JRubyMethod
     public IRubyObject add_file(IRubyObject arg) {
-        System.err.println("WARNING: unimplemented method called: Store#add_file");
-        return getRuntime().getNil();
+        String path = arg.toString();
+        FileReader in = null;
+        try {
+            in = new FileReader(path);
+            Object o = PEMInputOutput.readPEM(in, null);
+            System.out.println("o: "+o.getClass() + " iof: "+(o instanceof X509AuxCertificate));
+            if(o instanceof X509AuxCertificate && store.addCertificate((X509AuxCertificate)o) != 1) {
+                raise("can't store certificate");
+            } else if (o instanceof X509CRL && store.addCRL((java.security.cert.CRL)o) != 1) {
+                raise("can't store crl");
+            }
+        }
+        catch (FileNotFoundException e) {
+            raise("file not found: "+ e.getMessage());
+        }
+        catch (IOException e) {
+            raise("error while reading file: "+ e.getMessage());
+        }
+        finally {
+            if (in != null) {
+                try { in.close(); } catch(Exception e) {}
+            }
+        }
+        return this;
     }
 
     @JRubyMethod

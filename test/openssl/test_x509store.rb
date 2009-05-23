@@ -4,6 +4,7 @@ begin
 rescue LoadError
 end
 require "test/unit"
+require "tempfile"
 
 if defined?(OpenSSL)
 
@@ -212,6 +213,33 @@ class OpenSSL::TestX509Store < Test::Unit::TestCase
       store.add_crl(crl2) # add CRL issued by same CA twice.
     }
   end
+
+  def test_add_file
+    ca1_cert = <<END
+-----BEGIN CERTIFICATE-----
+MIIBzzCCATigAwIBAgIBATANBgkqhkiG9w0BAQUFADANMQswCQYDVQQDDAJjYTAe
+Fw0wOTA1MjIxMDE5MjNaFw0xNDA1MjExMDE5MjNaMA0xCzAJBgNVBAMMAmNhMIGf
+MA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDcTL520vsbXHXPfkHKrcgWbk2zVf0y
+oK7bPg06kjCghs8KYsi9b/tT9KpkpejD0KucDBSmDILD3PvIWrNFcBRWf6ZC5vA5
+YuF6ueATuFhsXjUFuNLqyPcIX+XrOQmXgjiyO9nc5vzQwWRRhdyyT8DgCRUD/yHW
+pjD2ZEGIAVLY/wIDAQABoz8wPTAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQf
+923P/SgiCcbiN20bbmuFM6SLxzALBgNVHQ8EBAMCAQYwDQYJKoZIhvcNAQEFBQAD
+gYEAE0CpCo8MxhfUNWMHF5GsGEG2+1LdE+aUX7gSb6d4vn1WjusrM2FoOFTomt32
+YPqJwMEbcqILq2v9Kkao4QNJRlK+z1xpRDnt1iBrHdXrYJFvYnfMqv3z7XAFPfQZ
+yMP+P2sR0jPzy4UNZfDIMmMUqQdhkz7onKWOGjXwLEtkCMs=
+-----END CERTIFICATE-----
+END
+
+    f = Tempfile.new("ca1_cert")
+    f << ca1_cert
+    f.close
+
+    store = OpenSSL::X509::Store.new
+    store.add_file(f.path)
+    assert_equal(true,  store.verify(OpenSSL::X509::Certificate.new(ca1_cert)))
+    f.unlink
+  end
+
 end
 
 end
