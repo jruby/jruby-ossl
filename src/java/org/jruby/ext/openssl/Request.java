@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
+import java.io.IOException;
+import java.io.StringReader;
 import java.security.GeneralSecurityException;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -49,6 +51,7 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
@@ -91,7 +94,21 @@ public class Request extends RubyObject {
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             return this;
         }
-        req = new PKCS10CertificationRequestExt(args[0].convertToString().getBytes());
+
+        byte[] req_bytes = args[0].convertToString().getBytes();
+        // Parse PEM if we ever get passed some PEM contents
+        try {
+            StringReader in = new StringReader(args[0].toString());
+            byte[] bytes = PEMInputOutput.readPEMToDER(in);
+            if (bytes != null)
+                req_bytes = bytes;
+            in.close();
+        }
+        catch(Exception e) {
+            // this is not PEM encoded, let's use the default argument
+        }
+
+        req = new PKCS10CertificationRequestExt(req_bytes);
         version = getRuntime().newFixnum(req.getVersion());
 
         final String[] result1 = new String[1];
