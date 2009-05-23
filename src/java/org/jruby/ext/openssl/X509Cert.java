@@ -246,7 +246,7 @@ public class X509Cert extends RubyObject {
 
     @JRubyMethod
     public IRubyObject to_text() {
-        return getRuntime().getNil();
+        return getRuntime().newString(getAuxCert().toString());
     }
 
     @JRubyMethod
