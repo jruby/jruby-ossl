@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.security.GeneralSecurityException;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -179,8 +180,16 @@ public class Request extends RubyObject {
 
     @JRubyMethod(name={"to_pem","to_s"})
     public IRubyObject to_pem() {
-        System.err.println("WARNING: unimplemented method called: to_pem");
-        return getRuntime().getNil();
+        StringWriter w = new StringWriter();
+        try {
+            PEMInputOutput.writeX509Request(w, req);
+            return getRuntime().newString(w.toString());
+        } catch (IOException ex) {
+            throw getRuntime().newIOErrorFromException(ex);
+        }
+        finally {
+            try { w.close(); } catch( Exception e ) {}
+        }
     }
 
     @JRubyMethod
