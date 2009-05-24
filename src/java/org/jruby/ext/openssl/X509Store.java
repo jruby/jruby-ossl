@@ -139,7 +139,7 @@ public class X509Store extends RubyObject {
 
     @JRubyMethod
     public IRubyObject add_path(IRubyObject arg) {
-        System.err.println("WARNING: unimplemented method called: Store#add_path");
+        getRuntime().getWarnings().warn("unimplemented method called: Store#add_path");
         return getRuntime().getNil();
     }
 
@@ -150,7 +150,6 @@ public class X509Store extends RubyObject {
         try {
             in = new FileReader(path);
             Object o = PEMInputOutput.readPEM(in, null);
-            System.out.println("o: "+o.getClass() + " iof: "+(o instanceof X509AuxCertificate));
             if(o instanceof X509AuxCertificate && store.addCertificate((X509AuxCertificate)o) != 1) {
                 raise("can't store certificate");
             } else if (o instanceof X509CRL && store.addCRL((java.security.cert.CRL)o) != 1) {
