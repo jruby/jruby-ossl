@@ -49,6 +49,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 
 import org.jruby.Ruby;
+import org.jruby.RubyArray;
 import org.jruby.RubyClass;
 import org.jruby.RubyIO;
 import org.jruby.RubyModule;
@@ -499,7 +500,14 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod
     public IRubyObject cert() {
-        System.err.println("WARNING: unimplemented method called: SSLSocket#cert");
+        try {
+            Certificate[] cert = engine.getSession().getLocalCertificates();
+            if (cert.length > 0) {
+                return X509Cert.wrap(getRuntime(), cert[0]);
+            }
+        } catch (CertificateEncodingException ex) {
+            throw X509Cert.newCertificateError(getRuntime(), ex);
+        }
         return getRuntime().getNil();
     }
 
@@ -520,14 +528,25 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod
     public IRubyObject peer_cert_chain() {
-        System.err.println("WARNING: unimplemented method called: SSLSocket#peer_cert_chain");
+        try {
+            javax.security.cert.Certificate[] certs = engine.getSession().getPeerCertificateChain();
+
+            RubyArray arr = getRuntime().newArray(certs.length);
+            for(int i = 0 ; i < certs.length; i++ ) {
+                arr.add(X509Cert.wrap(getRuntime(), certs[i]));
+            }
+            return arr;
+        } catch (javax.security.cert.CertificateEncodingException e) {
+            throw X509Cert.newCertificateError(getRuntime(), e);
+        } catch (SSLPeerUnverifiedException ex) {
+            Logger.getLogger(SSLSocket.class.getName()).log(Level.SEVERE, null, ex);
+        }
         return getRuntime().getNil();
     }
 
     @JRubyMethod
     public IRubyObject cipher() {
-        System.err.println("WARNING: unimplemented method called: SSLSocket#cipher");
-        return getRuntime().getNil();
+        return getRuntime().newString(engine.getSession().getCipherSuite());
     }
 
     @JRubyMethod

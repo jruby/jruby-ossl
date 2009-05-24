@@ -129,6 +129,12 @@ public class X509Cert extends RubyObject {
         return cr.callMethod(runtime.getCurrentContext(),"new",RubyString.newString(runtime, c.getEncoded()));
     }
 
+    // this is the javax.security counterpart of the previous wrap method
+    public static IRubyObject wrap(Ruby runtime, javax.security.cert.Certificate c) throws javax.security.cert.CertificateEncodingException {
+        RubyClass cr = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
+        return cr.callMethod(runtime.getCurrentContext(),"new",RubyString.newString(runtime, c.getEncoded()));
+    }
+
     @JRubyMethod(name="initialize", optional = 1, frame=true)
     public IRubyObject initialize(ThreadContext context, IRubyObject[] args, Block unusedBlock) {
         Ruby runtime = context.getRuntime();
