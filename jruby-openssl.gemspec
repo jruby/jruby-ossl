@@ -2,15 +2,13 @@
 
 # This gemspec is only used for github gem builds.
 
-require 'lib/jopenssl/version.rb'
-
 MANIFEST = ["History.txt", "README.txt", "License.txt", "lib/jopenssl.jar", "lib/bcmail-jdk14-139.jar", "lib/bcprov-jdk14-139.jar", "lib/openssl.rb", "lib/jopenssl/version.rb", "lib/openssl/bn.rb", "lib/openssl/buffering.rb", "lib/openssl/cipher.rb", "lib/openssl/digest.rb", "lib/openssl/dummy.rb", "lib/openssl/dummyssl.rb", "lib/openssl/ssl.rb", "lib/openssl/x509.rb", "test/pkcs7_mime_enveloped.message", "test/pkcs7_mime_signed.message", "test/pkcs7_multipart_signed.message", "test/test_cipher.rb", "test/test_integration.rb", "test/test_java.rb", "test/test_java_attribute.rb", "test/test_java_bio.rb", "test/test_java_mime.rb", "test/test_java_pkcs7.rb", "test/test_java_smime.rb", "test/test_openssl.rb", "test/test_openssl_x509.rb", "test/test_pkey.rb", "test/ut_eof.rb", "test/fixture/cacert.pem", "test/fixture/cert_localhost.pem", "test/fixture/localhost_keypair.pem", "test/openssl/ssl_server.rb", "test/openssl/test_asn1.rb", "test/openssl/test_cipher.rb", "test/openssl/test_digest.rb", "test/openssl/test_hmac.rb", "test/openssl/test_ns_spki.rb", "test/openssl/test_pair.rb", "test/openssl/test_pkcs7.rb", "test/openssl/test_pkey_rsa.rb", "test/openssl/test_ssl.rb", "test/openssl/test_x509cert.rb", "test/openssl/test_x509crl.rb", "test/openssl/test_x509ext.rb", "test/openssl/test_x509name.rb", "test/openssl/test_x509req.rb", "test/openssl/test_x509store.rb", "test/openssl/utils.rb", "test/ref/a.out", "test/ref/compile.rb", "test/ref/pkcs1", "test/ref/pkcs1.c"]
 
 NOW = Time.now.strftime('%Y%m%d')
 
 Gem::Specification.new do |s|
   s.name = %q{jruby-openssl}
-  s.version = Jopenssl::Version::VERSION + ".0001"
+  s.version = "0.5.0001"
 
   s.authors << "Ola Bini"
   s.authors << "Charles Nutter <headius@headius.com>"
