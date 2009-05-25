@@ -10,7 +10,7 @@ NOW = Time.now.strftime('%Y%m%d')
 
 Gem::Specification.new do |s|
   s.name = %q{jruby-openssl}
-  s.version = "#{Jopenssl::Version::VERSION}.#{NOW}"
+  s.version = Jopenssl::Version::VERSION + ".0001"
 
   s.authors << "Ola Bini"
   s.authors << "Charles Nutter <headius@headius.com>"
