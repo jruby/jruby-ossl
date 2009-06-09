@@ -674,10 +674,9 @@ public class PKeyRSA extends PKey {
 
         if(privKey == null) {
             generatePrivateKeyIfParams();
-        } else if(pubKey == null) {
+        }
+        if(pubKey == null) {
             generatePublicKeyIfParams();
-        } else {
-            throw newRSAError(getRuntime(), "illegal modification");
         }
         return value;
     }
@@ -702,12 +701,12 @@ public class PKeyRSA extends PKey {
     @JRubyMethod(name="n=")
     public synchronized IRubyObject set_n(IRubyObject value) {
         rsa_n = BN.getBigInteger(value);
+
         if(privKey == null) {
             generatePrivateKeyIfParams();
-        } else if(pubKey == null) {
+        }
+        if(pubKey == null) {
             generatePublicKeyIfParams();
-        } else {
-            throw newRSAError(getRuntime(), "illegal modification");
         }
         return value;
     }
