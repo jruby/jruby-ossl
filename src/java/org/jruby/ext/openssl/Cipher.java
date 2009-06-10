@@ -367,6 +367,7 @@ public class Cipher extends RubyObject {
         }
         this.realIV = ivBytes;
         this.orgIV = this.realIV;
+        ciphInited = false;
         return iv;
     }
 

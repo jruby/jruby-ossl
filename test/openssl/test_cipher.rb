@@ -19,6 +19,7 @@ class OpenSSL::TestCipher < Test::Unit::TestCase
     @c2 = OpenSSL::Cipher::DES.new(:EDE3, "CBC")
     @key = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
     @iv = "\0\0\0\0\0\0\0\0"
+    @iv1 = "\1\1\1\1\1\1\1\1"
     @hexkey = "0000000000000000000000000000000000000000000000"
     @hexiv = "0000000000000000"
     @data = "DATA"
@@ -67,6 +68,21 @@ class OpenSSL::TestCipher < Test::Unit::TestCase
     s1 = @c1.update(@data) + @c1.final
     @c1.reset
     s2 = @c1.update(@data) + @c1.final
+    assert_equal(s1, s2, "encrypt reset")
+  end
+
+  def test_set_iv
+    @c1.encrypt
+    @c1.key = @key
+    @c1.iv = @iv
+    s1 = @c1.update(@data) + @c1.final
+    @c1.iv = @iv1
+    s1 += @c1.update(@data) + @c1.final
+    @c1.reset
+    @c1.iv = @iv
+    s2 = @c1.update(@data) + @c1.final
+    @c1.iv = @iv1
+    s2 += @c1.update(@data) + @c1.final
     assert_equal(s1, s2, "encrypt reset")
   end
 
