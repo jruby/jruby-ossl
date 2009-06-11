@@ -186,7 +186,9 @@ public class X509Cert extends RubyObject {
                 if(critOid.equals("2.5.29.17")) {
                     add_extension(extFact.callMethod(tc,"create_ext", new IRubyObject[]{runtime.newString(critOid),runtime.newString(rValue.toString()),runtime.getTrue()}));
                 } else {
-                    add_extension(extFact.callMethod(tc,"create_ext", new IRubyObject[]{runtime.newString(critOid),runtime.newString(rValue.toString().substring(2)),runtime.getTrue()}));
+                    byte[] dest = new byte[value.length - 4];
+                    System.arraycopy(value, 4, dest, 0, value.length - 4);
+                    add_extension(extFact.callMethod(tc,"create_ext", new IRubyObject[]{runtime.newString(critOid),runtime.newString(new ByteList(dest, false)),runtime.getTrue()}));
                 }
             }
         }
