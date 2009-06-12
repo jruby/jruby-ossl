@@ -8,7 +8,7 @@ NOW = Time.now.strftime('%Y%m%d')
 
 Gem::Specification.new do |s|
   s.name = %q{jruby-openssl}
-  s.version = "0.5.0.2"
+  s.version = "0.5.0.3"
 
   s.authors << "Ola Bini"
   s.authors << "Charles Nutter <headius@headius.com>"
@@ -23,14 +23,4 @@ Gem::Specification.new do |s|
   s.rubyforge_project = %q{jruby-extras}
   s.summary = %q{OpenSSL add-on for JRuby}
   s.test_files = ["test/test_cipher.rb", "test/test_integration.rb", "test/test_java.rb", "test/test_java_attribute.rb", "test/test_java_bio.rb", "test/test_java_mime.rb", "test/test_java_pkcs7.rb", "test/test_java_smime.rb", "test/test_openssl.rb", "test/test_openssl_x509.rb", "test/test_pkey.rb"]
-
-  if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
-    s.specification_version = 3
-
-    if Gem::Version.new(Gem::RubyGemsVersion) >= Gem::Version.new('1.2.0') then
-    else
-    end
-  else
-  end
 end
