@@ -8,7 +8,7 @@ NOW = Time.now.strftime('%Y%m%d')
 
 Gem::Specification.new do |s|
   s.name = %q{jruby-openssl}
-  s.version = "0.5.1.a"
+  s.version = "0.5.0.2"
 
   s.authors << "Ola Bini"
   s.authors << "Charles Nutter <headius@headius.com>"
