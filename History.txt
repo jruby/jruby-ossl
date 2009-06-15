@@ -1,3 +1,8 @@
+== 0.5.1
+
+* Multiple fixes by Brice Figureau to get net/ssh working. Requires JRuby 1.3.1 to be 100%
+* Fix by Frederic Jean for a character-decoding issue for some certificates
+
 == 0.5
 
 * Fixed JRUBY-3614: Unsupported HMAC algorithm (HMACSHA-256)
