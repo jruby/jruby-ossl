@@ -137,11 +137,7 @@ public class SSLSocket extends RubyObject {
             IRubyObject store = callMethod(tc,"context").callMethod(tc,"cert_store");
             callMethod(tc,"context").callMethod(tc,"verify_mode");
 
-            if(store.isNil()) {
                 ctx.init(new javax.net.ssl.KeyManager[]{((org.jruby.ext.openssl.SSLContext)callMethod(tc,"context")).getKM()},new javax.net.ssl.TrustManager[]{((org.jruby.ext.openssl.SSLContext)callMethod(tc,"context")).getTM()},null);
-            } else {
-                ctx.init(new javax.net.ssl.KeyManager[]{((org.jruby.ext.openssl.SSLContext)callMethod(tc,"context")).getKM()},new javax.net.ssl.TrustManager[]{((X509Store)store).getStore()},null);
-            }
 
             String peerHost = ((SocketChannel)c).socket().getInetAddress().getHostName();
             int peerPort = ((SocketChannel)c).socket().getPort();

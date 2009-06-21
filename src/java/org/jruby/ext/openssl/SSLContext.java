@@ -249,9 +249,54 @@ public class SSLContext extends RubyObject {
             this.ctt = ctt;
         }
 
-        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
+            if(ctt.callMethod(ctt.getRuntime().getCurrentContext(),"verify_mode").isNil()) {
+                if(chain != null && chain.length > 0) {
+                    ctt.setPeer(chain[0]);
+                }
+                return;
+            }
+
+            int verify_mode = RubyNumeric.fix2int(ctt.callMethod(ctt.getRuntime().getCurrentContext(),"verify_mode"));
             if(chain != null && chain.length > 0) {
                 ctt.setPeer(chain[0]);
+                if((verify_mode & 0x1) != 0) { // verify_peer
+                    X509AuxCertificate x = StoreContext.ensureAux(chain[0]);
+                    StoreContext ctx = new StoreContext();
+                    IRubyObject str = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"cert_store");
+                    Store store = null;
+                    if(!str.isNil()) {
+                        store = ((X509Store)str).getStore();
+                    }
+                    if(ctx.init(store,x,StoreContext.ensureAux(chain)) == 0) {
+                        throw new CertificateException("couldn't initialize store");
+                    }
+
+                    ctx.setDefault("ssl_server");
+
+                    IRubyObject val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_file");
+                    String ca_file = val.isNil() ? null : val.convertToString().toString();
+                    val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_path");
+                    String ca_path = val.isNil() ? null : val.convertToString().toString();
+
+                    if(ca_file != null || ca_path != null) {
+                        if(ctx.loadVerifyLocations(ca_file, ca_path) == 0) {
+                            ctt.getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
+                        }
+                    }
+
+                    try {
+                        if(ctx.verifyCertificate() == 0) {
+                            throw new CertificateException("certificate verify failed");
+                        }
+                    } catch(Exception e) {
+                        throw new CertificateException("certificate verify failed");
+                    }
+                }
+            } else {
+                if((verify_mode & 0x2) != 0) { // fail if no peer cer
+                    throw new CertificateException("no peer certificate");
+                }
             }
         }
 
