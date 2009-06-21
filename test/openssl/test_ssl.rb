@@ -6,7 +6,7 @@ end
 require "rbconfig"
 require "socket"
 require "test/unit"
-require "jruby"
+require 'tempfile'
 
 if defined?(OpenSSL)
 
@@ -18,7 +18,7 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
   SSL_SERVER = File.join(File.dirname(__FILE__), "ssl_server.rb")
   PORT = 20443
   ITERATIONS = ($0 == __FILE__) ? 5 : 5
-  
+
   # Disable in-proc process launching and either run jruby with specified args
   # or yield args to a given block
   def jruby_oop(*args)
@@ -69,37 +69,70 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     OpenSSL::TestUtils.issue_crl(*arg)
   end
 
-  def start_server(port0, verify_mode, start_immediately, &block)
-    server = nil
-    jruby_oop {
+  def choose_port(port)
+    tcps = nil
+    100.times{|i|
+    begin
+      tcps = TCPServer.new("127.0.0.1", port+i)
+      port = port + i
+      break
+    rescue Errno::EADDRINUSE
+      next 
+    end
+    }
+    return tcps, port
+  end
+
+  def start_server(port0, verify_mode, start_immediately, ctx = nil, &block)
+    tcps, port = choose_port(port0)
+    t = Thread.start {
       begin
-        cmd = [RUBY]
-        cmd << "-Ilib"
-        cmd << "-d" if $DEBUG
-        cmd << SSL_SERVER << port0.to_s << verify_mode.to_s
-        cmd << (start_immediately ? "yes" : "no")
-        server = IO.popen(cmd.join(" "), "w+")
-        server.write(@ca_cert.to_pem)
-        server.write(@svr_cert.to_pem)
-        server.write(@svr_key.to_pem)
-        $stderr.puts "sent certs to server" if $DEBUG
-        str = server.gets
-        $stderr.puts "got pid from server: #{str}" if $DEBUG
-        pid = Integer(str)
-        if port = server.gets
+      if ctx.nil?
+        store = OpenSSL::X509::Store.new
+        store.add_cert(@ca_cert)
+        store.purpose = OpenSSL::X509::PURPOSE_ANY
+        ctx = OpenSSL::SSL::SSLContext.new
+        ctx.cert_store = store
+        #ctx.extra_chain_cert = [ ca_cert ]
+        ctx.cert = @svr_cert
+        ctx.key = @svr_key
+        ctx.verify_mode = verify_mode
+      end
+
+      Socket.do_not_reverse_lookup = true
+      ssls = OpenSSL::SSL::SSLServer.new(tcps, ctx)
+      ssls.start_immediately = start_immediately
+
+      loop do
+        begin
+          ssl = ssls.accept
+          Thread.start{
+            q = Queue.new
+            th = Thread.start{ ssl.write(q.shift) while true }
+            while line = ssl.gets
+              if line =~ /^STARTTLS$/
+                ssl.accept
+                next
+              end
+              q.push(line)
+            end
+            th.kill if q.empty?
+            ssl.close
+          }
+        rescue
           if $DEBUG
-            $stderr.printf("%s started: pid=%d port=%d\n", SSL_SERVER, pid, port)
+            puts $!
+            puts $!.backtrace.join("\n")
           end
-          block.call(server, port.to_i)
-        end
-      ensure
-        if server
-          $stderr.puts "killing: #{pid}" if $DEBUG
-          Process.kill(:KILL, pid)
-          server.close
         end
       end
+      rescue
+        puts $!
+        puts $!.backtrace.join("\n")
+      end
     }
+    sleep 1
+    block.call(nil, port.to_i)
   end
 
   def starttls(ssl)
@@ -173,42 +206,113 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     }
   end
 
-  # Temporarily disabled...see JRUBY-1888
-#  def test_client_auth
-#    vflag = OpenSSL::SSL::VERIFY_PEER|OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT
-#    start_server(PORT, vflag, true){|s, p|
-#      assert_raises(OpenSSL::SSL::SSLError){
-#        sock = TCPSocket.new("127.0.0.1", p)
-#        ssl = OpenSSL::SSL::SSLSocket.new(sock)
-#        ssl.connect
-#      }
-#      ctx = OpenSSL::SSL::SSLContext.new
-#      ctx.key = @cli_key
-#      ctx.cert = @cli_cert
-#      sock = TCPSocket.new("127.0.0.1", p)
-#      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
-#      ssl.sync_close = true
-#      ssl.connect
-#      ssl.puts("foo")
-#      assert_equal("foo\n", ssl.gets)
-#      ssl.close
-#
-#      called = nil
-#      ctx = OpenSSL::SSL::SSLContext.new
-#      ctx.client_cert_cb = Proc.new{|ssl|
-#        called = true
-#        [@cli_cert, @cli_key]
-#      }
-#      sock = TCPSocket.new("127.0.0.1", p)
-#      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
-#      ssl.sync_close = true
-#      ssl.connect
-##      assert(called)
-#      ssl.puts("foo")
-#      assert_equal("foo\n", ssl.gets)
-#      ssl.close
-#    }
-#  end
+  def test_client_auth
+    vflag = OpenSSL::SSL::VERIFY_PEER|OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT
+    start_server(PORT, vflag, true){|s, p|
+      assert_raises(OpenSSL::SSL::SSLError){
+        sock = TCPSocket.new("127.0.0.1", p)
+        ssl = OpenSSL::SSL::SSLSocket.new(sock)
+        ssl.connect
+      }
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.key = @cli_key
+      ctx.cert = @cli_cert
+      sock = TCPSocket.new("127.0.0.1", p)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      ssl.sync_close = true
+      ssl.connect
+      ssl.puts("foo")
+      assert_equal("foo\n", ssl.gets)
+      ssl.close
+
+      called = nil
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.client_cert_cb = Proc.new{|ssl2|
+        called = true
+        [@cli_cert, @cli_key]
+      }
+      sock = TCPSocket.new("127.0.0.1", p)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      ssl.sync_close = true
+      ssl.connect
+      assert(called)
+      ssl.puts("foo")
+      assert_equal("foo\n", ssl.gets)
+      ssl.close
+    }
+  end
+
+  def test_client_auth_with_server_store
+    vflag = OpenSSL::SSL::VERIFY_PEER
+
+    localcacert_file = Tempfile.open("cafile")
+    localcacert_file << @ca_cert.to_pem
+    localcacert_file.close
+    localcacert_path = localcacert_file.path
+
+    ssl_store = OpenSSL::X509::Store.new
+    ssl_store.purpose = OpenSSL::X509::PURPOSE_ANY
+    ssl_store.add_file(localcacert_path)
+
+    server_ctx = OpenSSL::SSL::SSLContext.new
+    server_ctx.cert = @svr_cert
+    server_ctx.key = @svr_key
+    server_ctx.verify_mode = vflag
+    server_ctx.cert_store = ssl_store
+
+    start_server(PORT, vflag, true, server_ctx){|s, p|
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.cert = @cli_cert
+      ctx.key = @cli_key
+      sock = TCPSocket.new("127.0.0.1", p)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      ssl.sync_close = true
+      ssl.connect
+      ssl.puts("foo")
+      assert_equal("foo\n", ssl.gets)
+      ssl.close
+      localcacert_file.unlink
+    }
+  end
+
+  def test_client_crl_with_server_store
+    vflag = OpenSSL::SSL::VERIFY_PEER
+
+    localcacert_file = Tempfile.open("cafile")
+    localcacert_file << @ca_cert.to_pem
+    localcacert_file.close
+    localcacert_path = localcacert_file.path
+
+    ssl_store = OpenSSL::X509::Store.new
+    ssl_store.purpose = OpenSSL::X509::PURPOSE_ANY
+    ssl_store.add_file(localcacert_path)
+    ssl_store.flags = OpenSSL::X509::V_FLAG_CRL_CHECK_ALL|OpenSSL::X509::V_FLAG_CRL_CHECK
+
+    crl = issue_crl([], 1, Time.now, Time.now+1600, [],
+                    @cli_cert, @ca_key, OpenSSL::Digest::SHA1.new)
+
+    ssl_store.add_crl(OpenSSL::X509::CRL.new(crl.to_pem))
+
+    server_ctx = OpenSSL::SSL::SSLContext.new
+    server_ctx.cert = @svr_cert
+    server_ctx.key = @svr_key
+    server_ctx.verify_mode = vflag
+    server_ctx.cert_store = ssl_store
+
+    start_server(PORT, vflag, true, server_ctx){|s, p|
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.cert = @cli_cert
+      ctx.key = @cli_key
+      assert_raises(OpenSSL::SSL::SSLError){
+        sock = TCPSocket.new("127.0.0.1", p)
+        ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+        ssl.sync_close = true
+        ssl.connect
+        ssl.close
+      }
+      localcacert_file.unlink
+    }
+  end
 
   def test_starttls
     start_server(PORT, OpenSSL::SSL::VERIFY_NONE, false){|s, p|
