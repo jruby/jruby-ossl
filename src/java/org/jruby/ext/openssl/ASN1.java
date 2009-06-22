@@ -512,8 +512,8 @@ public class ASN1 {
         if(null != v_name) {
             RubyClass c = asnM.getClass(v_name);
             if(v instanceof DERBitString) {
-                String va = new String(ByteList.plain(((DERBitString)v).getBytes()));
-                IRubyObject bString = c.callMethod(tc,"new",asnM.getRuntime().newString(va));
+                ByteList bl = new ByteList(((DERBitString)v).getBytes(), false);
+                IRubyObject bString = c.callMethod(tc,"new",asnM.getRuntime().newString(bl));
                 bString.callMethod(tc,"unused_bits=",asnM.getRuntime().newFixnum(((DERBitString)v).getPadBits()));
                 return bString;
             } else if(v instanceof DERString) {
@@ -653,7 +653,7 @@ public class ASN1 {
 
         @JRubyMethod
         public IRubyObject to_der() {
-            return getRuntime().newString(new String(ByteList.plain(toASN1().getDEREncoded())));
+            return getRuntime().newString(new ByteList(toASN1().getDEREncoded(),false));
         }
 
         protected IRubyObject defaultTag() {
