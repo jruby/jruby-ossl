@@ -182,8 +182,7 @@ public class X509Cert extends RubyObject {
             for(Iterator iter = crit.iterator();iter.hasNext();) {
                 String critOid = (String)iter.next();
                 byte[] value = cert.getExtensionValue(critOid);
-                IRubyObject rValue = ASN1.decode(ossl.getConstant("ASN1"),RubyString.newString(runtime, value)).callMet
-hod(tc,"value");
+                IRubyObject rValue = ASN1.decode(ossl.getConstant("ASN1"),RubyString.newString(runtime, value)).callMethod(tc,"value");
                 if(critOid.equals("2.5.29.17")) {
                     X509Extensions.Extension ext = (X509Extensions.Extension)(((RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Extension"))).callMethod(tc,"new", new IRubyObject[]{runtime.newString(critOid),rValue,runtime.getTrue()}));
                     add_extension(ext);
