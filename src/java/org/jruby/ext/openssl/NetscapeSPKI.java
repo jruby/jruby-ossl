@@ -44,7 +44,7 @@ import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
-import org.jvyamlb.util.Base64Coder;
+import org.jruby.ext.openssl.util.Base64Coder;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
