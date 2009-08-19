@@ -155,6 +155,13 @@ public class X509Extensions {
         private static boolean isHexDigit(char c) {
             return ('0'<=c && c<='9') || ('A'<= c && c <= 'F') || ('a'<= c && c <= 'f');
         }
+        
+        private boolean isHexString(String str ){
+        	for(int i = 0; i< str.length(); i++) {
+        		if (!isHexDigit(str.charAt(i))) return false;
+        	}
+        	return true;
+        }
 
         @JRubyMethod(rest=true)
         public IRubyObject create_ext(IRubyObject[] args) throws Exception {
@@ -196,7 +203,7 @@ public class X509Extensions {
                     }
                     byte[] b = MessageDigest.getInstance("SHA-1",OpenSSLReal.PROVIDER).digest(val.convertToString().getBytes());
                     value = new String(ByteList.plain(new DEROctetString(b).getDEREncoded()));
-                } else if(valuex.length() == 20) {
+                } else if(valuex.length() == 20 || !isHexString(valuex)) {
                     value = new String(ByteList.plain(new DEROctetString(ByteList.plain(valuex)).getDEREncoded()));
                 } else {
                     StringBuffer nstr = new StringBuffer();
