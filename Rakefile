@@ -1,7 +1,7 @@
 require 'rake'
 require 'rake/testtask'
 
-MANIFEST = FileList["History.txt", "README.txt", "License.txt", "lib/jopenssl.jar", "lib/**/*", "test/**/*"]
+MANIFEST = FileList["Rakefile", "History.txt", "Manifest.txt", "README.txt", "License.txt", "lib/jopenssl.jar", "lib/**/*", "test/**/*"]
 BC_JARS = FileList["lib/bc*.jar"]
 
 task :default => [:java_compile, :test]
@@ -36,7 +36,7 @@ task :java_compile do
   File.open("pkg/compile_sourcefiles", "w") do |f|
     f << FileList['src/java/**/*.java'].join(' ')
   end
-  
+
   sh "javac @pkg/compile_options @pkg/compile_classpath @pkg/compile_sourcefiles"
   File.open("pkg/classes/manifest.mf", "w") {|f| f.puts "Class-Path: #{BC_JARS.map{|f| File.basename(f) }.join(' ')}"}
   sh "jar cfm lib/jopenssl.jar pkg/classes/manifest.mf -C pkg/classes/ ."
