@@ -169,6 +169,28 @@ class OpenSSL::TestCipher < Test::Unit::TestCase
       }
     end
   end
+
+  # JRUBY-4028
+  def test_jruby_4028
+    key = "0599E113A7EE32A9"
+    data = "1234567890~5J96LC303C1D22DD~20090930005944~http%3A%2F%2Flocalhost%3A8080%2Flogin%3B0%3B1~http%3A%2F%2Fmix-stage.oracle.com%2F~00"
+    c1 = OpenSSL::Cipher::Cipher.new("DES-CBC")
+    c1.padding = 0
+    c1.encrypt
+    c1.key = key
+    e = c1.update data
+    e << c1.final
+    
+    c2 = OpenSSL::Cipher::Cipher.new("DES-CBC")
+    c2.padding = 0
+    c2.decrypt
+    c2.key = key
+    d = c2.update e
+    d << c2.final
+
+    assert_equal "]s\345F\251\250\223uO\315\220\255g\031\363c\006\205L\260G7\016`\265\377K5?\375\310\025\026\"\a\246N\270\234]\206\n\r\351\262\257\305\3632p_\205\257\026\226~-7\av#BZx\024\246'\f\216\005\201\r\372\201\316%W\250\210^\340{\371\245\374<~/YnV\277\311\230\250{\336\302W\353\032\321+\200pA\037\274\262\022*u\344\363\304\e\214J\353!\2352\267)s\360c\a", e
+    assert_equal data, d
+  end
 end
 
 end

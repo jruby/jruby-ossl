@@ -527,14 +527,19 @@ public class Cipher extends RubyObject {
         try {
             assert (key.length * 8 == keyLen) || (key.length == keyLen) : "Key wrong length";
             assert (this.realIV.length * 8 == ivLen) || (this.realIV.length == ivLen): "IV wrong length";
-            if(!"ECB".equalsIgnoreCase(cryptoMode) && this.realIV != null) {
+            if(!"ECB".equalsIgnoreCase(cryptoMode)) {
+                if(this.realIV == null) {
+                    this.realIV = new byte[ivLen];
+                    System.arraycopy("OpenSSL for JRuby rulez".getBytes(), 0,
+                                     this.realIV, 0, ivLen);
+                }
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.realIV));
             } else {
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
             }
         } catch(Exception e) {
             if (DEBUG) e.printStackTrace();
-            throw new RaiseException(getRuntime(), ciphErr, null, true);
+            throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
         }
     }
 
