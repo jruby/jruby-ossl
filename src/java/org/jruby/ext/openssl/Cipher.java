@@ -382,7 +382,13 @@ public class Cipher extends RubyObject {
         if(ivBytes.length < ivLen) {
             throw new RaiseException(getRuntime(), ciphErr, "iv length to short", true);
         }
-        this.realIV = ivBytes;
+		else if(ivBytes.length > ivLen) {
+			byte[] iv2 = new byte[ivLen];
+			System.arraycopy(ivBytes, 0, iv2, 0, ivLen);
+			this.realIV = iv2;
+		} else {
+        	this.realIV = ivBytes;
+		}
         this.orgIV = this.realIV;
         ciphInited = false;
         return iv;
