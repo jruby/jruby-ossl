@@ -43,6 +43,15 @@ class TestCipher < Test::Unit::TestCase
                      )
   end
 
+  def test_rc2
+    do_repeated_test(
+                     "RC2",
+                     "foobarbazboofarf",
+                     "\x18imZ\x9Ed\x15\xF3\xD6\xE6M\xCDf\xAA\xD3\xFE",
+		     "\xEF\xF7\x16\x06\x93)-##\xB2~\xAD,\xAD\x82\xF5"
+		    )
+  end
+
   private
   def do_repeated_test(algo, string, enc1, enc2)
     do_repeated_encrypt_test(algo, string, enc1, enc2)

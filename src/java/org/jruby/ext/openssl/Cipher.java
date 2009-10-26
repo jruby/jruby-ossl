@@ -37,7 +37,7 @@ import java.util.Set;
 
 import javax.crypto.spec.IvParameterSpec;
 
-import org.jruby.CompatVersion;
+import javax.crypto.spec.RC2ParameterSpec;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
@@ -519,25 +519,30 @@ public class Cipher extends RubyObject {
     }
 
     private void doInitialize() {
-
-        if (DEBUG) System.out.println("*** doInitialize");
-        if (DEBUG) dumpVars();
+        if (DEBUG) {
+            System.out.println("*** doInitialize");
+            dumpVars();
+        }
 
         ciphInited = true;
         try {
             assert (key.length * 8 == keyLen) || (key.length == keyLen) : "Key wrong length";
-            assert (this.realIV.length * 8 == ivLen) || (this.realIV.length == ivLen): "IV wrong length";
-            if(!"ECB".equalsIgnoreCase(cryptoMode)) {
-                if(this.realIV == null) {
+            assert (this.realIV.length * 8 == ivLen) || (this.realIV.length == ivLen) : "IV wrong length";
+            if (!"ECB".equalsIgnoreCase(cryptoMode)) {
+                if (this.realIV == null) {
                     this.realIV = new byte[ivLen];
                     System.arraycopy("OpenSSL for JRuby rulez".getBytes(), 0,
-                                     this.realIV, 0, ivLen);
+                            this.realIV, 0, ivLen);
                 }
-                this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.realIV));
+                if ("RC2".equals(cryptoBase)) {
+                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new RC2ParameterSpec(this.key.length * 8, this.realIV));
+                } else {
+                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.realIV));
+                }
             } else {
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
             }
-        } catch(Exception e) {
+        } catch (Exception e) {
             if (DEBUG) e.printStackTrace();
             throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
         }
