@@ -58,7 +58,6 @@ import org.jruby.RubyObject;
 import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
-import org.jruby.exceptions.RaiseException;
 import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
@@ -413,6 +412,9 @@ public class SSLSocket extends RubyObject {
         }
         if(len == 0) {
             return str;
+        }
+        if (len < 0) {
+            throw runtime.newArgumentError("negative string size (or size too big)");
         }
 
         // So we need to make sure to only block when there is no data left to process

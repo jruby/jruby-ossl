@@ -169,6 +169,8 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
       ssl.sync_close = true
       ssl.connect
 
+      assert_raises(ArgumentError) { ssl.sysread(-1) }
+
       # syswrite and sysread
       ITERATIONS.times{|i|
         str = "x" * 100 + "\n"
