@@ -14,12 +14,24 @@
   $Id: cipher.rb,v 1.1.2.2 2006/06/20 11:18:15 gotoyuzo Exp $
 =end
 
-##
-# Should we care what if somebody require this file directly?
-#require 'openssl'
+require 'openssl'
 
 module OpenSSL
   module Cipher
+    class Cipher
+      def random_key
+        str = OpenSSL::Random.random_bytes(self.key_len)
+        self.key = str
+        return str
+      end
+
+      def random_iv
+        str = OpenSSL::Random.random_bytes(self.iv_len)
+        self.iv = str
+        return str
+      end
+    end
+    
     %w(AES CAST5 BF DES IDEA RC2 RC4 RC5).each{|name|
       klass = Class.new(Cipher){
         define_method(:initialize){|*args|
@@ -40,19 +52,5 @@ module OpenSSL
       }
       const_set("AES#{keylen}", klass)
     }
-
-    class Cipher
-      def random_key
-        str = OpenSSL::Random.random_bytes(self.key_len)
-        self.key = str
-        return str
-      end
-
-      def random_iv
-        str = OpenSSL::Random.random_bytes(self.iv_len)
-        self.iv = str
-        return str
-      end
-    end
   end # Cipher
 end # OpenSSL

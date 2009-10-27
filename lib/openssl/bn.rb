@@ -14,9 +14,7 @@
   $Id: bn.rb,v 1.1 2003/07/23 16:11:30 gotoyuzo Exp $
 =end
 
-##
-# Should we care what if somebody require this file directly?
-#require 'openssl'
+require 'openssl'
 
 module OpenSSL
   class BN

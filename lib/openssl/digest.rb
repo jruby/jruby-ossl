@@ -14,9 +14,7 @@
   $Id: digest.rb,v 1.1.2.2 2006/06/20 11:18:15 gotoyuzo Exp $
 =end
 
-##
-# Should we care what if somebody require this file directly?
-#require 'openssl'
+require 'openssl'
 
 module OpenSSL
   module Digest
