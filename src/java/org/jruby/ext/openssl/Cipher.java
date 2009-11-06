@@ -249,6 +249,13 @@ public class Cipher extends RubyObject {
                 }
             } else {
                 keyLen = 16;
+                try {
+                    if ((javax.crypto.Cipher.getMaxAllowedKeyLength(name) / 8) < keyLen) {
+                        keyLen = javax.crypto.Cipher.getMaxAllowedKeyLength(name) / 8;
+                    }
+                } catch (Exception e) {
+                    // I hate checked exceptions
+                }
             }
         }
 
@@ -260,14 +267,6 @@ public class Cipher extends RubyObject {
             }
         }
         
-        try {
-            if((javax.crypto.Cipher.getMaxAllowedKeyLength(name)/8) < keyLen) {
-                keyLen = javax.crypto.Cipher.getMaxAllowedKeyLength(name)/8;
-            }
-        } catch(Exception e) {
-            // I hate checked exceptions
-        }
-
         return this;
     }
 
