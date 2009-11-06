@@ -67,10 +67,9 @@ class TestCipher < Test::Unit::TestCase
     cipher.key     = KEY_TEMPLATE[0, cipher.key_len]
 
     assert_equal result1, cipher.update(string)
-    cipher.final
+    assert_equal "", cipher.final
 
-    assert_equal result2, cipher.update(string)
-    cipher.final
+    assert_equal result2, cipher.update(string) + cipher.final
   end
 
   def do_repeated_decrypt_test(algo, result, string1, string2)
@@ -82,9 +81,8 @@ class TestCipher < Test::Unit::TestCase
     cipher.key     = KEY_TEMPLATE[0, cipher.key_len]
 
     assert_equal result, cipher.update(string1)
-    cipher.final
+    assert_equal "", cipher.final
 
-    assert_equal result, cipher.update(string2)
-    cipher.final
+    assert_equal result, cipher.update(string2) + cipher.final
   end
 end
