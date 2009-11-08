@@ -13,6 +13,13 @@ end
 require "test/unit"
 
 class TestCipher < Test::Unit::TestCase
+  def test_keylen
+    cipher = OpenSSL::Cipher::Cipher.new('DES-EDE3-CBC')
+    # must be 24 but it returns 16 on JRE6 without unlimited jurisdiction
+    # policy. it returns 24 on JRE6 with the unlimited policy.
+    assert_equal(24, cipher.key_len)
+  end
+
   def test_encrypt_takes_parameter
     enc = OpenSSL::Cipher::Cipher.new('DES-EDE3-CBC')
     enc.encrypt("123")
