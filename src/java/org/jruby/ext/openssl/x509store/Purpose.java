@@ -227,8 +227,8 @@ public class Purpose {
             if(x.getKeyUsage() != null) {
                 return 4;
             }
-            byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-            if(ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_ANY_CA) != 0) {
+            Integer nsCertType = x.getNsCertType();
+            if (nsCertType != null && (nsCertType & X509Utils.NS_ANY_CA) != 0) {
                 return 5;
             }
             return 0;
@@ -243,8 +243,8 @@ public class Purpose {
         if(ca_ret == 0) {
             return 0;
         }
-        byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-        boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_SSL_CA) != 0;
+        Integer nsCertType = x.getNsCertType();
+        boolean v2 = nsCertType != null && (nsCertType & X509Utils.NS_SSL_CA) != 0;
         if(ca_ret != 5 || v2) {
             return ca_ret;
         }
@@ -263,21 +263,20 @@ public class Purpose {
             if(ca_ret == 0) {
                 return 0;
             }
-            byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-            boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_SMIME_CA) != 0;
+            Integer nsCertType = x.getNsCertType();
+            boolean v2 = nsCertType != null && (nsCertType & X509Utils.NS_SMIME_CA) != 0;
             if(ca_ret != 5 || v2) {
                 return ca_ret;
             } else {
                 return 0;
             }
         }
-        byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-        if(ns1 != null) {
-            int nscert = ((DERBitString)new ASN1InputStream(ns1).readObject()).intValue();
-            if((nscert & X509Utils.NS_SMIME) != 0) {
+        Integer nsCertType = x.getNsCertType();
+        if (nsCertType != null) {
+            if ((nsCertType & X509Utils.NS_SMIME) != 0) {
                 return 1;
             }
-            if((nscert & X509Utils.NS_SSL_CLIENT) != 0) {
+            if ((nsCertType & X509Utils.NS_SSL_CLIENT) != 0) {
                 return 2;
             }
             return 0;
@@ -338,8 +337,8 @@ public class Purpose {
                 if(ca != 0) {
                     return checkSSLCA(x);
                 }
-                byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-                boolean v2 = ns1 != null && (((DERBitString)new ASN1InputStream(ns1).readObject()).intValue() & X509Utils.NS_SSL_SERVER) != 0;
+                Integer nsCertType = x.getNsCertType();
+                boolean v2 = nsCertType != null && (nsCertType & X509Utils.NS_SSL_SERVER) != 0;
                 if(v2) {
                     return 0;
                 }

@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
+import java.io.IOException;
 import java.math.BigInteger;
 
 import java.security.Principal;
@@ -48,6 +49,9 @@ import java.util.List;
 import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
+import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.DEROctetString;
 
 /**
  * Since regular X509Certificate doesn't represent the Aux part of a
@@ -139,4 +143,28 @@ public class X509AuxCertificate extends X509Certificate {
     public byte[] 	getExtensionValue(String oid){ return wrap.getExtensionValue(oid); }
     public Set<String> 	getNonCriticalExtensionOIDs(){ return wrap.getNonCriticalExtensionOIDs(); }
     public boolean 	hasUnsupportedCriticalExtension(){ return wrap.hasUnsupportedCriticalExtension(); }
+
+    private static final String NS_CERT_TYPE_OID = "2.16.840.1.113730.1.1";
+    public Integer getNsCertType() throws CertificateException {
+        byte[] bytes = getExtensionValue(NS_CERT_TYPE_OID);
+        if (bytes == null) {
+            return null;
+        }
+        try {
+            Object o = new ASN1InputStream(bytes).readObject();
+            if (o instanceof DERBitString) {
+                return ((DERBitString) o).intValue();
+            } else if (o instanceof DEROctetString) {
+                // just reads initial object for nsCertType definition and ignores trailing objects.
+                ASN1InputStream in = new ASN1InputStream(((DEROctetString) o).getOctets());
+                o = in.readObject();
+                return ((DERBitString) o).intValue();
+            } else {
+                throw new CertificateException("unknown type from ASN1InputStream.readObject: " + o);
+            }
+        } catch (IOException ioe) {
+            throw new CertificateEncodingException(ioe.getMessage(), ioe);
+        }
+    }
+
 }// X509AuxCertificate

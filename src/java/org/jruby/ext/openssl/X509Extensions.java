@@ -359,6 +359,51 @@ public class X509Extensions {
                 }
                 
                 value = new String(ByteList.plain(new DERBitString(inp,unused).getDEREncoded()));
+            } else if(r_oid.equals(new DERObjectIdentifier("2.16.840.1.113730.1.1"))) { //nsCertType
+                byte v = 0;
+                if (valuex.length() < 3) {
+                    byte[] inp = ByteList.plain(valuex);
+                    v = inp[0];
+                } else {
+                    String[] spl = valuex.split(",");
+                    for (int i = 0; i < spl.length; i++) {
+                        spl[i] = spl[i].trim();
+                    }
+                    for (int i = 0; i < spl.length; i++) {
+                        if ("SSL Client".equals(spl[i]) || "client".equals(spl[i])) {
+                            v |= (byte) 128;
+                        } else if ("SSL Server".equals(spl[i]) || "server".equals(spl[i])) {
+                            v |= (byte) 64;
+                        } else if ("S/MIME".equals(spl[i]) || "email".equals(spl[i])) {
+                            v |= (byte) 32;
+                        } else if ("Object Signing".equals(spl[i]) || "objsign".equals(spl[i])) {
+                            v |= (byte) 16;
+                        } else if ("Unused".equals(spl[i]) || "reserved".equals(spl[i])) {
+                            v |= (byte) 8;
+                        } else if ("SSL CA".equals(spl[i]) || "sslCA".equals(spl[i])) {
+                            v |= (byte) 4;
+                        } else if ("S/MIME CA".equals(spl[i]) || "emailCA".equals(spl[i])) {
+                            v |= (byte) 2;
+                        } else if ("Object Signing CA".equals(spl[i]) || "objCA".equals(spl[i])) {
+                            v |= (byte) 1;
+                        } else {
+                            throw new RaiseException(getRuntime(), (RubyClass) (((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("ExtensionError")), oid + " = " + valuex + ": unknown bit string argument", true);
+                        }
+                    }
+                }
+                int unused = 0;
+                if (v == 0) {
+                    unused += 8;
+                } else {
+                    byte a2 = v;
+                    int x = 8;
+                    while (a2 != 0) {
+                        a2 <<= 1;
+                        x--;
+                    }
+                    unused += x;
+                }
+                value = new DERBitString(new byte[] { v }, unused);
             } else if(r_oid.equals(new DERObjectIdentifier("2.5.29.17"))) { //subjectAltName
                 if(valuex.startsWith("DNS:")) {
                     value = new String(ByteList.plain(new GeneralNames(new GeneralName(GeneralName.dNSName,new DERIA5String(valuex.substring(4)))).getDEREncoded()));
@@ -569,6 +614,43 @@ public class X509Extensions {
                 }
                 if((b1 & (byte)1) != 0) {
                     sbe.append(sep).append("Encipher Only");
+                }
+                return getRuntime().newString(sbe.toString());
+            } else if(getRealOid().equals(new DERObjectIdentifier("2.16.840.1.113730.1.1"))) { //nsCertType
+                byte[] bx = getRealValueBytes();
+                byte b = bx[0];
+                StringBuffer sbe = new StringBuffer();
+                String sep = "";
+                if((b & (byte)128) != 0) {
+                    sbe.append(sep).append("SSL Client");
+                    sep = ", ";
+                }
+                if((b & (byte)64) != 0) {
+                    sbe.append(sep).append("SSL Servern");
+                    sep = ", ";
+                }
+                if((b & (byte)32) != 0) {
+                    sbe.append(sep).append("S/MIME");
+                    sep = ", ";
+                }
+                if((b & (byte)16) != 0) {
+                    sbe.append(sep).append("Object Signing");
+                    sep = ", ";
+                }
+                if((b & (byte)8) != 0) {
+                    sbe.append(sep).append("Unused");
+                    sep = ", ";
+                }
+                if((b & (byte)4) != 0) {
+                    sbe.append(sep).append("SSL CA");
+                    sep = ", ";
+                }
+                if((b & (byte)2) != 0) {
+                    sbe.append(sep).append("S/MIME CA");
+                    sep = ", ";
+                }
+                if((b & (byte)1) != 0) {
+                    sbe.append(sep).append("Object Signing CA");
                 }
                 return getRuntime().newString(sbe.toString());
             } else if(getRealOid().equals(new DERObjectIdentifier("2.5.29.14"))) { //subjectKeyIdentifier
