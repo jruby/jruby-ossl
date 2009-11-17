@@ -64,7 +64,12 @@ public class Name {
             byte[] md = null;
             MessageDigest md5 = MessageDigest.getInstance("MD5");
             md = md5.digest(bytes);
-            return md[0] | ((long)md[1] << 8) | ((long)md[2] << 16) | ((long)md[3] << 24);
+            long result = 0;
+            result |= md[3] & 0xff; result <<= 8;
+            result |= md[2] & 0xff; result <<= 8;
+            result |= md[1] & 0xff; result <<= 8;
+            result |= md[0] & 0xff;
+            return result & 0xffffffff;
         } catch(Exception e) {
             return 0;
         }

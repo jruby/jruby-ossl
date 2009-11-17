@@ -450,7 +450,6 @@ public class StoreContext {
                 ctx = new Store();
                 this.param.inherit(ctx.param);
                 param.inherit(VerifyParameter.lookup("default"));
-                this.verifyCallback = ctx.verifyCallback;
                 this.cleanup = ctx.cleanup;
                 if(ctx.checkIssued != null && ctx.checkIssued != Store.CheckIssuedFunction.EMPTY) {
                     this.checkIssued = ctx.checkIssued;
@@ -906,7 +905,7 @@ public class StoreContext {
                 }
             }
 
-            if(i > 1 && x.getBasicConstraints() != -1 && (i > (x.getBasicConstraints() + proxy_path_length + 1))) {
+            if(i > 1 && x.getBasicConstraints() != -1 && x.getBasicConstraints() != Integer.MAX_VALUE && (i > (x.getBasicConstraints() + proxy_path_length + 1))) {
                 error = X509Utils.V_ERR_PATH_LENGTH_EXCEEDED;
                 errorDepth = i;
                 currentCertificate = x;

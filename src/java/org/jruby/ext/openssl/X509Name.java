@@ -57,6 +57,7 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.x509store.Name;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -355,7 +356,8 @@ else
 
     @JRubyMethod
     public RubyFixnum hash() {
-        return getRuntime().newFixnum(new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values)).hashCode());
+        Name name = new Name(new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values)));
+        return getRuntime().newFixnum(name.hash());
     }
 
     @JRubyMethod

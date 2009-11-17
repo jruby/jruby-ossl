@@ -29,18 +29,57 @@ class TestIntegration < Test::Unit::TestCase
   # Warning - this test actually uses the internet connection.
   # If there is no connection, it will fail.
   def test_ca_path_name
-    uri = URI.parse('https://www.paypal.com')
-
+    uri = URI.parse('https://www.amazon.com')
     http = Net::HTTP.new(uri.host, uri.port)
     http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    http.ca_path = "./"
+    http.ca_path = "test/fixture/ca_path/"
     http.use_ssl = true
-
     response = http.start do |s|
       assert s.get(uri.request_uri).length > 0
     end
   end
-  
+
+  # Warning - this test actually uses the internet connection.
+  # If there is no connection, it will fail.
+  def test_ssl_verify
+    uri = URI.parse('https://www.amazon.com/')
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+    # right trust anchor for www.amazon.com
+    http.ca_file = 'test/fixture/verisign.pem'
+    response = http.start do |s|
+      assert s.get(uri.request_uri).length > 0
+    end
+    # wrong trust anchor for www.amazon.com
+    http.ca_file = 'test/fixture/verisign_c3.pem'
+    assert_raises(OpenSSL::SSL::SSLError) do
+      # it must cause SSLError for verification failure.
+      response = http.start do |s|
+        s.get(uri.request_uri)
+      end
+    end
+    # round trip
+    http.ca_file = 'test/fixture/verisign.pem'
+    response = http.start do |s|
+      assert s.get(uri.request_uri).length > 0
+    end
+  end
+
+  # Warning - this test actually uses the internet connection.
+  # If there is no connection, it will fail.
+  def test_pathlen_does_not_appear
+    uri = URI.parse('https://www.paypal.com/')
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+    # right trust anchor for www.amazon.com
+    http.ca_file = 'test/fixture/verisign_c3.pem'
+    response = http.start do |s|
+      assert s.get(uri.request_uri).length > 0
+    end
+  end
+
   # JRUBY-2178 and JRUBY-1307
   # Warning - this test actually uses the internet connection.
   # If there is no connection, it will fail.
