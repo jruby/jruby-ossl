@@ -86,6 +86,20 @@ class TestX509Store < Test::Unit::TestCase
     assert_equal(true, @store.verify(cert))
   end
 
+  def test_set_default_paths
+    @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
+    cert = OpenSSL::X509::Certificate.new(File.read("test/fixture/purpose/sslserver.pem"))
+    assert_equal(false, @store.verify(cert))
+    begin
+      backup = ENV['SSL_CERT_DIR']
+      ENV['SSL_CERT_DIR'] = 'test/fixture/purpose/'
+      @store.set_default_paths
+      assert_equal(true, @store.verify(cert))
+    ensure
+      ENV['SSL_CERT_DIR'] = backup if backup
+    end
+  end
+
   GLOBALSIGN_ROOT_CA = <<__EOS__
 -----BEGIN CERTIFICATE-----
 MIIDdTCCAl2gAwIBAgILBAAAAAABFUtaw5QwDQYJKoZIhvcNAQEFBQAwVzELMAkG
