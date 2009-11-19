@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
+import java.io.FileNotFoundException;
 import java.security.cert.X509Certificate;
 
 import java.util.ArrayList;
@@ -324,6 +325,8 @@ public class Store implements X509TrustManager {
 
     /**
      * c: X509_STORE_set_default_paths
+     * not used for now: invoking this method causes refering System.getenv("SSL_CERT_DIR") etc.
+     * We need to get the dir via evaluating "ENV['SSL_CERT_DIR']" instead of it.
      */
     public int setDefaultPaths() throws Exception { 
         Lookup lookup;
@@ -332,15 +335,23 @@ public class Store implements X509TrustManager {
         if(lookup == null) {
             return 0;
         }
-
-        lookup.loadFile(new CertificateFile.Path(null,X509Utils.X509_FILETYPE_DEFAULT));
+        try {
+            lookup.loadFile(new CertificateFile.Path(null,X509Utils.X509_FILETYPE_DEFAULT));
+        }
+        catch(FileNotFoundException e) {
+            // set_default_paths ignores FileNotFound
+        }
 
         lookup = addLookup(Lookup.hashDirLookup());
         if(lookup == null) {
             return 0;
         }
-
-        lookup.addDir(new CertificateHashDir.Dir(null,X509Utils.X509_FILETYPE_DEFAULT));
+        try {
+            lookup.addDir(new CertificateHashDir.Dir(null,X509Utils.X509_FILETYPE_DEFAULT));
+        }
+        catch(FileNotFoundException e) {
+            // set_default_paths ignores FileNotFound
+        }
 
         X509Error.clearErrors();
 

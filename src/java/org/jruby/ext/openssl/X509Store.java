@@ -36,15 +36,18 @@ import java.io.Reader;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
+import org.jruby.RubyHash;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
+import org.jruby.ext.openssl.x509store.X509Utils;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -178,7 +181,16 @@ public class X509Store extends RubyObject {
 
     @JRubyMethod
     public IRubyObject set_default_paths() {
-        System.err.println("WARNING: unimplemented method called: Store#set_default_paths");
+        try {
+            RubyHash env = (RubyHash)getRuntime().getObject().fastGetConstant("ENV");
+            String file = (String)env.get(getRuntime().newString(X509Utils.getDefaultCertificateFileEnvironment()));
+            store.loadLocations(file, null);
+            String path = (String)env.get(getRuntime().newString(X509Utils.getDefaultCertificateDirectoryEnvironment()));
+            store.loadLocations(null, path);
+        }
+        catch(Exception e) {
+            raise("setting default path failed: " + e.getMessage());
+        }
         return getRuntime().getNil();
     }
 
