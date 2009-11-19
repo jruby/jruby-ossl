@@ -272,7 +272,7 @@ public class SSLContext extends RubyObject {
                         throw new CertificateException("couldn't initialize store");
                     }
 
-                    ctx.setDefault("ssl_server");
+                    ctx.setDefault("ssl_client");
 
                     IRubyObject val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_file");
                     String ca_file = val.isNil() ? null : val.convertToString().toString();
@@ -323,7 +323,7 @@ public class SSLContext extends RubyObject {
                         throw new CertificateException("couldn't initialize store");
                     }
 
-                    ctx.setDefault("ssl_client");
+                    ctx.setDefault("ssl_server");
 
                     IRubyObject val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_file");
                     String ca_file = val.isNil() ? null : val.convertToString().toString();

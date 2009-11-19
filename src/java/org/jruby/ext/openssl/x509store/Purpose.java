@@ -30,10 +30,6 @@ package org.jruby.ext.openssl.x509store;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.DERBitString;
-import org.bouncycastle.asn1.DERObject;
-import org.bouncycastle.asn1.DEROctetString;
 
 /**
  * c: X509_PURPOSE
@@ -41,6 +37,14 @@ import org.bouncycastle.asn1.DEROctetString;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Purpose {
+    private static final String XKU_EMAIL_PROTECT = "1.3.6.1.5.5.7.3.4";    // Email protection
+    private static final String XKU_SSL_CLIENT = "1.3.6.1.5.5.7.3.2";       // SSL Client Authentication
+    private static final String[] XKU_SSL_SERVER = new String[]{
+        "1.3.6.1.5.5.7.3.1",        // SSL Server Authentication
+        "2.16.840.1.113730.4.1",    // Netscape Server Gated Crypto
+        "1.3.6.1.4.1.311.10.3.3"    // Microsoft Server Gated Crypto
+    };
+
     public static interface CheckPurposeFunction extends Function3 {
         public static final CheckPurposeFunction EMPTY = new CheckPurposeFunction(){
                 public int call(Object arg0, Object arg1, Object arg2) {
@@ -215,7 +219,7 @@ public class Purpose {
             return 0;
         }
         if(x.getExtensionValue("2.5.29.19") != null) { // BASIC_CONSTRAINTS
-            if(x.getBasicConstraints() != -1) {
+            if(x.getBasicConstraints() != -1) { // is CA.
                 return 1;
             } else {
                 return 0;
@@ -252,10 +256,38 @@ public class Purpose {
     }
 
      /**
+     * c: xku_reject: check if the cert must be rejected(true) or not
+     */
+    public static boolean xkuReject(X509AuxCertificate x, String mustHaveXku) throws Exception {
+        List<String> xku = x.getExtendedKeyUsage();
+        return (xku != null) && !xku.contains(mustHaveXku);
+    }
+    public static boolean xkuReject(X509AuxCertificate x, String[] mustHaveOneOfXku) throws Exception {
+        List<String> xku = x.getExtendedKeyUsage();
+        if(xku == null) {
+            return false;
+        }
+        for (String mustHaveXku : mustHaveOneOfXku) {
+            if(xku.contains(mustHaveXku)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+     /**
+     * c: ns_reject
+     */
+    public static boolean nsReject(X509AuxCertificate x, int mustHaveCertType) throws Exception {
+        Integer nsCertType = x.getNsCertType();
+        return (nsCertType != null) && (nsCertType & mustHaveCertType) == 0;
+    }
+
+     /**
      * c: purpose_smime
      */
     public static int purposeSMIME(X509AuxCertificate x, int ca) throws Exception {
-        if(x.getExtendedKeyUsage() != null && !x.getExtendedKeyUsage().contains("1.3.6.1.5.5.7.3.4")) {
+        if(xkuReject(x,XKU_EMAIL_PROTECT)) {
             return 0; // must allow email protection
         }
         if(ca != 0) {
@@ -290,32 +322,19 @@ public class Purpose {
      public final static CheckPurposeFunction checkPurposeSSLClient = new CheckPurposeFunction() {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
-                int ca = ((Integer)_ca).intValue();
-
-                if(x.getExtendedKeyUsage() != null && !x.getExtendedKeyUsage().contains("1.3.6.1.5.5.7.3.2")) {
+                if(xkuReject(x, XKU_SSL_CLIENT)) {
                     return 0;
                 }
+                int ca = ((Integer)_ca).intValue();
                 if(ca != 0) {
                     return checkSSLCA(x);
                 }
                 if(x.getKeyUsage() != null && !x.getKeyUsage()[0]) {
                     return 0;
                 }
-                byte[] ns1 = x.getExtensionValue("2.16.840.1.113730.1.1"); //nsCertType
-                if (ns1 != null) {
-                    DERObject derObject = new ASN1InputStream(ns1).readObject();
-                    DERBitString derBitString;
-                    if (derObject instanceof DEROctetString) {
-                        derBitString = new DERBitString(derObject);
-                    } else if (derObject instanceof DERBitString) {
-                        derBitString = (DERBitString)derObject;
-                    } else {
-                        throw new RuntimeException("unknown type from ASN1InputStream.readObject: " + derObject);
-                    }
-                    boolean v2 = ns1 != null && (derBitString.intValue() & X509Utils.NS_SSL_CLIENT) != 0;
-                    if(v2) {
-                        return 0;
-                    }
+                if(nsReject(x, X509Utils.NS_SSL_CLIENT)) {
+                    // when the cert has nsCertType, it must include NS_SSL_CLIENT
+                    return 0;
                 }
                 return 1;
             }
@@ -328,18 +347,14 @@ public class Purpose {
             public int call(Object _xp, Object _x, Object _ca) throws Exception {
                 X509AuxCertificate x = (X509AuxCertificate)_x;
                 int ca = ((Integer)_ca).intValue();
-
-                if(x.getExtendedKeyUsage() != null && (!x.getExtendedKeyUsage().contains("1.3.6.1.5.5.7.3.1") && 
-                                                       !x.getExtendedKeyUsage().contains("2.16.840.1.113730.4.1") &&
-                                                       !x.getExtendedKeyUsage().contains("1.3.6.1.4.1.311.10.3.3"))) {
+                if(xkuReject(x, XKU_SSL_SERVER)) {
                     return 0;
                 }
                 if(ca != 0) {
                     return checkSSLCA(x);
                 }
-                Integer nsCertType = x.getNsCertType();
-                boolean v2 = nsCertType != null && (nsCertType & X509Utils.NS_SSL_SERVER) != 0;
-                if(v2) {
+                if(nsReject(x, X509Utils.NS_SSL_SERVER)) {
+                    // when the cert has nsCertType, it must include NS_SSL_SERVER
                     return 0;
                 }
                 if(x.getKeyUsage() != null && (!x.getKeyUsage()[0] || !x.getKeyUsage()[2])) {
