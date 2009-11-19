@@ -44,6 +44,28 @@ class TestX509Store < Test::Unit::TestCase
     end
   end
 
+  def test_purpose_ssl_client
+    @store.add_file("test/fixture/purpose/cacert.pem")
+    cert = OpenSSL::X509::Certificate.new(File.read("test/fixture/purpose/sslclient.pem"))
+    @store.purpose = OpenSSL::X509::PURPOSE_SSL_CLIENT
+    assert_equal(true, @store.verify(cert))
+    @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
+    assert_equal(false, @store.verify(cert))
+    @store.purpose = OpenSSL::X509::PURPOSE_SSL_CLIENT
+    assert_equal(true, @store.verify(cert))
+  end
+
+  def test_purpose_ssl_server
+    @store.add_file("test/fixture/purpose/cacert.pem")
+    cert = OpenSSL::X509::Certificate.new(File.read("test/fixture/purpose/sslserver.pem"))
+    @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
+    assert_equal(true, @store.verify(cert))
+    @store.purpose = OpenSSL::X509::PURPOSE_SSL_CLIENT
+    assert_equal(false, @store.verify(cert))
+    @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
+    assert_equal(true, @store.verify(cert))
+  end
+
   GLOBALSIGN_ROOT_CA = <<__EOS__
 -----BEGIN CERTIFICATE-----
 MIIDdTCCAl2gAwIBAgILBAAAAAABFUtaw5QwDQYJKoZIhvcNAQEFBQAwVzELMAkG
