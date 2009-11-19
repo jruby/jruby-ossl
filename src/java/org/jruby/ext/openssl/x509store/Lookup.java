@@ -32,6 +32,7 @@ import java.io.FileReader;
 import java.io.Reader;
 import java.io.InputStream;
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
@@ -218,18 +219,26 @@ public class Lookup {
             return loadCertificateFile(file,type);
         }
         int count = 0;
-        Reader r  = new FileReader(file);
-        for(;;) {
-            Object v = PEMInputOutput.readPEM(r,null);
-            if(null == v) {
-                break;
+        Reader in = null;
+        try {
+            in = new FileReader(file);
+            Reader r = new BufferedReader(in);
+            for (;;) {
+                Object v = PEMInputOutput.readPEM(r, null);
+                if (null == v) {
+                    break;
+                }
+                if (v instanceof X509Certificate) {
+                    store.addCertificate(StoreContext.ensureAux((X509Certificate) v));
+                    count++;
+                } else if (v instanceof CRL) {
+                    store.addCRL((CRL) v);
+                    count++;
+                }
             }
-            if(v instanceof X509Certificate) {
-                store.addCertificate(StoreContext.ensureAux((X509Certificate)v));
-                count++;
-            } else if(v instanceof CRL) {
-                store.addCRL((CRL)v);
-                count++;
+        } finally {
+            if (in != null) {
+                try { in.close(); } catch(Exception e) {}
             }
         }
 
