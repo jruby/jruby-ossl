@@ -53,7 +53,8 @@ File.open("Manifest.txt", "w") {|f| MANIFEST.each {|n| f.puts n } }
 require File.dirname(__FILE__) + "/lib/jopenssl/version"
 begin
   require 'hoe'
-  Hoe.new("jruby-openssl", Jopenssl::Version::VERSION) do |p|
+  Hoe.spec("jruby-openssl") do |p|
+    p.version = Jopenssl::Version::VERSION
     p.rubyforge_name = "jruby-extras"
     p.url = "http://jruby-extras.rubyforge.org/jruby-openssl"
     p.author = "Ola Bini and JRuby contributors"

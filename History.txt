@@ -1,3 +1,23 @@
+== 0.6
+
+- This is a recommended upgrade to jruby-openssl. A security problem
+  involving peer certificate verification was found where failed
+  verification silently did nothing, making affected applications
+  vulnerable to a man-in-the-middle attack. Your application would be
+  vulnerable if you're using the 'net/https' library with
+  OpenSSL::SSL::VERIFY_PEER mode and any version of jruby-openssl
+  prior to 0.6. Thanks to NaHi (NAKAMURA Hiroshi) for finding the
+  problem and providing the fix.
+- Many fixes from NaHi, including issues related to certificate
+  verification and certificate store purpose verification.
+  - implement OpenSSL::X509::Store#set_default_paths
+  - MRI compat. fix: OpenSSL::X509::Store#add_file
+  - Fix nsCertType handling.
+  - Fix Cipher#key_len for DES-EDE3: 16 should be 24.
+  - Modified test expectations around Cipher#final.
+- Public keys are lazily instantiated when the
+  X509::Certificate#public_key method is called (Dave Garcia)
+
 == 0.5.2
 
 * Multiple bugs fixed:
