@@ -84,7 +84,6 @@ import org.bouncycastle.cms.CMSSignedData;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.spec.DSAPrivateKeySpec;
@@ -722,17 +721,21 @@ public class PEMInputOutput {
             OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
             pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(f), salt);
             SecretKey secretKey = null;
-            if(algo.equalsIgnoreCase("DESEDE")) {
+
+            if(algo.startsWith("DES")) {
                 // generate key
                 int keyLength = 24;
                 secretKey = new SecretKeySpec(((KeyParameter)pGen.generateDerivedParameters(keyLength * 8)).getKey(), algo);
+                if (algo.equalsIgnoreCase("DESEDE")) {
+                    algo = "DESede/CBC/PKCS5Padding";
+                }
             } else {
-                throw new IOException("unknown algorithm in write_DSAPrivateKey");
+                throw new IOException("unknown algorithm `" + algo + "' in write_DSAPrivateKey");
             }
 
             // cipher  
             try {
-                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
+                Cipher c = Cipher.getInstance(algo, OpenSSLReal.PROVIDER);
                 c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(salt));
                 encData = c.doFinal(encoding);
             } catch (Exception e) {

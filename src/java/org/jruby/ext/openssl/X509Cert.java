@@ -296,7 +296,15 @@ public class X509Cert extends RubyObject {
             changed = true;
         }
         serial = num;
-        generator.setSerialNumber(new BigInteger(serial.toString()));
+        String s = serial.toString();
+
+        BigInteger bi;
+        if (s.equals("0")) { // MRI compatibility: allow 0 serial number
+            bi = BigInteger.ONE;
+        } else {
+            bi = new BigInteger(s);
+        }
+        generator.setSerialNumber(bi);
         return num;
     }
 
@@ -466,7 +474,7 @@ public class X509Cert extends RubyObject {
     @SuppressWarnings("unchecked")
     @JRubyMethod(name="extensions=")
     public IRubyObject set_extensions(IRubyObject arg) {
-        extensions = ((RubyArray)arg).getList();
+        extensions = new ArrayList(((RubyArray)arg).getList());
         return arg;
     }
 

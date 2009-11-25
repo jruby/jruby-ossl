@@ -106,9 +106,12 @@
             </compilation-unit>
             <compilation-unit>
                 <package-root>src/java</package-root>
-                <classpath mode="compile">lib/bcmail-jdk14-139.jar:lib/bcprov-jdk14-139.jar:../jruby/lib/jruby.jar:../bytelist/lib/bytelist-1.0.1.jar:../jvyamlb/lib/jvyamlb-0.2.5.jar</classpath>
+                <classpath mode="compile">lib/bcmail-jdk14-139.jar:lib/bcprov-jdk14-139.jar:../jruby/lib/jruby.jar:../jruby/build_lib/bytelist.jar</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>
         </java-data>
+        <preferences xmlns="http://www.netbeans.org/ns/auxiliary-configuration-preferences/1">
+            <module name="org-netbeans-modules-editor-indent"/>
+        </preferences>
     </configuration>
 </project>
