@@ -6,7 +6,7 @@ require 'mocha'
 if defined?(JRUBY_VERSION)
   require "java"
   $CLASSPATH << 'pkg/classes'
-  $CLASSPATH << 'lib/bcprov-jdk14-139.jar'
+  $CLASSPATH << 'lib/bcprov-jdk15-144.jar'
   
   module PKCS7Test
     module ASN1
