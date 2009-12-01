@@ -32,10 +32,10 @@ import java.security.NoSuchAlgorithmException;
 
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
+import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
-import org.jruby.runtime.Block;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -51,13 +51,14 @@ public class Digest extends RubyObject {
         }
     };
 
-    public static void createDigest(Ruby runtime, RubyModule ossl) {
-        RubyModule mDigest = ossl.defineModuleUnder("Digest");
-        RubyClass cDigest = mDigest.defineClassUnder("Digest",runtime.getObject(),DIGEST_ALLOCATOR);
-        RubyClass openSSLError = ossl.getClass("OpenSSLError");
-        mDigest.defineClassUnder("DigestError",openSSLError,openSSLError.getAllocator());
-
+    public static void createDigest(Ruby runtime, RubyModule mOSSL) {
+        runtime.getLoadService().require("digest");
+        RubyModule mDigest = runtime.fastGetModule("Digest");
+        RubyClass cDigestClass = mDigest.fastGetClass("Class");
+        RubyClass cDigest = mOSSL.defineClassUnder("Digest", cDigestClass, DIGEST_ALLOCATOR);
         cDigest.defineAnnotatedMethods(Digest.class);
+        RubyClass openSSLError = mOSSL.getClass("OpenSSLError");
+        mOSSL.defineClassUnder("DigestError", openSSLError, openSSLError.getAllocator());
     }
 
     private static MessageDigest getDigest(final String name, final IRubyObject recv) {
@@ -72,46 +73,28 @@ public class Digest extends RubyObject {
         });
     }
 
+    // name mapping for openssl -> BC
     private static String transformDigest(String inp) {
         String[] sp = inp.split("::");
-        if(sp.length > 1) { // We only want Digest names from the last part of class name
-            inp = sp[sp.length-1];
+        if (sp.length > 1) { // We only want Digest names from the last part of class name
+            inp = sp[sp.length - 1];
         }
-
-        if("DSS".equalsIgnoreCase(inp)) {
+        if ("DSS".equalsIgnoreCase(inp)) {
             return "SHA";
-        } else if("DSS1".equalsIgnoreCase(inp)) {
+        } else if ("DSS1".equalsIgnoreCase(inp)) {
             return "SHA1";
         }
         return inp;
     }
 
-    @JRubyMethod(name="digest", meta=true)
-    public static IRubyObject s_digest(IRubyObject recv, IRubyObject str, IRubyObject data) {
-        String name = str.toString();
-        MessageDigest md = getDigest(name, recv);
-        return RubyString.newString(recv.getRuntime(), md.digest(data.convertToString().getBytes()));
-    }
-
-    @JRubyMethod(name="hexdigest", meta=true)
-    public static IRubyObject s_hexdigest(IRubyObject recv, IRubyObject str, IRubyObject data) {
-        String name = str.toString();
-        MessageDigest md = getDigest(name, recv);
-        return RubyString.newString(recv.getRuntime(), ByteList.plain(Utils.toHex(md.digest(data.convertToString().getBytes()))));
-    }
-
     public Digest(Ruby runtime, RubyClass type) {
         super(runtime,type);
-        data = new StringBuffer();
-
-        if(!(type.toString().equals("OpenSSL::Digest::Digest"))) {
-            name = type.toString();
-            md = getDigest(name, this);
-        }
+        // do not initialize MessageDigest at allocation time (same as the ruby-openssl)
+        name = null;
+        algo = null;
     }
 
-    private MessageDigest md;
-    private StringBuffer data;
+    private MessageDigest algo;
     private String name;
 
     public String getRealName() {
@@ -122,54 +105,54 @@ public class Digest extends RubyObject {
         return name;
     }
 
-    @JRubyMethod(rest=true)
+    @JRubyMethod(required = 1, optional = 1)
     public IRubyObject initialize(IRubyObject[] args) {
-        IRubyObject type;
+        IRubyObject type = args[0];
         IRubyObject data = getRuntime().getNil();
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2) {
+        if (args.length > 1) {
             data = args[1];
         }
-        type = args[0];
-
         name = type.toString();
-        md = getDigest(name, this);
-        if(!data.isNil()) {
-            update(data);
+        algo = getDigest(name, this);
+        if (!data.isNil()) {
+            update(data.convertToString());
         }
         return this;
     }
 
     @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
+        checkFrozen();
         if(this == obj) {
             return this;
         }
-        checkFrozen();
-        data = new StringBuffer(((Digest)obj).data.toString());
-        name = ((Digest)obj).md.getAlgorithm();
-        md = getDigest(name, this);
-
+        name = ((Digest)obj).algo.getAlgorithm();
+        try {
+            algo = (MessageDigest)((Digest)obj).algo.clone();
+        } catch(CloneNotSupportedException e) {
+            throw getRuntime().newTypeError("Could not initialize copy of digest (" + name + ")");
+        }
         return this;
     }
 
     @JRubyMethod(name={"update","<<"})
     public IRubyObject update(IRubyObject obj) {
-        data.append(obj);
-        md.update(obj.convertToString().getBytes());
+        ByteList bytes = obj.convertToString().getByteList();
+        algo.update(bytes.bytes, bytes.begin, bytes.realSize);
         return this;
     }
 
     @JRubyMethod
     public IRubyObject reset() {
-        md.reset();
-        data = new StringBuffer();
+        algo.reset();
         return this;
     }
 
     @JRubyMethod
-    public IRubyObject digest() {
-        md.reset();
-        return RubyString.newString(getRuntime(), md.digest(ByteList.plain(data)));
+    public IRubyObject finish() {
+        IRubyObject digest = RubyString.newStringNoCopy(getRuntime(), algo.digest());
+        algo.reset();
+        return digest;
     }
 
     @JRubyMethod
@@ -177,31 +160,20 @@ public class Digest extends RubyObject {
         return getRuntime().newString(name);
     }
 
-    @JRubyMethod
-    public IRubyObject size() {
-        return getRuntime().newFixnum(md.getDigestLength());
+    @JRubyMethod()
+    public IRubyObject digest_length() {
+        return RubyFixnum.newFixnum(getRuntime(), algo.getDigestLength());
     }
 
-    @JRubyMethod(name={"hexdigest","inspect","to_s"})
-    public IRubyObject hexdigest() {
-        md.reset();
-        return RubyString.newString(getRuntime(), ByteList.plain(Utils.toHex(md.digest(ByteList.plain(data)))));
-    }
-
-    @JRubyMethod(name="==")
-    public IRubyObject eq(IRubyObject oth) {
-        boolean ret = this == oth;
-        if(!ret && oth instanceof Digest) {
-            Digest b = (Digest)oth;
-            ret = this.md.getAlgorithm().equals(b.md.getAlgorithm()) &&
-                this.digest().equals(b.digest());
-        }
-
-        return ret ? getRuntime().getTrue() : getRuntime().getFalse();
+    @JRubyMethod()
+    public IRubyObject block_length() {
+        // TODO: ruby-openssl supports it.
+        throw getRuntime().newRuntimeError(
+                this.getMetaClass() + " doesn't implement block_length()");
     }
 
     String getAlgorithm() {
-        return this.md.getAlgorithm();
+        return this.algo.getAlgorithm();
     }
 }
 
