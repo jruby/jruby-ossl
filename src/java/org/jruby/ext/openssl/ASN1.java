@@ -27,7 +27,6 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
-import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -42,8 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.io.IOException;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -557,7 +554,7 @@ public class ASN1 {
                 return c.callMethod(tc,"new",asnM.getRuntime().newString(av));
             } else if(v instanceof DEROctetString) {
                 ByteList bl = new ByteList(((DEROctetString)v).getOctets(), false);
-                return c.callMethod(tc,"new",asnM.getRuntime().newStringShared(bl));
+                return c.callMethod(tc,"new",asnM.getRuntime().newString(bl));
             } else if(v instanceof DERBoolean) {
                 return c.callMethod(tc,"new",((DERBoolean)v).isTrue() ? asnM.getRuntime().getTrue() : asnM.getRuntime().getFalse());
             } else {

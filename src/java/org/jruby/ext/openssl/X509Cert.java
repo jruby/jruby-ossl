@@ -12,7 +12,7 @@
  * rights and limitations under the License.
  *
  * Copyright (C) 2006, 2007 Ola Bini <ola@ologix.com>
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
  * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -84,7 +84,7 @@ public class X509Cert extends RubyObject {
             return new X509Cert(runtime, klass);
         }
     };
-    
+
     public static void createX509Cert(Ruby runtime, RubyModule mX509) {
         RubyClass cX509Cert = mX509.defineClassUnder("Certificate",runtime.getObject(),X509CERT_ALLOCATOR);
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
@@ -113,6 +113,8 @@ public class X509Cert extends RubyObject {
 
     private X509V3CertificateGenerator generator = new X509V3CertificateGenerator();
     private X509Certificate cert;
+    private String public_key_algorithm;
+    private byte[] public_key_encoded;
 
     X509AuxCertificate getAuxCert() {
         if(null == cert) {
@@ -146,11 +148,10 @@ public class X509Cert extends RubyObject {
         IRubyObject arg = OpenSSLImpl.to_der_if_possible(args[0]);
         ByteArrayInputStream bis = new ByteArrayInputStream(arg.convertToString().getBytes());
         CertificateFactory cf;
-        
+
         RubyModule ossl = runtime.getModule("OpenSSL");
         RubyModule x509 = (RubyModule)ossl.getConstant("X509");
         IRubyObject x509Name = x509.getConstant("Name");
-        RubyModule pkey = (RubyModule)ossl.getConstant("PKey");
 
         try {
             cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
@@ -166,13 +167,8 @@ public class X509Cert extends RubyObject {
         set_issuer(x509Name.callMethod(tc,"new",RubyString.newString(runtime, cert.getIssuerX500Principal().getEncoded())));
 
         String algorithm = cert.getPublicKey().getAlgorithm();
-        if ("RSA".equalsIgnoreCase(algorithm)) {
-            set_public_key(pkey.getConstant("RSA").callMethod(tc,"new",RubyString.newString(runtime, cert.getPublicKey().getEncoded())));
-        } else if ("DSA".equalsIgnoreCase(algorithm)) {
-            set_public_key(pkey.getConstant("DSA").callMethod(tc,"new",RubyString.newString(runtime, cert.getPublicKey().getEncoded())));
-        } else {
-            throw newCertificateError(runtime, "The algorithm " + algorithm + " is unsupported for public keys");
-        }
+
+        set_public_key(algorithm, cert.getPublicKey().getEncoded());
 
         IRubyObject extFact = ((RubyClass)(x509.getConstant("ExtensionFactory"))).callMethod(tc,"new");
         extFact.callMethod(tc,"subject_certificate=",this);
@@ -214,6 +210,12 @@ public class X509Cert extends RubyObject {
         changed = false;
 
         return this;
+    }
+
+    //Lazy method for public key instantiation
+    private void set_public_key(String algorithm, byte[] encoded) {
+        this.public_key_algorithm = algorithm;
+        this.public_key_encoded = encoded;
     }
 
     public static RaiseException newCertificateError(Ruby runtime, Exception ex) {
@@ -294,7 +296,15 @@ public class X509Cert extends RubyObject {
             changed = true;
         }
         serial = num;
-        generator.setSerialNumber(new BigInteger(serial.toString()));
+        String s = serial.toString();
+
+        BigInteger bi;
+        if (s.equals("0")) { // MRI compatibility: allow 0 serial number
+            bi = BigInteger.ONE;
+        } else {
+            bi = new BigInteger(s);
+        }
+        generator.setSerialNumber(bi);
         return num;
     }
 
@@ -358,6 +368,20 @@ public class X509Cert extends RubyObject {
 
     @JRubyMethod
     public IRubyObject public_key() {
+        if (public_key == null && public_key_encoded != null && public_key_algorithm != null){
+            RubyModule ossl = getRuntime().getModule("OpenSSL");
+            RubyModule pkey = (RubyModule)ossl.getConstant("PKey");
+            ThreadContext tc = getRuntime().getCurrentContext();
+
+            if ("RSA".equalsIgnoreCase(public_key_algorithm)) {
+                set_public_key(pkey.getConstant("RSA").callMethod(tc,"new",RubyString.newString(getRuntime(), cert.getPublicKey().getEncoded())));
+            } else if ("DSA".equalsIgnoreCase(public_key_algorithm)) {
+                set_public_key(pkey.getConstant("DSA").callMethod(tc,"new",RubyString.newString(getRuntime(), cert.getPublicKey().getEncoded())));
+            } else {
+                throw newCertificateError(getRuntime(), "The algorithm " + public_key_algorithm + " is unsupported for public keys");
+            }
+        }
+
         return public_key;
     }
 
@@ -374,12 +398,12 @@ public class X509Cert extends RubyObject {
     @JRubyMethod
     public IRubyObject sign(ThreadContext context, final IRubyObject key, IRubyObject digest) {
         Ruby runtime = context.getRuntime();
-        
+
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();
         String digAlg = ((Digest)digest).getAlgorithm();
-        
-        if(("DSA".equalsIgnoreCase(keyAlg) && "MD5".equalsIgnoreCase(digAlg)) || 
+
+        if(("DSA".equalsIgnoreCase(keyAlg) && "MD5".equalsIgnoreCase(digAlg)) ||
            ("RSA".equalsIgnoreCase(keyAlg) && "DSS1".equals(((Digest)digest).name().toString())) ||
            ("DSA".equalsIgnoreCase(keyAlg) && "SHA1".equals(((Digest)digest).name().toString()))) {
             throw new RaiseException(runtime, (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("CertificateError")), null, true);
@@ -450,7 +474,7 @@ public class X509Cert extends RubyObject {
     @SuppressWarnings("unchecked")
     @JRubyMethod(name="extensions=")
     public IRubyObject set_extensions(IRubyObject arg) {
-        extensions = ((RubyArray)arg).getList();
+        extensions = new ArrayList(((RubyArray)arg).getList());
         return arg;
     }
 
@@ -464,7 +488,7 @@ public class X509Cert extends RubyObject {
                 X509Extensions.Extension ag = (X509Extensions.Extension)iter.next();
                 if(ag.getRealOid().equals(new DERObjectIdentifier("2.5.29.17"))) {
                     ASN1EncodableVector v1 = new ASN1EncodableVector();
-                    
+
                     try {
                         GeneralName[] n1 = GeneralNames.getInstance(new ASN1InputStream(ag.getRealValueBytes()).readObject()).getNames();
                         GeneralName[] n2 = GeneralNames.getInstance(new ASN1InputStream(((X509Extensions.Extension)arg).getRealValueBytes()).readObject()).getNames();

@@ -1,5 +1,5 @@
 module Jopenssl
   module Version
-    VERSION = "0.5.2"
+    VERSION = "0.6"
   end
 end

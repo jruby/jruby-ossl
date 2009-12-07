@@ -99,13 +99,12 @@ public class Request extends RubyObject {
         byte[] req_bytes = args[0].convertToString().getBytes();
         // Parse PEM if we ever get passed some PEM contents
         try {
-            StringReader in = new StringReader(args[0].toString());
+            StringReader in = new StringReader(args[0].convertToString().getUnicodeValue());
             byte[] bytes = PEMInputOutput.readPEMToDER(in);
             if (bytes != null)
                 req_bytes = bytes;
             in.close();
-        }
-        catch(Exception e) {
+        } catch(Exception e) {
             // this is not PEM encoded, let's use the default argument
         }
 
@@ -118,7 +117,7 @@ public class Request extends RubyObject {
         OpenSSLReal.doWithBCProvider(new Runnable() {
                 public void run() {
                     try {
-                        result1[0] = req.getPublicKey("BC").getAlgorithm();;
+                        result1[0] = req.getPublicKey("BC").getAlgorithm();
                         result2[0] = req.getPublicKey("BC").getEncoded();
                     } catch(GeneralSecurityException e) {
                     }
