@@ -43,7 +43,6 @@ import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
-import org.jruby.RubyString;
 import org.jruby.common.IRubyWarnings;
 import org.jruby.common.IRubyWarnings.ID;
 import org.jruby.anno.JRubyMethod;
@@ -73,30 +72,50 @@ public class Cipher extends RubyObject {
         cCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
     }
 
-    @JRubyModule(name="OpenSSL::Cipher")
+    @JRubyModule(name = "OpenSSL::Cipher")
     public static class CipherModule {
         @JRubyMethod(meta = true)
         public static IRubyObject ciphers(IRubyObject recv) {
-            List<IRubyObject> ciphers = new ArrayList<IRubyObject>();
-            String[] other = {"AES128","AES192","AES256","BLOWFISH", "RC2-40-CBC", "RC2-64-CBC","RC4","RC4-40", "CAST","CAST-CBC"};
-            String[] bases = {"AES-128","AES-192","AES-256","BF", "DES", "DES-EDE","DES-EDE3", "RC2","CAST5"};
-            String[] suffixes = {"","-CBC","-CFB","-CFB1","-CFB8","-ECB","-OFB"};
-            for(int i=0,j=bases.length;i<j;i++) {
-                for(int k=0,l=suffixes.length;k<l;k++) {
-                    String val = bases[i]+suffixes[k];
-                    if(tryCipher(val)) {
-                        ciphers.add(recv.getRuntime().newString(val));
-                        ciphers.add(recv.getRuntime().newString((val).toLowerCase()));
+            initializeCiphers();
+            List<IRubyObject> result = new ArrayList<IRubyObject>();
+            for (String cipher : CIPHERS) {
+                result.add(recv.getRuntime().newString(cipher));
+                result.add(recv.getRuntime().newString(cipher.toLowerCase()));
+            }
+            return recv.getRuntime().newArray(result);
+        }
+
+        static boolean isSupportedCipher(String name) {
+            initializeCiphers();
+            return CIPHERS.indexOf(name.toUpperCase()) != -1;
+        }
+
+        private static boolean initialized = false;
+        private static final List<String> CIPHERS = new ArrayList<String>();
+
+        private static void initializeCiphers() {
+            synchronized (CIPHERS) {
+                if (initialized) {
+                    return;
+                }
+                String[] other = {"AES128", "AES192", "AES256", "BLOWFISH", "RC2-40-CBC", "RC2-64-CBC", "RC4", "RC4-40", "CAST", "CAST-CBC"};
+                String[] bases = {"AES-128", "AES-192", "AES-256", "BF", "DES", "DES-EDE", "DES-EDE3", "RC2", "CAST5"};
+                String[] suffixes = {"", "-CBC", "-CFB", "-CFB1", "-CFB8", "-ECB", "-OFB"};
+                for (int i = 0, j = bases.length; i < j; i++) {
+                    for (int k = 0, l = suffixes.length; k < l; k++) {
+                        String val = bases[i] + suffixes[k];
+                        if (tryCipher(val)) {
+                            CIPHERS.add(val.toUpperCase());
+                        }
                     }
                 }
-            }
-            for(int i=0,j=other.length;i<j;i++) {
-                if(tryCipher(other[i])) {
-                    ciphers.add(recv.getRuntime().newString(other[i]));
-                    ciphers.add(recv.getRuntime().newString(other[i].toLowerCase()));
+                for (int i = 0, j = other.length; i < j; i++) {
+                    if (tryCipher(other[i])) {
+                        CIPHERS.add(other[i].toUpperCase());
+                    }
                 }
+                initialized = true;
             }
-            return recv.getRuntime().newArray(ciphers);
         }
     }
 
@@ -220,6 +239,9 @@ public class Cipher extends RubyObject {
     @JRubyMethod(required=1)
     public IRubyObject initialize(IRubyObject str) {
         name = str.toString();
+        if (!CipherModule.isSupportedCipher(name)) {
+            throw new RaiseException(getRuntime(), ciphErr, String.format("unsupported cipher algorithm (%s)", name), true);
+        }
         String[] values = rubyToJavaCipher(name, padding);
         cryptoBase = values[0];
         cryptoVersion = values[1];
