@@ -108,6 +108,24 @@ class TestCipher < Test::Unit::TestCase
     end
   end
 
+  def test_iv_length_auto_trim_JRUBY_4012
+    e1 = e2 = nil
+    plain = 'data'
+    des = OpenSSL::Cipher::Cipher.new("des-ede3-cbc")
+    des.encrypt
+    des.key = '0123456789abcdef01234567890'
+    des.iv = "0" * (128/8) # too long for DES which is a 64 bit block
+    assert_nothing_raised do
+      e1 = des.update(plain) + des.final  
+    end
+    des = OpenSSL::Cipher::Cipher.new("des-ede3-cbc")
+    des.encrypt
+    des.key = '0123456789abcdef01234567890'
+    des.iv = "0" * (64/8) # DES is a 64 bit block
+    e2 = des.update(plain) + des.final  
+    assert_equal(e2, e1, "JRUBY-4012")
+  end
+
   private
   def do_repeated_test(algo, string, enc1, enc2)
     do_repeated_encrypt_test(algo, string, enc1, enc2)
