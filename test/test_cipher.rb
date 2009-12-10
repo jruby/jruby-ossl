@@ -59,6 +59,55 @@ class TestCipher < Test::Unit::TestCase
 		    )
   end
 
+  # JRUBY-4326 (1)
+  def test_cipher_unsupported_algorithm
+    assert_raises(OpenSSL::Cipher::CipherError) do
+      cipher = OpenSSL::Cipher::Cipher.new('aes-xxxxxxx')
+    end
+  end
+
+  # JRUBY-4326 (2)
+  def test_cipher_unsupported_keylen
+    bits_128 = java.lang.String.new("0123456789ABCDEF").getBytes()
+    bits_256 = java.lang.String.new("0123456789ABCDEF0123456789ABCDEF").getBytes()
+
+    # AES128 is allowed
+    cipher = OpenSSL::Cipher::Cipher.new('aes-128-cbc')
+    cipher = OpenSSL::Cipher::Cipher.new('AES-128-CBC')
+    cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding")
+    key_spec = javax.crypto.spec.SecretKeySpec.new(bits_128, "AES")
+    iv_spec = javax.crypto.spec.IvParameterSpec.new(bits_128)
+    assert_nothing_raised do
+      cipher.init(javax.crypto.Cipher::ENCRYPT_MODE, key_spec, iv_spec)
+    end
+
+    # check if AES256 is allowed or not in env policy
+    cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding")
+    key_spec = javax.crypto.spec.SecretKeySpec.new(bits_256, "AES")
+    allowed = false
+    begin
+      cipher.init(javax.crypto.Cipher::ENCRYPT_MODE, key_spec, iv_spec)
+      allowed = true
+    rescue
+    end
+
+    # jruby-openssl should raise as well?
+    # CRuby's openssl raises exception at initialization time.
+    # At this time, jruby-openssl raises later. TODO
+    cipher = OpenSSL::Cipher::Cipher.new('aes-256-cbc')
+    cipher.encrypt
+    cipher.padding = 0
+    if allowed
+      assert_nothing_raised(OpenSSL::Cipher::CipherError) do
+        cipher.pkcs5_keyivgen("password")
+      end
+    else
+      assert_raises(OpenSSL::Cipher::CipherError) do
+        cipher.pkcs5_keyivgen("password")
+      end
+    end
+  end
+
   private
   def do_repeated_test(algo, string, enc1, enc2)
     do_repeated_encrypt_test(algo, string, enc1, enc2)
