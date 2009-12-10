@@ -106,7 +106,7 @@
             </compilation-unit>
             <compilation-unit>
                 <package-root>src/java</package-root>
-                <classpath mode="compile">lib/bcmail-jdk14-139.jar:lib/bcprov-jdk14-139.jar:../jruby/lib/jruby.jar:../jruby/build_lib/bytelist.jar</classpath>
+                <classpath mode="compile">lib/bcmail-jdk15-144.jar:lib/bcprov-jdk15-144.jar:../jruby/lib/jruby.jar:../jruby/build_lib/bytelist.jar</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>
         </java-data>
