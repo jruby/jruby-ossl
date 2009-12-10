@@ -3,7 +3,7 @@ if defined?(JRUBY_VERSION)
   require "java"
   base = File.join(File.dirname(__FILE__), '..')
   $CLASSPATH << File.join(base, 'pkg', 'classes')
-  $CLASSPATH << File.join(base, 'lib', 'bcprov-jdk14-139.jar')
+  $CLASSPATH << File.join(base, 'lib', 'bcprov-jdk15-144.jar')
 end
 
 def protect_require(name)
