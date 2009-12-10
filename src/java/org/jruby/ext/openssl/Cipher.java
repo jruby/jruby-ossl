@@ -65,16 +65,12 @@ public class Cipher extends RubyObject {
         }
     };
     
-    public static void createCipher(Ruby runtime, RubyModule ossl) {
-        RubyModule mCipher = ossl.defineModuleUnder("Cipher");
-        RubyClass cCipher = mCipher.defineClassUnder("Cipher",runtime.getObject(), CIPHER_ALLOCATOR);
-
-        RubyClass openSSLError = ossl.getClass("OpenSSLError");
-        mCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
-        ossl.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
-
+    public static void createCipher(Ruby runtime, RubyModule mOSSL) {
+        RubyClass cCipher = mOSSL.defineClassUnder("Cipher",runtime.getObject(), CIPHER_ALLOCATOR);
         cCipher.defineAnnotatedMethods(Cipher.class);
-        mCipher.defineAnnotatedMethods(CipherModule.class);
+        cCipher.defineAnnotatedMethods(CipherModule.class);
+        RubyClass openSSLError = mOSSL.getClass("OpenSSLError");
+        cCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
     }
 
     @JRubyModule(name="OpenSSL::Cipher")
@@ -585,7 +581,7 @@ public class Cipher extends RubyObject {
             throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
         }
 
-        return RubyString.newString(getRuntime(), new ByteList(str,false));
+        return getRuntime().newString(new ByteList(str,false));
     }
 
     @JRubyMethod(name="<<")
@@ -635,7 +631,7 @@ public class Cipher extends RubyObject {
     @JRubyMethod(name="padding=")
     public IRubyObject set_padding(IRubyObject padding) {
         this.padding = padding.toString();
-        initialize(RubyString.newString(getRuntime(), name));
+        initialize(getRuntime().newString(name));
         return padding;
     }
 

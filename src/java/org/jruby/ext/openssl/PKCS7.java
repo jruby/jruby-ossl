@@ -28,24 +28,12 @@
 package org.jruby.ext.openssl;
 
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
-import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
-import java.security.cert.CertStore;
-import java.security.cert.CollectionCertStoreParameters;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import javax.security.auth.x500.X500Principal;
-import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.ASN1Object;
-import org.bouncycastle.asn1.x509.TBSCertificateStructure;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyBignum;
@@ -66,12 +54,9 @@ import org.jruby.ext.openssl.impl.PKCS7Exception;
 import org.jruby.ext.openssl.impl.RecipInfo;
 import org.jruby.ext.openssl.impl.SMIME;
 import org.jruby.ext.openssl.impl.SignerInfoWithPkey;
-import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.Store;
-import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.runtime.Arity;
-import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
@@ -87,29 +72,26 @@ public class PKCS7 extends RubyObject {
     };
 
     public static void createPKCS7(Ruby runtime, RubyModule mOSSL) {
-        RubyModule mPKCS7 = mOSSL.defineModuleUnder("PKCS7");
+        RubyClass cPKCS7 = mOSSL.defineClassUnder("PKCS7",runtime.getObject(),PKCS7_ALLOCATOR);
         RubyClass openSSLError = runtime.getModule("OpenSSL").getClass("OpenSSLError");
-        mPKCS7.defineClassUnder("PKCS7Error",openSSLError,openSSLError.getAllocator());
-        RubyClass cPKCS7 = mPKCS7.defineClassUnder("PKCS7",runtime.getObject(),PKCS7_ALLOCATOR);
-
+        cPKCS7.defineClassUnder("PKCS7Error",openSSLError,openSSLError.getAllocator());
         cPKCS7.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newSymbol("data"),runtime.newSymbol("error_string")});
-
-        mPKCS7.defineAnnotatedMethods(ModuleMethods.class);
         cPKCS7.defineAnnotatedMethods(PKCS7.class);
+        cPKCS7.defineAnnotatedMethods(ModuleMethods.class);
 
-        SignerInfo.createSignerInfo(runtime,mPKCS7);
-        RecipientInfo.createRecipientInfo(runtime,mPKCS7);
+        SignerInfo.createSignerInfo(runtime,cPKCS7);
+        RecipientInfo.createRecipientInfo(runtime,cPKCS7);
 
-        mPKCS7.setConstant("TEXT",runtime.newFixnum(1));
-        mPKCS7.setConstant("NOCERTS",runtime.newFixnum(2));
-        mPKCS7.setConstant("NOSIGS",runtime.newFixnum(4));
-        mPKCS7.setConstant("NOCHAIN",runtime.newFixnum(8));
-        mPKCS7.setConstant("NOINTERN",runtime.newFixnum(16));
-        mPKCS7.setConstant("NOVERIFY",runtime.newFixnum(32));
-        mPKCS7.setConstant("DETACHED",runtime.newFixnum(64));
-        mPKCS7.setConstant("BINARY",runtime.newFixnum(128));
-        mPKCS7.setConstant("NOATTR",runtime.newFixnum(256));
-        mPKCS7.setConstant("NOSMIMECAP",runtime.newFixnum(512));
+        cPKCS7.setConstant("TEXT",runtime.newFixnum(1));
+        cPKCS7.setConstant("NOCERTS",runtime.newFixnum(2));
+        cPKCS7.setConstant("NOSIGS",runtime.newFixnum(4));
+        cPKCS7.setConstant("NOCHAIN",runtime.newFixnum(8));
+        cPKCS7.setConstant("NOINTERN",runtime.newFixnum(16));
+        cPKCS7.setConstant("NOVERIFY",runtime.newFixnum(32));
+        cPKCS7.setConstant("DETACHED",runtime.newFixnum(64));
+        cPKCS7.setConstant("BINARY",runtime.newFixnum(128));
+        cPKCS7.setConstant("NOATTR",runtime.newFixnum(256));
+        cPKCS7.setConstant("NOSMIMECAP",runtime.newFixnum(512));
     }
 
     public static BIO obj2bio(IRubyObject obj) {
@@ -536,9 +518,9 @@ public class PKCS7 extends RubyObject {
             }
         };
     
-        public static void createSignerInfo(Ruby runtime, RubyModule mPKCS7) {
-            RubyClass cPKCS7Signer = mPKCS7.defineClassUnder("SignerInfo",runtime.getObject(),SIGNERINFO_ALLOCATOR);
-            mPKCS7.defineConstant("Signer",cPKCS7Signer);
+        public static void createSignerInfo(Ruby runtime, RubyModule cPKCS7) {
+            RubyClass cPKCS7Signer = cPKCS7.defineClassUnder("SignerInfo",runtime.getObject(),SIGNERINFO_ALLOCATOR);
+            cPKCS7.defineConstant("Signer",cPKCS7Signer);
 
             cPKCS7Signer.defineAnnotatedMethods(SignerInfo.class);
         }
@@ -594,8 +576,8 @@ public class PKCS7 extends RubyObject {
             }
         };
     
-        public static void createRecipientInfo(Ruby runtime, RubyModule mPKCS7) {
-            RubyClass cPKCS7Recipient = mPKCS7.defineClassUnder("RecipientInfo",runtime.getObject(),RECIPIENTINFO_ALLOCATOR);
+        public static void createRecipientInfo(Ruby runtime, RubyModule cPKCS7) {
+            RubyClass cPKCS7Recipient = cPKCS7.defineClassUnder("RecipientInfo",runtime.getObject(),RECIPIENTINFO_ALLOCATOR);
 
             cPKCS7Recipient.defineAnnotatedMethods(RecipientInfo.class);
         }

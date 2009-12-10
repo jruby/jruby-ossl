@@ -1,5 +1,5 @@
 =begin
-= $RCSfile: cipher.rb,v $ -- Ruby-space predefined Cipher subclasses
+= $RCSfile$ -- Ruby-space predefined Cipher subclasses
 
 = Info
   'OpenSSL for Ruby 2' project
@@ -11,27 +11,15 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: cipher.rb,v 1.1.2.2 2006/06/20 11:18:15 gotoyuzo Exp $
+  $Id: cipher.rb 12496 2007-06-08 15:02:04Z technorama $
 =end
 
-require 'openssl'
+##
+# Should we care what if somebody require this file directly?
+#require 'openssl'
 
 module OpenSSL
-  module Cipher
-    class Cipher
-      def random_key
-        str = OpenSSL::Random.random_bytes(self.key_len)
-        self.key = str
-        return str
-      end
-
-      def random_iv
-        str = OpenSSL::Random.random_bytes(self.iv_len)
-        self.iv = str
-        return str
-      end
-    end
-    
+  class Cipher
     %w(AES CAST5 BF DES IDEA RC2 RC4 RC5).each{|name|
       klass = Class.new(Cipher){
         define_method(:initialize){|*args|
@@ -52,5 +40,26 @@ module OpenSSL
       }
       const_set("AES#{keylen}", klass)
     }
+
+    # Generate, set, and return a random key.
+    # You must call cipher.encrypt or cipher.decrypt before calling this method.
+    def random_key
+      str = OpenSSL::Random.random_bytes(self.key_len)
+      self.key = str
+      return str
+    end
+
+    # Generate, set, and return a random iv.
+    # You must call cipher.encrypt or cipher.decrypt before calling this method.
+    def random_iv
+      str = OpenSSL::Random.random_bytes(self.iv_len)
+      self.iv = str
+      return str
+    end
+
+    # This class is only provided for backwards compatibility.  Use OpenSSL::Digest in the future.
+    class Cipher < Cipher
+      # add warning
+    end
   end # Cipher
 end # OpenSSL

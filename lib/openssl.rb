@@ -1,5 +1,5 @@
 =begin
-= $RCSfile: openssl.rb,v $ -- Loader for all OpenSSL C-space and Ruby-space definitions
+= $RCSfile$ -- Loader for all OpenSSL C-space and Ruby-space definitions
 
 = Info
   'OpenSSL for Ruby 2' project
@@ -11,7 +11,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: openssl.rb,v 1.1 2003/07/23 16:11:29 gotoyuzo Exp $
+  $Id: openssl.rb 12496 2007-06-08 15:02:04Z technorama $
 =end
 
 require 'jopenssl'
@@ -19,6 +19,7 @@ require 'jopenssl'
 require 'openssl/bn'
 require 'openssl/cipher'
 require 'openssl/digest'
+require 'openssl/pkcs7'
 require 'openssl/ssl'
 require 'openssl/x509'
 
