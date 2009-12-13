@@ -138,6 +138,7 @@ class OpenSSL::TestX509Name < Test::Unit::TestCase
 
   def test_s_parse_rfc2253
     scanner = OpenSSL::X509::Name::RFC2253DN.method(:scan)
+
     assert_equal([["C", "JP"]], scanner.call("C=JP"))
     assert_equal([
         ["DC", "org"],

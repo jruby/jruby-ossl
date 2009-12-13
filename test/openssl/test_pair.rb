@@ -36,16 +36,14 @@ module SSLPair
 
   def ssl_pair
     ssls = server
-    tv = nil
     th = Thread.new {
       ns = ssls.accept
       ssls.close
-      tv = ns
+      ns
     }
     port = ssls.to_io.addr[1]
     c = client(port)
-    th.join
-    s = tv
+    s = th.value
     if block_given?
       begin
         yield c, s
@@ -65,10 +63,7 @@ class OpenSSL::TestEOF1 < Test::Unit::TestCase
 
   def open_file(content)
     s1, s2 = ssl_pair
-    Thread.new { 
-      s2 << content; 
-      s2.close 
-    }
+    Thread.new { s2 << content; s2.close }
     yield s1
   end
 end

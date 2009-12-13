@@ -49,7 +49,8 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     ].each{|pk, digest|
       cert = issue_cert(@ca, pk, 1, Time.now, Time.now+3600, exts,
                         nil, nil, digest)
-      assert_equal(cert.extensions[1].value,OpenSSL::TestUtils.get_subject_key_id(cert))
+      assert_equal(cert.extensions[1].value,
+                   OpenSSL::TestUtils.get_subject_key_id(cert))
       cert = OpenSSL::X509::Certificate.new(cert.to_der)
       assert_equal(cert.extensions[1].value,
                    OpenSSL::TestUtils.get_subject_key_id(cert))
@@ -156,15 +157,15 @@ class OpenSSL::TestX509Certificate < Test::Unit::TestCase
     cert.not_after = Time.now 
     assert_equal(false, cert.verify(@dsa512))
 
-    assert_raises(OpenSSL::X509::CertificateError){
+    assert_raise(OpenSSL::X509::CertificateError){
       cert = issue_cert(@ca, @rsa2048, 1, Time.now, Time.now+3600, [],
                         nil, nil, OpenSSL::Digest::DSS1.new) 
     }
-    assert_raises(OpenSSL::X509::CertificateError){
+    assert_raise(OpenSSL::X509::CertificateError){
       cert = issue_cert(@ca, @dsa512, 1, Time.now, Time.now+3600, [],
                         nil, nil, OpenSSL::Digest::MD5.new) 
     }
-    assert_raises(OpenSSL::X509::CertificateError){
+    assert_raise(OpenSSL::X509::CertificateError){
       cert = issue_cert(@ca, @dsa512, 1, Time.now, Time.now+3600, [],
                         nil, nil, OpenSSL::Digest::SHA1.new) 
     }
@@ -230,7 +231,6 @@ END
     # This is commented out because it doesn't take timezone into consideration; FIXME
     #assert_equal(cert_text, cert.to_text)
   end
-
 end
 
 end

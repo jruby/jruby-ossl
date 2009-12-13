@@ -136,7 +136,7 @@ module PKCS7Test
     end
     
     def test_set_type_throws_exception_on_wrong_argument
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         # 42 is a value that is not one of the valid NID's for type
         PKCS7.new.type = 42
       end
@@ -239,25 +239,25 @@ module PKCS7Test
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_digest
       
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.cipher = nil
       end
       
       p7.type = ASN1Registry::NID_pkcs7_encrypted
 
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.cipher = nil
       end
 
       p7.type = ASN1Registry::NID_pkcs7_data
 
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.cipher = nil
       end
 
       p7.type = ASN1Registry::NID_pkcs7_signed
 
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.cipher = nil
       end
     end
@@ -288,25 +288,25 @@ module PKCS7Test
     def test_add_recipient_info_to_something_that_cant_have_recipients
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_signed
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_recipient(X509Cert)
       end
 
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_data
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_recipient(X509Cert)
       end
       
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_encrypted
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_recipient(X509Cert)
       end
       
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_digest
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_recipient(X509Cert)
       end
     end
@@ -335,25 +335,25 @@ module PKCS7Test
     def test_add_signer_to_something_that_cant_have_signers
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_enveloped
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_signer(SignerInfoWithPkey.new(nil, nil, nil, nil, nil, nil, nil))
       end
 
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_data
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_signer(SignerInfoWithPkey.new(nil, nil, nil, nil, nil, nil, nil))
       end
       
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_encrypted
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_signer(SignerInfoWithPkey.new(nil, nil, nil, nil, nil, nil, nil))
       end
       
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_digest
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_signer(SignerInfoWithPkey.new(nil, nil, nil, nil, nil, nil, nil))
       end
     end
@@ -452,7 +452,7 @@ module PKCS7Test
     def test_set_content_on_data_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_data
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.setContent(PKCS7.new)
       end
     end
@@ -460,7 +460,7 @@ module PKCS7Test
     def test_set_content_on_enveloped_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_enveloped
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.setContent(PKCS7.new)
       end
     end
@@ -468,7 +468,7 @@ module PKCS7Test
     def test_set_content_on_signedAndEnveloped_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_signedAndEnveloped
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.setContent(PKCS7.new)
       end
     end
@@ -476,7 +476,7 @@ module PKCS7Test
     def test_set_content_on_encrypted_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_encrypted
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.setContent(PKCS7.new)
       end
     end
@@ -538,7 +538,7 @@ module PKCS7Test
     def test_content_new_on_data_raises_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_data
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.content_new(ASN1Registry::NID_pkcs7_data)
       end
     end
@@ -546,7 +546,7 @@ module PKCS7Test
     def test_content_new_on_encrypted_raises_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_encrypted
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.content_new(ASN1Registry::NID_pkcs7_data)
       end
     end
@@ -554,7 +554,7 @@ module PKCS7Test
     def test_content_new_on_enveloped_raises_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_enveloped
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.content_new(ASN1Registry::NID_pkcs7_data)
       end
     end
@@ -562,7 +562,7 @@ module PKCS7Test
     def test_content_new_on_signedAndEnveloped_raises_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_signedAndEnveloped
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.content_new(ASN1Registry::NID_pkcs7_data)
       end
     end
@@ -591,7 +591,7 @@ module PKCS7Test
     def test_add_certificate_on_data_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_data
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_certificate(X509Cert)
       end
     end
@@ -599,7 +599,7 @@ module PKCS7Test
     def test_add_certificate_on_enveloped_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_enveloped
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_certificate(X509Cert)
       end
     end
@@ -607,7 +607,7 @@ module PKCS7Test
     def test_add_certificate_on_encrypted_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_encrypted
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_certificate(X509Cert)
       end
     end
@@ -615,7 +615,7 @@ module PKCS7Test
     def test_add_certificate_on_digest_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_digest
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_certificate(X509Cert)
       end
     end
@@ -639,7 +639,7 @@ module PKCS7Test
     def test_add_crl_on_data_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_data
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_crl(X509CRL)
       end
     end
@@ -647,7 +647,7 @@ module PKCS7Test
     def test_add_crl_on_enveloped_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_enveloped
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_crl(X509CRL)
       end
     end
@@ -655,7 +655,7 @@ module PKCS7Test
     def test_add_crl_on_encrypted_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_encrypted
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_crl(X509CRL)
       end
     end
@@ -663,7 +663,7 @@ module PKCS7Test
     def test_add_crl_on_digest_throws_exception
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_digest
-      assert_raises NativeException do 
+      assert_raise NativeException do 
         p7.add_crl(X509CRL)
       end
     end

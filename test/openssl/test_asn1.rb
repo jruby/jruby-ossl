@@ -10,7 +10,6 @@ class  OpenSSL::TestASN1 < Test::Unit::TestCase
     subj = OpenSSL::X509::Name.parse("/DC=org/DC=ruby-lang/CN=TestCA")
     key = OpenSSL::TestUtils::TEST_KEY_RSA1024
     now = Time.at(Time.now.to_i) # suppress usec
-#    now = Time.utc(2006,04,03,22,15,13)
     s = 0xdeadbeafdeadbeafdeadbeafdeadbeaf
     exts = [
       ["basicConstraints","CA:TRUE,pathlen:1",true],
@@ -20,6 +19,7 @@ class  OpenSSL::TestASN1 < Test::Unit::TestCase
     dgst = OpenSSL::Digest::SHA1.new
     cert = OpenSSL::TestUtils.issue_cert(
       subj, key, s, now, now+3600, exts, nil, nil, dgst)
+
 
     asn1 = OpenSSL::ASN1.decode(cert)
     assert_equal(OpenSSL::ASN1::Sequence, asn1.class)
@@ -32,7 +32,6 @@ class  OpenSSL::TestASN1 < Test::Unit::TestCase
     version = tbs_cert.value[0]
     assert_equal(:CONTEXT_SPECIFIC, version.tag_class)
     assert_equal(0, version.tag)
-
     assert_equal(1, version.value.size)
     assert_equal(OpenSSL::ASN1::Integer, version.value[0].class)
     assert_equal(2, version.value[0].value)
@@ -192,7 +191,6 @@ class  OpenSSL::TestASN1 < Test::Unit::TestCase
     assert_equal(OpenSSL::ASN1::Null, pkey.value[0].value[1].class)
 
     assert_equal(OpenSSL::ASN1::BitString, sig_val.class)
-
     cululated_sig = key.sign(OpenSSL::Digest::SHA1.new, tbs_cert.to_der)
     assert_equal(cululated_sig, sig_val.value)
   end

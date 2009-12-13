@@ -53,7 +53,7 @@ class TestIntegration < Test::Unit::TestCase
     end
     # wrong trust anchor for www.amazon.com
     http.ca_file = 'test/fixture/verisign_c3.pem'
-    assert_raises(OpenSSL::SSL::SSLError) do
+    assert_raise(OpenSSL::SSL::SSLError) do
       # it must cause SSLError for verification failure.
       response = http.start do |s|
         s.get(uri.request_uri)

@@ -14,7 +14,7 @@ class TestParseCertificate < Test::Unit::TestCase
 
   def test_certificate_with_ec_pk_cert_fails_requesting_pk
     cer = OpenSSL::X509::Certificate.new(File.read(CERT))
-    assert_raises(OpenSSL::X509::CertificateError) { cer.public_key }
+    assert_raise(OpenSSL::X509::CertificateError) { cer.public_key }
   end
 end
 

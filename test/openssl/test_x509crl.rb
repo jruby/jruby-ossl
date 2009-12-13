@@ -134,7 +134,7 @@ class OpenSSL::TestX509CRL < Test::Unit::TestCase
       ["authorityKeyIdentifier", "keyid:always", false], 
       ["issuerAltName", "issuer:copy", false],
     ]
-    
+
     cert = issue_cert(@ca, @rsa2048, 1, Time.now, Time.now+3600, cert_exts,
                       nil, nil, OpenSSL::Digest::SHA1.new)
     crl = issue_crl([], 1, Time.now, Time.now+1600, crl_exts,
@@ -228,7 +228,6 @@ END
     assert_equal(1, crl.version)
     assert_equal(OpenSSL::X509::Name.parse("/CN=ca").to_der, crl.issuer.to_der)
   end
-
 end
 
 end

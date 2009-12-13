@@ -61,7 +61,7 @@ class TestCipher < Test::Unit::TestCase
 
   # JRUBY-4326 (1)
   def test_cipher_unsupported_algorithm
-    assert_raises(OpenSSL::Cipher::CipherError) do
+    assert_raise(OpenSSL::Cipher::CipherError) do
       cipher = OpenSSL::Cipher::Cipher.new('aes-xxxxxxx')
     end
   end
@@ -102,7 +102,7 @@ class TestCipher < Test::Unit::TestCase
         cipher.pkcs5_keyivgen("password")
       end
     else
-      assert_raises(OpenSSL::Cipher::CipherError) do
+      assert_raise(OpenSSL::Cipher::CipherError) do
         cipher.pkcs5_keyivgen("password")
       end
     end

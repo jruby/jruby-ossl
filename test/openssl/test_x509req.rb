@@ -155,8 +155,8 @@ END
     assert_equal(OpenSSL::X509::Name.parse("/CN=192.168.0.4").to_der, req.subject.to_der)
   end
 
-    def test_create_to_pem
-      req_s = <<END
+  def test_create_to_pem
+    req_s = <<END
 -----BEGIN CERTIFICATE REQUEST-----
 MIIBVTCBvwIBADAWMRQwEgYDVQQDDAsxOTIuMTY4LjAuNDCBnzANBgkqhkiG9w0B
 AQEFAAOBjQAwgYkCgYEA0oTTzFLydOTVtBpNdYl4S0356AysVkHlqD/tNEMxQT0l
@@ -168,11 +168,10 @@ DVD201pI3p6LIxaRyXE20RYTp0Jj6jv+tNFd0wjVlzgStmcplNo8hu6Dtp1gKETW
 qL7M4i48FXHn
 -----END CERTIFICATE REQUEST-----
 END
-      req = OpenSSL::X509::Request.new(req_s)
+    req = OpenSSL::X509::Request.new(req_s)
 
-      assert_equal(req_s, req.to_pem)
-    end
-
+    assert_equal(req_s, req.to_pem)
+  end
 end
 
 end

@@ -69,11 +69,11 @@ class OpenSSL::TestX509Extension < Test::Unit::TestCase
       %r{URI:ldap://ldap.example.com/cn=ca\?certificateRevocationList;binary},
       cdp.value)
   end
-  
+
   # JRUBY-3888
   # Problems with subjectKeyIdentifier with non 20-bytes sha1 digested keys
   def test_certificate_with_rare_extension
-	cert_file = File.join(File.dirname(__FILE__), "..", "fixture", "max.pem")
+    cert_file = File.expand_path('../fixture/max.pem', File.dirname(__FILE__))
     cer = OpenSSL::X509::Certificate.new(File.read(cert_file))
     exts = Hash.new
     cer.extensions.each{|ext| exts[ext.oid] = ext.value}
@@ -82,7 +82,7 @@ class OpenSSL::TestX509Extension < Test::Unit::TestCase
   end
 
   def test_extension_from_20_byte_sha1_digests
-    cert_file = File.join(File.dirname(__FILE__), "..", "fixture", "common.pem")
+    cert_file = File.expand_path('../fixture/common.pem', File.dirname(__FILE__))
     cer = OpenSSL::X509::Certificate.new(File.read(cert_file))
     exts = Hash.new
     cer.extensions.each{|ext| exts[ext.oid] = ext.value}

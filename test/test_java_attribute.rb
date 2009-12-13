@@ -4,10 +4,10 @@ module PKCS7Test
       val = ASN1::OctetString.new("foo".to_java_bytes)
       val2 = ASN1::OctetString.new("bar".to_java_bytes)
       attr = Attribute.create(123, 444, val)
-      assert_raises NoMethodError do 
+      assert_raise NoMethodError do 
         attr.type = 12
       end
-      assert_raises NoMethodError do 
+      assert_raise NoMethodError do 
         attr.value = val2
       end
 
