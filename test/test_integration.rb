@@ -52,6 +52,9 @@ class TestIntegration < Test::Unit::TestCase
       assert s.get(uri.request_uri).length > 0
     end
     # wrong trust anchor for www.amazon.com
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
     http.ca_file = 'test/fixture/verisign_c3.pem'
     assert_raise(OpenSSL::SSL::SSLError) do
       # it must cause SSLError for verification failure.
@@ -60,6 +63,9 @@ class TestIntegration < Test::Unit::TestCase
       end
     end
     # round trip
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
     http.ca_file = 'test/fixture/verisign.pem'
     response = http.start do |s|
       assert s.get(uri.request_uri).length > 0
