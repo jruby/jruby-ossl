@@ -58,6 +58,7 @@ import org.jruby.RubyObject;
 import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
+import org.jruby.exceptions.RaiseException;
 import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
@@ -90,8 +91,11 @@ public class SSLSocket extends RubyObject {
 
     public SSLSocket(Ruby runtime, RubyClass type) {
         super(runtime,type);
+        cSSLError = (RubyClass)((RubyModule)getRuntime().getModule("OpenSSL").getConstant("SSL")).getConstant("SSLError");
     }
 
+    private RubyClass cSSLError;
+    private org.jruby.ext.openssl.SSLContext rubyCtx;
     private SSLEngine engine;
     private SocketChannel c = null;
 
@@ -109,39 +113,38 @@ public class SSLSocket extends RubyObject {
     private Selector wsel;
     private Selector asel;
     
-    @JRubyMethod(name="initialize", rest=true, frame=true)
+    @JRubyMethod(name = "initialize", rest = true, frame = true)
     public IRubyObject _initialize(IRubyObject[] args, Block unused) {
-        IRubyObject io, ctx;
-        if (Arity.checkArgumentCount(getRuntime(),args,1,2) == 1) {
+        IRubyObject io;
+        if (Arity.checkArgumentCount(getRuntime(), args, 1, 2) == 1) {
             RubyClass sslContext = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("SSL"))).getClass("SSLContext");
-            ctx = api.callMethod(sslContext,"new");
+            rubyCtx = (org.jruby.ext.openssl.SSLContext) api.callMethod(sslContext, "new");
         } else {
-            ctx = args[1];
+            rubyCtx = (org.jruby.ext.openssl.SSLContext) args[1];
         }
         io = args[0];
-        api.callMethod(this,"io=",io);
+        api.callMethod(this, "io=", io);
         // This is a bit of a hack: SSLSocket should share code with RubyBasicSocket, which always sets sync to true.
         // Instead we set it here for now.
-        api.callMethod(io,"sync=",getRuntime().getTrue());
-        c = (SocketChannel)(((RubyIO)io).getChannel());
-        api.callMethod(this,"context=",ctx);
-        api.callMethod(this,"sync_close=",getRuntime().getFalse());
+        api.callMethod(io, "sync=", getRuntime().getTrue());
+        c = (SocketChannel) (((RubyIO) io).getChannel());
+        api.callMethod(this, "context=", rubyCtx);
+        api.callMethod(this, "sync_close=", getRuntime().getFalse());
+        rubyCtx.setup();
         return api.callSuper(this, args);
     }
 
     private void ossl_ssl_setup() throws NoSuchAlgorithmException, KeyManagementException, IOException {
         if(null == engine) {
             ThreadContext tc = getRuntime().getCurrentContext();
-            SSLContext ctx = SSLContext.getInstance("SSL");
-            IRubyObject store = callMethod(tc,"context").callMethod(tc,"cert_store");
-            callMethod(tc,"context").callMethod(tc,"verify_mode");
-
-                ctx.init(new javax.net.ssl.KeyManager[]{((org.jruby.ext.openssl.SSLContext)callMethod(tc,"context")).getKM()},new javax.net.ssl.TrustManager[]{((org.jruby.ext.openssl.SSLContext)callMethod(tc,"context")).getTM()},null);
-
+            SSLContext ctx = SSLContext.getInstance(rubyCtx.getProtocol());
+            rubyCtx.callMethod(tc, "verify_mode");
+            ctx.init(new javax.net.ssl.KeyManager[]{rubyCtx.getKM()}, new javax.net.ssl.TrustManager[]{rubyCtx.getTM()}, null);
             String peerHost = ((SocketChannel)c).socket().getInetAddress().getHostName();
             int peerPort = ((SocketChannel)c).socket().getPort();
             engine = ctx.createSSLEngine(peerHost,peerPort);
-            engine.setEnabledCipherSuites(((org.jruby.ext.openssl.SSLContext)callMethod(tc,"context")).getCipherSuites(engine));
+            engine.setEnabledCipherSuites(rubyCtx.getCipherSuites(engine));
+            engine.setEnabledProtocols(rubyCtx.getEnabledProtocols(engine));
             SSLSession session = engine.getSession();
             peerNetData = ByteBuffer.allocate(session.getPacketBufferSize());
             peerAppData = ByteBuffer.allocate(session.getApplicationBufferSize());		
@@ -162,7 +165,10 @@ public class SSLSocket extends RubyObject {
     @JRubyMethod
     public IRubyObject connect(ThreadContext context) {
         Ruby runtime = context.getRuntime();
-        
+        if (!rubyCtx.isProtocolForClient()) {
+            throw new RaiseException(runtime, cSSLError, "called a function you should not call", false);
+        }
+
         try {
             ossl_ssl_setup();
             engine.setUseClientMode(true);
@@ -190,14 +196,15 @@ public class SSLSocket extends RubyObject {
     @JRubyMethod
     public IRubyObject accept(ThreadContext context) {
         Ruby runtime = context.getRuntime();
-
+        if (!rubyCtx.isProtocolForServer()) {
+            throw new RaiseException(runtime, cSSLError, "called a function you should not call", false);
+        }
         try {
             int vfy = 0;
             ossl_ssl_setup();
             engine.setUseClientMode(false);
-            IRubyObject ccc = callMethod(context,"context");
-            if(!ccc.isNil() && !ccc.callMethod(context,"verify_mode").isNil()) {
-                vfy = RubyNumeric.fix2int(ccc.callMethod(context,"verify_mode"));
+            if(!rubyCtx.isNil() && !rubyCtx.callMethod(context,"verify_mode").isNil()) {
+                vfy = RubyNumeric.fix2int(rubyCtx.callMethod(context,"verify_mode"));
                 if(vfy == 0) { //VERIFY_NONE
                     engine.setNeedClientAuth(false);
                     engine.setWantClientAuth(false);
@@ -224,6 +231,12 @@ public class SSLSocket extends RubyObject {
         }
 
         return this;
+    }
+
+    @JRubyMethod
+    public IRubyObject verify_result() {
+        // TODO: implement
+        return getRuntime().getNil();
     }
 
     private void waitSelect(Selector sel) {
@@ -256,7 +269,7 @@ public class SSLSocket extends RubyObject {
                 }
             } else if(hsStatus == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
                 if (netData.hasRemaining()) {
-                    while(flushData());
+                    while(flushData()) {};
                 }
                 netData.clear();
                 res = engine.wrap(dummy, netData);
@@ -447,7 +460,7 @@ public class SSLSocket extends RubyObject {
             str.callMethod(getRuntime().getCurrentContext(),"<<",RubyString.newString(getRuntime(), out));
             return str;
         } catch (IOException ioe) {
-            throw runtime.newIOErrorFromException(ioe);
+            throw getRuntime().newEOFError();
         }
     }
 

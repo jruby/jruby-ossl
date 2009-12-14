@@ -31,7 +31,6 @@ package org.jruby.ext.openssl;
 
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -43,12 +42,13 @@ import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.common.IRubyWarnings.ID;
+import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
-import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -61,6 +61,44 @@ public class SSLContext extends RubyObject {
     "timeout", "verify_mode", "verify_depth",
     "verify_callback", "options", "cert_store", "extra_chain_cert",
     "client_cert_cb", "tmp_dh_callback", "session_id_context"};
+
+    // Mapping table for OpenSSL's SSL_METHOD -> JSSE's SSLContext algorithm.
+    private final static Map<String, String> SSL_VERSION_OSSL2JSSE;
+    // Mapping table for JSEE's enabled protocols for the algorithm.
+    private final static Map<String, String[]> ENABLED_PROTOCOLS;
+    
+    static {
+        SSL_VERSION_OSSL2JSSE = new HashMap<String, String>();
+        ENABLED_PROTOCOLS = new HashMap<String, String[]>();
+
+        SSL_VERSION_OSSL2JSSE.put("TLSv1", "TLSv1");
+        SSL_VERSION_OSSL2JSSE.put("TLSv1_server", "TLSv1");
+        SSL_VERSION_OSSL2JSSE.put("TLSv1_client", "TLSv1");
+        ENABLED_PROTOCOLS.put("TLSv1", new String[] { "TLSv1" });
+
+        SSL_VERSION_OSSL2JSSE.put("SSLv2", "SSLv2");
+        SSL_VERSION_OSSL2JSSE.put("SSLv2_server", "SSLv2");
+        SSL_VERSION_OSSL2JSSE.put("SSLv2_client", "SSLv2");
+        ENABLED_PROTOCOLS.put("SSLv2", new String[] { "SSLv2" });
+
+        SSL_VERSION_OSSL2JSSE.put("SSLv3", "SSLv3");
+        SSL_VERSION_OSSL2JSSE.put("SSLv3_server", "SSLv3");
+        SSL_VERSION_OSSL2JSSE.put("SSLv3_client", "SSLv3");
+        ENABLED_PROTOCOLS.put("SSLv3", new String[] { "SSLv3" });
+
+        SSL_VERSION_OSSL2JSSE.put("SSLv23", "SSL");
+        SSL_VERSION_OSSL2JSSE.put("SSLv23_server", "SSL");
+        SSL_VERSION_OSSL2JSSE.put("SSLv23_client", "SSL");
+        ENABLED_PROTOCOLS.put("SSL", new String[] { "SSLv2", "SSLv3", "TLSv1" });
+
+        // Followings(TLS, TLSv1.1) are JSSE only methods at present. Let's allow user to use it.
+        
+        SSL_VERSION_OSSL2JSSE.put("TLS", "TLS");
+        ENABLED_PROTOCOLS.put("TLS", new String[] { "TLSv1", "TLSv1.1" });
+
+        SSL_VERSION_OSSL2JSSE.put("TLSv1.1", "TLSv1.1");
+        ENABLED_PROTOCOLS.put("TLSv1.1", new String[] { "TLSv1.1" });
+    }
 
     private static ObjectAllocator SSLCONTEXT_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
@@ -79,9 +117,15 @@ public class SSLContext extends RubyObject {
 
     public SSLContext(Ruby runtime, RubyClass type) {
         super(runtime,type);
+        cSSLError = (RubyClass)((RubyModule)getRuntime().getModule("OpenSSL").getConstant("SSL")).getConstant("SSLError");
+        ciphers = runtime.getNil();
     }
 
+    private RubyClass cSSLError;
     private IRubyObject ciphers;
+    private String protocol = "SSL"; // SSLv23 in OpenSSL by default
+    private boolean protocolForServer = true;
+    private boolean protocolForClient = true;
     private PKey t_key = null;
     private X509Cert t_cert = null;
     
@@ -124,9 +168,19 @@ public class SSLContext extends RubyObject {
     }
 
     @JRubyMethod
+    public IRubyObject setup() {
+        if (isFrozen()) {
+            return getRuntime().getNil();
+        }
+        // should do good things for performance: KM and TM setup and cache.
+        this.freeze(getRuntime().getCurrentContext());
+        return getRuntime().getTrue();
+    }
+
+    @JRubyMethod
     public IRubyObject ciphers() {
-        System.err.println("fetching ciphers");
-        return this.ciphers;
+        // TODO: implement
+        return ciphers;
     }
 
     @JRubyMethod(name="ciphers=")
@@ -157,6 +211,51 @@ public class SSLContext extends RubyObject {
         return result;
     }
 
+    @JRubyMethod(name = "ssl_version=")
+    public IRubyObject set_ssl_version(IRubyObject val) {
+        RubyString str = val.convertToString();
+        String given = str.toString();
+        String mapped = SSL_VERSION_OSSL2JSSE.get(given);
+        if (mapped == null) {
+            throw new RaiseException(getRuntime(), cSSLError, String.format("unknown SSL method `%s'.", given), false);
+        }
+        protocol = mapped;
+        protocolForServer = protocolForClient = true;
+        if (given.endsWith("_client")) {
+            protocolForServer = false;
+        }
+        if (given.endsWith("_server")) {
+            protocolForClient = false;
+        }
+        return str;
+    }
+
+    String getProtocol() {
+        return protocol;
+    }
+
+    String[] getEnabledProtocols(SSLEngine engine) {
+        List<String> candidates = new ArrayList<String>();
+        if (ENABLED_PROTOCOLS.get(protocol) != null) {
+            for (String enabled : ENABLED_PROTOCOLS.get(protocol)) {
+                for (String allowed : engine.getEnabledProtocols()) {
+                    if (allowed.equals(enabled)) {
+                        candidates.add(allowed);
+                    }
+                }
+            }
+        }
+        return candidates.toArray(new String[candidates.size()]);
+    }
+
+    boolean isProtocolForServer() {
+        return protocolForServer;
+    }
+
+    boolean isProtocolForClient() {
+        return protocolForClient;
+    }
+
     KM getKM() {
         return new KM(this);
     }
@@ -172,6 +271,7 @@ public class SSLContext extends RubyObject {
             this.ctt = ctt;
         }
 
+        @Override
         public String chooseEngineClientAlias(String[] keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
             PKey k = null;
             if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {
@@ -190,6 +290,7 @@ public class SSLContext extends RubyObject {
             return null;
         }
 
+        @Override
         public String chooseEngineServerAlias(String keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
             PKey k = null;
             if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {
