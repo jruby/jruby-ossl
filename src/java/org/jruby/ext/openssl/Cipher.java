@@ -119,70 +119,113 @@ public class Cipher extends RubyObject {
         }
     }
 
-    private static final Set<String> BLOCK_MODES = new HashSet<String>();
-    static {
-        BLOCK_MODES.add("CBC");
-        BLOCK_MODES.add("CFB");
-        BLOCK_MODES.add("CFB1");
-        BLOCK_MODES.add("CFB8");
-        BLOCK_MODES.add("ECB");
-        BLOCK_MODES.add("OFB");
-    }
+    public static class Algorithm {
 
-    private static String[] rubyToJavaCipher(String inName, String padding) {
-        String[] split = inName.split("-");
-        String cryptoBase = split[0];
-        String cryptoVersion = null;
-        String cryptoMode = null;
-        String realName = null;
+        private static final Set<String> BLOCK_MODES;
 
-        String padding_type;
-        if (padding == null || padding.equalsIgnoreCase("PKCS5Padding")) {
-            padding_type = "PKCS5Padding";
-        } else if (padding.equals("0") || padding.equalsIgnoreCase("NoPadding")) {
-            padding_type = "NoPadding";
-        } else if (padding.equalsIgnoreCase("ISO10126Padding")) {
-            padding_type = "ISO10126Padding";
-        } else {
-            padding_type = "PKCS5Padding";
+        static {
+            BLOCK_MODES = new HashSet<String>();
+
+            BLOCK_MODES.add("CBC");
+            BLOCK_MODES.add("CFB");
+            BLOCK_MODES.add("CFB1");
+            BLOCK_MODES.add("CFB8");
+            BLOCK_MODES.add("ECB");
+            BLOCK_MODES.add("OFB");
         }
 
-        if("bf".equalsIgnoreCase(cryptoBase)) {
-            cryptoBase = "Blowfish";
-        }
-
-        if(split.length == 3) {
-            cryptoVersion = split[1];
-            cryptoMode = split[2];
-        } else {
-            if(split.length == 2) {
-                cryptoMode = split[1];
-            } else {
+        public static String jsseToOssl(String inName, int keyLen) {
+            String cryptoBase = null;
+            String cryptoVersion = null;
+            String cryptoMode = null;
+            String[] parts = inName.split("/");
+            if (parts.length != 1 && parts.length != 3) {
+                return null;
+            }
+            cryptoBase = parts[0];
+            if (parts.length > 2) {
+                cryptoMode = parts[1];
+                // padding: parts[2] is not used
+            }
+            if (!BLOCK_MODES.contains(cryptoMode)) {
+                cryptoVersion = cryptoMode;
                 cryptoMode = "CBC";
             }
+            if (cryptoMode == null) {
+                cryptoMode = "CBC";
+            }
+            if (cryptoBase.equals("DESede")) {
+                cryptoBase = "DES";
+                cryptoVersion = "EDE3";
+            } else if (cryptoBase.equals("Blowfish")) {
+                cryptoBase = "BF";
+            }
+            if (cryptoVersion == null) {
+                cryptoVersion = String.valueOf(keyLen);
+            }
+            return cryptoBase + "-" + cryptoVersion + "-" + cryptoMode;
+        }
+        
+        public static String[] osslToJsse(String inName) {
+            // assume PKCS5Padding
+            return osslToJsse(inName, null);
         }
 
-        if(cryptoBase.equalsIgnoreCase("DES") && "EDE3".equalsIgnoreCase(cryptoVersion)) {
-            realName = "DESede";
-        } else {
-            realName = cryptoBase;
+        public static String[] osslToJsse(String inName, String padding) {
+            String[] split = inName.split("-");
+            String cryptoBase = split[0];
+            String cryptoVersion = null;
+            String cryptoMode = null;
+            String realName = null;
+
+            String padding_type;
+            if (padding == null || padding.equalsIgnoreCase("PKCS5Padding")) {
+                padding_type = "PKCS5Padding";
+            } else if (padding.equals("0") || padding.equalsIgnoreCase("NoPadding")) {
+                padding_type = "NoPadding";
+            } else if (padding.equalsIgnoreCase("ISO10126Padding")) {
+                padding_type = "ISO10126Padding";
+            } else {
+                padding_type = "PKCS5Padding";
+            }
+
+            if ("bf".equalsIgnoreCase(cryptoBase)) {
+                cryptoBase = "Blowfish";
+            }
+
+            if (split.length == 3) {
+                cryptoVersion = split[1];
+                cryptoMode = split[2];
+            } else {
+                if (split.length == 2) {
+                    cryptoMode = split[1];
+                } else {
+                    cryptoMode = "CBC";
+                }
+            }
+
+            if (cryptoBase.equalsIgnoreCase("DES") && "EDE3".equalsIgnoreCase(cryptoVersion)) {
+                realName = "DESede";
+            } else {
+                realName = cryptoBase;
+            }
+
+            if (!BLOCK_MODES.contains(cryptoMode.toUpperCase())) {
+                cryptoVersion = cryptoMode;
+                cryptoMode = "CBC";
+            }
+
+            realName = realName + "/" + cryptoMode + "/" + padding_type;
+
+            return new String[]{cryptoBase, cryptoVersion, cryptoMode, realName, padding_type};
         }
-
-        if(!BLOCK_MODES.contains(cryptoMode.toUpperCase())) {
-            cryptoVersion = cryptoMode;
-            cryptoMode = "CBC";
-        }
-
-        realName = realName + "/" + cryptoMode + "/" + padding_type;
-
-        return new String[]{cryptoBase,cryptoVersion,cryptoMode,realName,padding_type};
     }
 
     private static boolean tryCipher(final String rubyName) {
         return ((Boolean) (OpenSSLReal.getWithBCProvider(new Callable() {
             public Object call() {
                 try {
-                    javax.crypto.Cipher.getInstance(rubyToJavaCipher(rubyName, null)[3], OpenSSLReal.PROVIDER);
+                    javax.crypto.Cipher.getInstance(Algorithm.osslToJsse(rubyName, null)[3], OpenSSLReal.PROVIDER);
                     return Boolean.TRUE;
                 } catch (Exception e) {
                     return Boolean.FALSE;
@@ -242,7 +285,7 @@ public class Cipher extends RubyObject {
         if (!CipherModule.isSupportedCipher(name)) {
             throw new RaiseException(getRuntime(), ciphErr, String.format("unsupported cipher algorithm (%s)", name), true);
         }
-        String[] values = rubyToJavaCipher(name, padding);
+        String[] values = Algorithm.osslToJsse(name, padding);
         cryptoBase = values[0];
         cryptoVersion = values[1];
         cryptoMode = values[2];
@@ -288,6 +331,7 @@ public class Cipher extends RubyObject {
         return this;
     }
 
+    @Override
     @JRubyMethod(required=1)
     public IRubyObject initialize_copy(IRubyObject obj) {
         if(this == obj) {
@@ -500,7 +544,7 @@ public class Cipher extends RubyObject {
         MessageDigest digest = null;
         if(args.length>1) {
             if(!args[1].isNil()) {
-                salt = args[1].convertToString().getBytes();;
+                salt = args[1].convertToString().getBytes();
             }
             if(args.length>2) {
                 if(!args[2].isNil()) {

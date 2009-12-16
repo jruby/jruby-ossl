@@ -11,8 +11,8 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
- * Copyright (C) 2006 Ola Bini <ola@ologix.com>
- * 
+ * Copyright (C) 2009 Hiroshi Nakamura <nahi@ruby-lang.org>
+ *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
  * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -25,33 +25,54 @@
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the CPL, the GPL or the LGPL.
  ***** END LICENSE BLOCK *****/
-package org.jruby.ext.openssl.x509store;
+package org.jruby.ext.openssl.impl;
+
+import javax.crypto.Cipher;
 
 /**
- * c: X509_OBJECT
  *
- * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
+ * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class Certificate extends X509Object {
-    public X509AuxCertificate x509;
+public class CipherSpec extends BIOFilter {
+    private final Cipher cipher;
+    private final String osslName;
+    private final int keyLenInBits;
 
-    public int type() {
-        return X509Utils.X509_LU_X509;
+    public CipherSpec(Cipher cipher, String osslName, int keyLenInBits) {
+        this.cipher = cipher;
+        this.osslName = osslName;
+        this.keyLenInBits = keyLenInBits;
     }
 
-    public boolean isName(Name nm) {
-        return nm.isEqual(x509.getSubjectX500Principal());
+    public Cipher getCipher() {
+        return cipher;
     }
 
-    public boolean matches(X509Object o) {
-        return o instanceof Certificate && x509.getSubjectX500Principal().equals(((Certificate)o).x509.getSubjectX500Principal());
+    public String getOsslName() {
+        return osslName;
     }
 
-    public int compareTo(Object oth) {
-        int ret1 = super.compareTo(oth);
-        if(ret1 == 0) {
-            ret1 = x509.equals(((Certificate)oth).x509) ? 0 : -1;
+    public int getKeyLenInBits() {
+        return keyLenInBits;
+    }
+
+    public String getAlgorithm() {
+        return getCipher().getAlgorithm();
+    }
+
+    public String getWrappingAlgorithm() {
+        return getWrappingAlgorithm(getAlgorithm());
+    }
+
+    public static String getWrappingAlgorithm(String algorithm) {
+        if (algorithm == null) {
+            return null;
         }
-        return ret1;
+        if (algorithm.equalsIgnoreCase("RSA")) {
+            return "RSA/ECB/PKCS1Padding";
+        } else {
+            return algorithm;
+        }
     }
-}// X509_OBJECT_CERT
+
+}// CipherSpec

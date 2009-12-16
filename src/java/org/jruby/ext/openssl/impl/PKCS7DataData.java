@@ -52,14 +52,17 @@ public class PKCS7DataData extends PKCS7Data {
         return ASN1Registry.NID_pkcs7_data;
     }
 
+    @Override
     public void setData(ASN1OctetString data) {
         this.data = data;
     }
 
+    @Override
     public ASN1OctetString getData() {
         return this.data;
     }
 
+    @Override
     public boolean isData() {
         return true;
     }
@@ -79,6 +82,7 @@ public class PKCS7DataData extends PKCS7Data {
         return new PKCS7DataData((ASN1OctetString)content);
     }
 
+    @Override
     public ASN1Encodable asASN1() {
         if(data == null) {
             return new DEROctetString(new byte[0]).toASN1Object();

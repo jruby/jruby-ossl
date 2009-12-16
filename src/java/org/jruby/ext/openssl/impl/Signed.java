@@ -34,20 +34,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERInteger;
-import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.DERTaggedObject;
-import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.X509CertificateStructure;
 import org.bouncycastle.jce.provider.X509CertificateObject;
@@ -203,11 +201,18 @@ public class Signed {
         vector.add(new DERInteger(version));
         vector.add(digestAlgorithmsToASN1Set());
         vector.add(contents.asASN1());
-        if(cert != null && cert.size() > 0) {
-            vector.add(new DERTaggedObject(0, certificatesToASN1Set()));
+        if (cert != null) {
+            if (cert.size() > 1) {
+                vector.add(new DERTaggedObject(false, 0, certificatesToASN1Set()));
+            } else {
+                // Encode the signer certificate directly for OpenSSL compatibility.
+                // OpenSSL does not support multiple signer signature.
+                // And OpenSSL requires EXPLICIT tagging.
+                vector.add(new DERTaggedObject(true, 0, firstCertificatesToASN1()));
+            }
         }
-        if(crl != null && crl.size() > 0) {
-            vector.add(new DERTaggedObject(1, crlsToASN1Set()));
+        if (crl != null && crl.size() > 0) {
+            vector.add(new DERTaggedObject(false, 1, crlsToASN1Set()));
         }
         vector.add(signerInfosToASN1Set());
         return new DERSequence(vector);
@@ -222,16 +227,26 @@ public class Signed {
     }
 
     // This imlementation is stupid and wasteful. Ouch.
-    private ASN1Set certificatesToASN1Set() {
+    private DERSet certificatesToASN1Set() {
         try {
             ASN1EncodableVector vector = new ASN1EncodableVector();
             for(X509AuxCertificate c : cert) {
+                //return (DERSequence)(new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
                 vector.add(new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
             }
             return new DERSet(vector);
         } catch(Exception e) {
             return null;
         }
+    }
+
+    private DERSequence firstCertificatesToASN1() {
+        try {
+            for (X509AuxCertificate c : cert) {
+                return (DERSequence) (new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
+            }
+        } catch (Exception e) {}
+        return null;
     }
 
     private ASN1Set crlsToASN1Set() {
@@ -302,27 +317,34 @@ public class Signed {
 
     private static Collection<X509AuxCertificate> certificatesFromASN1Set(DEREncodable content) {
         Collection<X509AuxCertificate> result = new ArrayList<X509AuxCertificate>();
-        if(content instanceof DERSet) {
-            for(Enumeration<?> enm = ((DERSet)content).getObjects(); enm.hasMoreElements(); ) {
-                DEREncodable current = (DEREncodable)enm.nextElement();
-                X509CertificateStructure struct = X509CertificateStructure.getInstance(current);
-                try {
-                    result.add(new X509AuxCertificate(new X509CertificateObject(struct)));
-                } catch(CertificateParsingException ex) {
-                    throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + ex);
+        if (content instanceof DERSequence) {
+            try {
+                for (Enumeration<?> enm = ((DERSequence) content).getObjects(); enm.hasMoreElements();) {
+                    DEREncodable current = (DEREncodable) enm.nextElement();
+                    result.add(certificateFromASN1(current));
                 }
+            } catch (IllegalArgumentException iae) {
+                result.add(certificateFromASN1(content));
+            }
+        } else if (content instanceof DERSet) {
+            // EXPLICIT Set shouldn't apper here but keep this for backward compatibility.
+            for (Enumeration<?> enm = ((DERSet) content).getObjects(); enm.hasMoreElements();) {
+                DEREncodable current = (DEREncodable) enm.nextElement();
+                result.add(certificateFromASN1(current));
             }
         } else {
-            X509CertificateStructure struct = X509CertificateStructure.getInstance(content);
-            try {
-                result.add(new X509AuxCertificate(new X509CertificateObject(struct)));
-            } catch(CertificateParsingException ex) {
-                throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + ex);
-            }
+            throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "unknown certificates format");
         }
-
-
         return result;
+    }
+
+    private static X509AuxCertificate certificateFromASN1(DEREncodable current) {
+        X509CertificateStructure struct = X509CertificateStructure.getInstance(current);
+        try {
+            return new X509AuxCertificate(new X509CertificateObject(struct));
+        } catch (CertificateParsingException cpe) {
+            throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + cpe);
+        }
     }
 
     private static Set<AlgorithmIdentifier> algorithmIdentifiersFromASN1Set(DEREncodable content) {

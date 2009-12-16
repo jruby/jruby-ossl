@@ -15,6 +15,7 @@ if defined?(JRUBY_VERSION)
     
     PKCS7 = org.jruby.ext.openssl.impl.PKCS7 unless defined?(PKCS7)
     Attribute = org.jruby.ext.openssl.impl.Attribute unless defined?(Attribute)
+    CipherSpec = org.jruby.ext.openssl.impl.CipherSpec unless defined?(CipherSpec)
     Digest = org.jruby.ext.openssl.impl.Digest unless defined?(Digest)
     EncContent = org.jruby.ext.openssl.impl.EncContent unless defined?(EncContent)
     Encrypt = org.jruby.ext.openssl.impl.Encrypt unless defined?(Encrypt)
@@ -94,5 +95,6 @@ CRL
   require File.join(File.dirname(__FILE__), 'test_java_bio')
   require File.join(File.dirname(__FILE__), 'test_java_mime')
   require File.join(File.dirname(__FILE__), 'test_java_pkcs7')
-  require File.join(File.dirname(__FILE__), 'test_java_smime')
+# recover this once JRUBY-4356 is fixed.
+#  require File.join(File.dirname(__FILE__), 'test_java_smime')
 end

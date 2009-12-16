@@ -29,6 +29,7 @@ package org.jruby.ext.openssl;
 
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,6 +48,7 @@ import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.impl.ASN1Registry;
 import org.jruby.ext.openssl.impl.BIO;
+import org.jruby.ext.openssl.impl.CipherSpec;
 import org.jruby.ext.openssl.impl.MemBIO;
 import org.jruby.ext.openssl.impl.Mime;
 import org.jruby.ext.openssl.impl.NotVerifiedPKCS7Exception;
@@ -54,6 +56,7 @@ import org.jruby.ext.openssl.impl.PKCS7Exception;
 import org.jruby.ext.openssl.impl.RecipInfo;
 import org.jruby.ext.openssl.impl.SMIME;
 import org.jruby.ext.openssl.impl.SignerInfoWithPkey;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.runtime.Arity;
@@ -191,8 +194,8 @@ public class PKCS7 extends RubyObject {
          */
         @JRubyMethod(meta=true, rest=true)
         public static IRubyObject encrypt(IRubyObject recv, IRubyObject[] args) throws Exception {
-            IRubyObject certs, data, cipher = recv.getRuntime().getNil(), flags  = recv.getRuntime().getNil();
-            javax.crypto.Cipher ciph = null;
+            IRubyObject certs, data, cipher = recv.getRuntime().getNil(), flags = recv.getRuntime().getNil();
+            CipherSpec ciph = null;
             switch(Arity.checkArgumentCount(recv.getRuntime(), args, 2, 4)) {
             case 4:
                 flags = args[3];
@@ -203,9 +206,10 @@ public class PKCS7 extends RubyObject {
             certs = args[0];
             
             if(cipher.isNil()) {
-                ciph = javax.crypto.Cipher.getInstance("RC2/CBC/PKCS5Padding");
+                ciph = new CipherSpec(javax.crypto.Cipher.getInstance("RC2/CBC/PKCS5Padding"), Cipher.Algorithm.jsseToOssl("RC2/CBC/PKCS5Padding", 40), 40);
             } else {
-                ciph = ((Cipher)cipher).getCipher();
+                Cipher c = ((Cipher) cipher);
+                ciph = new CipherSpec(c.getCipher(), c.getName(), c.getKeyLen() * 8);
             }
 
             int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
@@ -253,15 +257,16 @@ public class PKCS7 extends RubyObject {
         return this;
     }
 
+    @Override
     @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#init_copy");
+        System.err.println("WARNING: unimplemented method called PKCS7#init_copy");
         return this;
     }
 
     @JRubyMethod(name="type=")
     public IRubyObject set_type(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#type=");
+        System.err.println("WARNING: unimplemented method called PKCS7#type=");
         return getRuntime().getNil();
     }
 
@@ -287,25 +292,25 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod(name="detached=")
     public IRubyObject set_detached(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#detached=");
+        System.err.println("WARNING: unimplemented method called PKCS7#detached=");
         return getRuntime().getNil();
     }
 
     @JRubyMethod
     public IRubyObject detached() {
-        System.err.println("WARNING: un.implemented method called PKCS7#detached");
+        System.err.println("WARNING: unimplemented method called PKCS7#detached");
         return getRuntime().getNil();
     }
 
     @JRubyMethod(name="detached?")
     public IRubyObject detached_p() {
-        System.err.println("WARNING: un.implemented method called PKCS7#detached?");
+        System.err.println("WARNING: unimplemented method called PKCS7#detached?");
         return getRuntime().getNil();
     }
 
     @JRubyMethod(name="cipher=")
     public IRubyObject set_cipher(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#cipher=");
+        System.err.println("WARNING: unimplemented method called PKCS7#cipher=");
         return getRuntime().getNil();
     }
 
@@ -340,7 +345,7 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject add_recipient(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#add_recipient");
+        System.err.println("WARNING: unimplemented method called PKCS7#add_recipient");
         return getRuntime().getNil();
     }
 
@@ -374,7 +379,7 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod(name="certificates=")
     public IRubyObject set_certificates(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#certificates=");
+        System.err.println("WARNING: unimplemented method called PKCS7#certificates=");
         return getRuntime().getNil();
     }
 
@@ -410,25 +415,25 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject add_crl(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#add_crl");
+        System.err.println("WARNING: unimplemented method called PKCS7#add_crl");
         return getRuntime().getNil();
     }
 
     @JRubyMethod(name="crls=")
     public IRubyObject set_crls(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#crls=");
+        System.err.println("WARNING: unimplemented method called PKCS7#crls=");
         return getRuntime().getNil();
     }
 
     @JRubyMethod
     public IRubyObject crls() {
-        System.err.println("WARNING: un.implemented method called PKCS7#crls");
+        System.err.println("WARNING: unimplemented method called PKCS7#crls");
         return getRuntime().getNil();
     }
 
     @JRubyMethod(name={"add_data", "data="})
     public IRubyObject add_data(IRubyObject obj) {
-        System.err.println("WARNING: un.implemented method called PKCS7#add_data");
+        System.err.println("WARNING: unimplemented method called PKCS7#add_data");
         return getRuntime().getNil();
     }
 
@@ -437,18 +442,18 @@ public class PKCS7 extends RubyObject {
         IRubyObject certs = null;
         IRubyObject store = null;
         IRubyObject indata = getRuntime().getNil();
-        IRubyObject flags = getRuntime().getNil();
+        IRubyObject vflags = getRuntime().getNil();
         
         switch(Arity.checkArgumentCount(getRuntime(), args, 2, 4)) {
         case 4:
-            flags = args[3];
+            vflags = args[3];
         case 3:
             indata = args[2];
         default:
             store = args[1];
             certs = args[0];
         }
-        int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
+        int flg = vflags.isNil() ? 0 : RubyNumeric.fix2int(vflags);
 
         if(indata.isNil()) {
             indata = getData();
@@ -484,15 +489,15 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod(rest=true)
     public IRubyObject decrypt(IRubyObject[] args) {
-        IRubyObject flags = getRuntime().getNil();
+        IRubyObject dflags = getRuntime().getNil();
         if(Arity.checkArgumentCount(getRuntime(), args, 2, 3) == 3) {
-            flags = args[2];
+            dflags = args[2];
         }
         IRubyObject pkey = args[0];
         IRubyObject cert = args[1];
         PrivateKey key = ((PKey)pkey).getPrivateKey();
         X509AuxCertificate x509 = ((X509Cert)cert).getAuxCert();
-        int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
+        int flg = dflags.isNil() ? 0 : RubyNumeric.fix2int(dflags);
 
         BIO out = BIO.mem();
         p7.decrypt(key, x509, out, flg);
@@ -500,10 +505,16 @@ public class PKCS7 extends RubyObject {
         return membio2str(getRuntime(), out);
     }
 
-    @JRubyMethod(name={"to_pem","to_s"})
+    @JRubyMethod(name = {"to_pem", "to_s"})
     public IRubyObject to_pem() throws Exception {
-        System.err.println("WARNING: un-implemented method called PKCS7#to_pem");
-        return getRuntime().getNil();
+        try {
+            StringWriter w = new StringWriter();
+            PEMInputOutput.writePKCS7(w, p7.toASN1());
+            w.close();
+            return getRuntime().newString(w.toString());
+        } catch (IOException ex) {
+            throw getRuntime().newIOErrorFromException(ex);
+        }
     }
 
     @JRubyMethod

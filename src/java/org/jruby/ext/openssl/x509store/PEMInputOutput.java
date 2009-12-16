@@ -520,6 +520,15 @@ public class PEMInputOutput {
         out.newLine();
         out.flush();
     }
+    public static void writePKCS7(Writer _out, byte[] encoded) throws IOException {
+        BufferedWriter out = makeBuffered(_out);
+        out.write(BEF_G + PEM_STRING_PKCS7 + AFT);
+        out.newLine();
+        writeEncoded(out,encoded);
+        out.write(BEF_E + PEM_STRING_PKCS7 + AFT);
+        out.newLine();
+        out.flush();
+    }
     public static void writeX509Certificate(Writer _out, X509Certificate obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
         try {

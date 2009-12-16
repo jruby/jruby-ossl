@@ -31,7 +31,6 @@ import java.security.cert.X509CRL;
 import java.util.Collection;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.DEREncodable;
-import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 
 /**
@@ -57,6 +56,7 @@ public class PKCS7DataSigned extends PKCS7Data {
         return ASN1Registry.NID_pkcs7_signed;
     }
 
+    @Override
     public Object ctrl(int cmd, Object v, Object ignored) {
         int ret = 0;
         switch(cmd) {
@@ -79,35 +79,43 @@ public class PKCS7DataSigned extends PKCS7Data {
         return Integer.valueOf(ret);
     }
 
+    @Override
     public void setSign(Signed sign) {
         this.sign = sign;
     }
 
+    @Override
     public Signed getSign() {
         return this.sign;
     }
 
+    @Override
     public boolean isSigned() {
         return true;
     }
 
+    @Override
     public void addSigner(SignerInfoWithPkey psi) {
         this.sign.getMdAlgs().add(psi.getDigestAlgorithm());
         this.sign.getSignerInfo().add(psi);
     }
 
+    @Override
     public void setContent(PKCS7 p7) {
         this.sign.setContents(p7);
     }
 
+    @Override
     public Collection<SignerInfoWithPkey> getSignerInfo() {
         return this.sign.getSignerInfo();
     }
 
+    @Override
     public void addCertificate(X509AuxCertificate cert) {
         this.sign.getCert().add(cert);
     }
 
+    @Override
     public void addCRL(X509CRL crl) {
         this.sign.getCrl().add(crl);
     }
@@ -121,6 +129,7 @@ public class PKCS7DataSigned extends PKCS7Data {
         return new PKCS7DataSigned(Signed.fromASN1(content));
     }
 
+    @Override
     public ASN1Encodable asASN1() {
         return sign.asASN1();
     }

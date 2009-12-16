@@ -29,11 +29,9 @@ package org.jruby.ext.openssl.impl;
 
 import java.security.cert.X509CRL;
 import java.util.Collection;
-import javax.crypto.Cipher;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.DEREncodable;
-import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 
 /**
@@ -115,7 +113,7 @@ public abstract class PKCS7Data {
         return false;
     }
 
-    public void setCipher(Cipher cipher) {
+    public void setCipher(CipherSpec cipher) {
         throw new PKCS7Exception(PKCS7.F_PKCS7_SET_CIPHER,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 

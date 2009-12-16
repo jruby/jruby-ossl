@@ -55,15 +55,12 @@ import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERInteger;
-import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.DERUTCTime;
-import org.bouncycastle.asn1.pkcs.Attribute;
 import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
-import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
 import org.jruby.ext.openssl.OpenSSLReal;
@@ -152,7 +149,7 @@ public class PKCS7 {
         ASN1EncodableVector vector = new ASN1EncodableVector();
         DERObjectIdentifier contentType = ASN1Registry.nid2obj(getType());
         vector.add(contentType);
-        vector.add(data.asASN1());
+        vector.add(new DERTaggedObject(0, data.asASN1()));
 
         return new DERSequence(vector);
     }
@@ -452,7 +449,7 @@ public class PKCS7 {
     /* c: PKCS7_encrypt
      *
      */
-    public static PKCS7 encrypt(Collection<X509AuxCertificate> certs, byte[] in, Cipher cipher, int flags) {
+    public static PKCS7 encrypt(Collection<X509AuxCertificate> certs, byte[] in, CipherSpec cipher, int flags) {
         PKCS7 p7 = new PKCS7();
 
         p7.setType(ASN1Registry.NID_pkcs7_enveloped);
@@ -532,7 +529,7 @@ public class PKCS7 {
     /** c: PKCS7_set_cipher
      *
      */
-    public void setCipher(Cipher cipher) {
+    public void setCipher(CipherSpec cipher) {
         this.data.setCipher(cipher);
     }
 
@@ -757,8 +754,10 @@ public class PKCS7 {
                 }
             } else {
                 try {
-                    tmp = EVP.decrypt(ri.getEncKey().getOctets(), pkey);
-                } catch(Exception e) {
+                    Cipher cipher = Cipher.getInstance(CipherSpec.getWrappingAlgorithm(pkey.getAlgorithm()), OpenSSLReal.PROVIDER);
+                    cipher.init(Cipher.DECRYPT_MODE, pkey);
+                    tmp = cipher.doFinal(ri.getEncKey().getOctets());
+                } catch (Exception e) {
                     throw new PKCS7Exception(F_PKCS7_DATADECODE, -1, e.toString());
                 }
             }
@@ -807,11 +806,10 @@ public class PKCS7 {
         state = S_HEADER;
         Collection<RecipInfo> rsk = null;
         AlgorithmIdentifier xa = null;
-        Cipher evpCipher = null;
+        CipherSpec evpCipher = null;
         BIO out = null;
         BIO btmp = null;
         EncContent enc = null;
-
         switch(i) {
         case ASN1Registry.NID_pkcs7_signed:
             mdSk = getSign().getMdAlgs();
@@ -856,29 +854,23 @@ public class PKCS7 {
 
         if(evpCipher != null) {
             byte[] tmp;
-            String algorithm = evpCipher.getAlgorithm();
-            btmp = BIO.cipherFilter(evpCipher);
-
-            int klen = -1;
-
-            String algoBase = evpCipher.getAlgorithm();
+            btmp = BIO.cipherFilter(evpCipher.getCipher());
+            String algoBase = evpCipher.getCipher().getAlgorithm();
             if(algoBase.indexOf('/') != -1) {
                 algoBase = algoBase.split("/")[0];
             }
-
             try {
                 KeyGenerator gen = KeyGenerator.getInstance(algoBase, OpenSSLReal.PROVIDER);
-                gen.init(new SecureRandom());
+                gen.init(evpCipher.getKeyLenInBits(), new SecureRandom());
                 SecretKey key = gen.generateKey();
-                klen = ((SecretKeySpec)key).getEncoded().length*8;
-                evpCipher.init(Cipher.ENCRYPT_MODE, key);
+                evpCipher.getCipher().init(Cipher.ENCRYPT_MODE, key);
 
-                if(null != rsk) {
-                    for(RecipInfo ri : rsk) {
+                if (null != rsk) {
+                    for (RecipInfo ri : rsk) {
                         PublicKey pkey = ri.getCert().getPublicKey();
-                        Cipher cipher = Cipher.getInstance(pkey.getAlgorithm(), OpenSSLReal.PROVIDER);
+                        Cipher cipher = Cipher.getInstance(CipherSpec.getWrappingAlgorithm(pkey.getAlgorithm()), OpenSSLReal.PROVIDER);
                         cipher.init(Cipher.ENCRYPT_MODE, pkey);
-                        tmp = cipher.doFinal(((SecretKeySpec)key).getEncoded());
+                        tmp = cipher.doFinal(((SecretKeySpec) key).getEncoded());
                         ri.setEncKey(new DEROctetString(tmp));
                     }
                 }
@@ -886,23 +878,12 @@ public class PKCS7 {
                 e.printStackTrace();
             }
 
-            DERObjectIdentifier encAlgo = ASN1Registry.sym2oid(algorithm);
-            if(encAlgo == null) {
-                String name = algorithm;
-                String block = "CBC";
-                if(name.indexOf('/') != -1) {
-                    String[] nameParts = name.split("/");
-                    name = nameParts[0];
-                    block = nameParts[1];
-                }
-                encAlgo = ASN1Registry.sym2oid(name + "-" + klen + "-" + block);
-                if(null == encAlgo) {
-                    throw new PKCS7Exception(-1, -1, "Couldn't find algorithm " + algorithm + ". Tried: " + (name + "-" + klen + "-" + block));
-                }
+            DERObjectIdentifier encAlgo = ASN1Registry.sym2oid(evpCipher.getOsslName());
+            if (encAlgo == null) {
+                throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_HAS_NO_OBJECT_IDENTIFIER);
             }
-
-            if(evpCipher.getIV() != null) {
-                enc.setAlgorithm(new AlgorithmIdentifier(encAlgo, new DEROctetString(evpCipher.getIV())));
+            if(evpCipher.getCipher().getIV() != null) {
+                enc.setAlgorithm(new AlgorithmIdentifier(encAlgo, new DEROctetString(evpCipher.getCipher().getIV())));
             } else {
                 enc.setAlgorithm(new AlgorithmIdentifier(encAlgo));
             }

@@ -28,7 +28,6 @@
 package org.jruby.ext.openssl.impl;
 
 
-import javax.crypto.Cipher;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.DEREncodable;
 
@@ -54,18 +53,22 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
         return ASN1Registry.NID_pkcs7_enveloped;
     }
 
+    @Override
     public Envelope getEnveloped() {
         return this.enveloped;
     }
 
+    @Override
     public boolean isEnveloped() {
         return true;
     }
 
-    public void setCipher(Cipher cipher) {
+    @Override
+    public void setCipher(CipherSpec cipher) {
         this.enveloped.getEncData().setCipher(cipher);
     }
 
+    @Override
     public void addRecipientInfo(RecipInfo ri) {
         this.enveloped.getRecipientInfo().add(ri);
     }
@@ -79,6 +82,7 @@ public class PKCS7DataEnveloped extends PKCS7Data  {
         return new PKCS7DataEnveloped(Envelope.fromASN1(content));
     }
 
+    @Override
     public ASN1Encodable asASN1() {
         return enveloped.asASN1();
     }

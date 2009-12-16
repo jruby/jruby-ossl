@@ -29,9 +29,7 @@ package org.jruby.ext.openssl.impl;
 
 import java.security.cert.X509CRL;
 import java.util.Collection;
-import javax.crypto.Cipher;
 import org.bouncycastle.asn1.DEREncodable;
-import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 
 /**
@@ -52,35 +50,43 @@ public class PKCS7DataSignedAndEnveloped extends PKCS7Data  {
         return ASN1Registry.NID_pkcs7_signedAndEnveloped;
     }
 
+    @Override
     public boolean isSignedAndEnveloped() {
         return true;
     }
 
+    @Override
     public SignEnvelope getSignedAndEnveloped() {
         return signedAndEnveloped;
     }
 
-    public void setCipher(Cipher cipher) {
+    @Override
+    public void setCipher(CipherSpec cipher) {
         this.signedAndEnveloped.getEncData().setCipher(cipher);
     }
 
+    @Override
     public void addRecipientInfo(RecipInfo ri) {
         this.signedAndEnveloped.getRecipientInfo().add(ri);
     }
 
+    @Override
     public void addSigner(SignerInfoWithPkey psi) {
         this.signedAndEnveloped.getMdAlgs().add(psi.getDigestAlgorithm());
         this.signedAndEnveloped.getSignerInfo().add(psi);
     }
 
+    @Override
     public Collection<SignerInfoWithPkey> getSignerInfo() {
         return this.signedAndEnveloped.getSignerInfo();
     }
 
+    @Override
     public void addCertificate(X509AuxCertificate cert) {
         this.signedAndEnveloped.getCert().add(cert);
     }
 
+    @Override
     public void addCRL(X509CRL crl) {
         this.signedAndEnveloped.getCrl().add(crl);
     }

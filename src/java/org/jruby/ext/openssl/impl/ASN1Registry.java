@@ -695,6 +695,7 @@ public class ASN1Registry {
     public final static int    NID_rc2_40_cbc = 98;
     public final static String SN_rc2_40_cbc = "RC2-40-CBC";
     public final static String LN_rc2_40_cbc = "rc2-40-cbc";
+    public final static String OBJ_rc2_40_cbc = OBJ_rsadsi + ".3.2";
 
     public final static int    NID_givenName = 99;
     public final static String SN_givenName = "GN";
@@ -3445,7 +3446,7 @@ public class ASN1Registry {
         addObject(NID_mdc2, SN_mdc2, LN_mdc2, OBJ_mdc2); // NID: 95
         addObject(NID_mdc2WithRSA, SN_mdc2WithRSA, LN_mdc2WithRSA, OBJ_mdc2WithRSA); // NID: 96
         addObject(NID_rc4_40, SN_rc4_40, LN_rc4_40, null); // NID: 97
-        addObject(NID_rc2_40_cbc, SN_rc2_40_cbc, LN_rc2_40_cbc, null); // NID: 98
+        addObject(NID_rc2_40_cbc, SN_rc2_40_cbc, LN_rc2_40_cbc, OBJ_rc2_40_cbc); // NID: 98
         addObject(NID_givenName, SN_givenName, LN_givenName, OBJ_givenName); // NID: 99
         addObject(NID_surname, SN_surname, LN_surname, OBJ_surname); // NID: 100
         addObject(NID_initials, null, LN_initials, OBJ_initials); // NID: 101

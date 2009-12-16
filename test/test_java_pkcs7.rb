@@ -266,7 +266,8 @@ module PKCS7Test
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_enveloped
 
-      cipher = javax.crypto.Cipher.getInstance("RSA")
+      c = javax.crypto.Cipher.getInstance("RSA")
+      cipher = CipherSpec.new(c, "RSA", 128)
       
       p7.cipher = cipher
       
@@ -278,7 +279,8 @@ module PKCS7Test
       p7 = PKCS7.new
       p7.type = ASN1Registry::NID_pkcs7_signedAndEnveloped
 
-      cipher = javax.crypto.Cipher.getInstance("RSA")
+      c = javax.crypto.Cipher.getInstance("RSA")
+      cipher = CipherSpec.new(c, "RSA", 128)
       
       p7.cipher = cipher
       
@@ -690,7 +692,8 @@ module PKCS7Test
     
     def test_encrypt_integration_test
       certs = [X509Cert]
-      cipher = Cipher.get_instance("AES", BCP.new)
+      c = Cipher.get_instance("AES", BCP.new)
+      cipher = CipherSpec.new(c, "AES-128-CBC", 128)
       data = "aaaaa\nbbbbb\nccccc\n".to_java_bytes
       PKCS7::encrypt(certs, data, cipher, PKCS7::BINARY)
 #       puts

@@ -27,7 +27,6 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
-import javax.crypto.Cipher;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1OctetString;
@@ -51,7 +50,7 @@ public class EncContent {
     /**
      * Describe cipher here.
      */
-    private Cipher cipher;
+    private CipherSpec cipher;
 
     /**
      * Describe algorithm here.
@@ -86,7 +85,7 @@ public class EncContent {
      *
      * @return a <code>Cipher</code> value
      */
-    public final Cipher getCipher() {
+    public final CipherSpec getCipher() {
         return cipher;
     }
 
@@ -95,7 +94,7 @@ public class EncContent {
      *
      * @param newCipher The new Cipher value.
      */
-    public final void setCipher(final Cipher newCipher) {
+    public final void setCipher(final CipherSpec newCipher) {
         this.cipher = newCipher;
     }
 
@@ -171,7 +170,7 @@ public class EncContent {
         vector.add(ASN1Registry.nid2obj(contentType).toASN1Object());
         vector.add(algorithm.toASN1Object());
         if(encData != null) {
-            vector.add(new DERTaggedObject(0, encData).toASN1Object());
+            vector.add(new DERTaggedObject(false, 0, encData));
         }
         return new DERSequence(vector);
    }
