@@ -424,12 +424,27 @@ public class CipherStrings {
             return "Cipher<" + name + ">";
         }
 
+        // from ssl_cipher_apply_rule
         public boolean matches(Def current) {
-            return (this.algorithms == 0 || (this.algorithms & current.algorithms) != 0) &&
-                (this.algo_strength == 0 || (this.algo_strength & current.algo_strength) != 0) &&
-                (this.algorithm2 == 0 || (this.algorithm2 & current.algorithm2) != 0) &&
-                (this.mask == 0 || (this.mask & current.mask) != 0) &&
-                (this.mask_strength == 0 || (this.mask_strength & current.mask_strength) != 0);
+//            ma = mask & cp->algorithms;
+//            ma_s = mask_strength & cp->algo_strength;
+//
+//            // Select: if none of the mask bit was met from the
+//            // cipher or not all of the bits were met, the
+//            // selection does not apply.
+//            if (((ma == 0) && (ma_s == 0)) ||
+//                ((ma & algorithms) != ma) ||
+//                ((ma_s & algo_strength) != ma_s))
+//                continue; // does not apply
+//            }
+            long ma = mask & current.algorithms;
+            long ma_s = mask_strength & current.algo_strength;
+            if (((ma == 0) && (ma_s == 0)) ||
+                    ((ma & algorithms) != ma) ||
+                    ((ma_s & algo_strength) != ma_s)) {
+                return false;
+            }
+            return true;
         }
     }
 
@@ -443,27 +458,18 @@ public class CipherStrings {
         List<Def> currentList = new ArrayList<Def>();
         Set<Def> removed = new HashSet<Def>();
 
-        boolean first = true;
-        for(String part : parts) {
-            if(first) {
-                for(String entry : all) {
-                    String ossl = SuiteToOSSL.get(entry);
-                    if(ossl != null) {
-                        Def def = CipherNames.get(ossl);
-                        if(def != null) {
-                            def.cipherSuite = entry;
+        for (String part : parts) {
+            if (part.equals("@STRENGTH")) {
+                Collections.sort(currentList, new Comparator<Def>() {
 
-                            if(Definitions.get(part).matches(def)) {
-                                currentList.add(def);
-                            }
-                        }
+                    public int compare(Def first, Def second) {
+                        return second.strength_bits - first.strength_bits;
                     }
-                }
-                first = false;
-            } else {
-                int index = 0;
-
-                switch(part.charAt(0)) {
+                });
+                continue;
+            }
+            int index = 0;
+            switch (part.charAt(0)) {
                 case '!':
                     index++;
                     break;
@@ -473,32 +479,16 @@ public class CipherStrings {
                 case '-':
                     index++;
                     break;
-                case '@':
-                    if(part.equals("@STRENGTH")) {
-                        Collections.sort(currentList, new Comparator<Def>() {
-                                public int compare(Def first, Def second) {
-                                    return second.strength_bits - first.strength_bits;
-                                }
-                            });
-                    }
-                    continue;
-                }
+            }
+            String name = part.substring(index);
 
-                String name = part.substring(index);
+            // TODO: handle + in the name here at some point
 
-                // TODO: handle + in the name here at some point
-
-                Def pattern = Definitions.get(name);
-                if(pattern != null) {
-                    List<Def> matching = new ArrayList<Def>();
-                    for(Def current : currentList) {
-                        if(pattern.matches(current)) {
-                            matching.add(current);
-                        }
-                    }
-
-                    if(index > 0) {
-                        switch(part.charAt(0)) {
+            Def pattern = Definitions.get(name);
+            if (pattern != null) {
+                List<Def> matching = getMatching(pattern, all);
+                if (index > 0) {
+                    switch (part.charAt(0)) {
                         case '!':
                             currentList.removeAll(matching);
                             removed.addAll(matching);
@@ -510,16 +500,34 @@ public class CipherStrings {
                         case '-':
                             currentList.removeAll(matching);
                             break;
-                        }
-                    } else {
-                        if(!removed.contains(pattern)) {
-                            currentList.add(pattern);
+                    }
+                } else {
+                    for (Def ele : matching) {
+                        if (!removed.contains(ele)) {
+                            currentList.add(ele);
                         }
                     }
                 }
             }
         }
         return currentList;
+    }
+
+    private static List<Def> getMatching(Def pattern, String[] all) {
+        List<Def> matching = new ArrayList<Def>();
+        for (String entry : all) {
+            String ossl = SuiteToOSSL.get(entry);
+            if (ossl != null) {
+                Def def = CipherNames.get(ossl);
+                if (def != null) {
+                    def.cipherSuite = entry;
+                    if (pattern.matches(def)) {
+                        matching.add(def);
+                    }
+                }
+            }
+        }
+        return matching;
     }
 
     private static void addAlias(String cipherSuite, String ossl) {

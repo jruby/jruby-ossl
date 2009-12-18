@@ -527,6 +527,60 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     }
   end
 
+  def test_sslctx_ciphers
+    c = OpenSSL::SSL::SSLContext.new
+
+    c.ciphers = 'ALL'
+    all = c.ciphers
+    assert(all.size > 0)
+
+    c.ciphers = 'LOW'
+    low = c.ciphers
+    assert(low.size > 0)
+
+    c.ciphers = 'MEDIUM'
+    medium = c.ciphers
+    assert(medium.size > 0)
+
+    c.ciphers = 'HIGH'
+    high = c.ciphers
+    assert(high.size > 0)
+
+    c.ciphers = 'EXP'
+    exp = c.ciphers
+    assert(exp.size > 0)
+
+    # -
+    c.ciphers = 'ALL:-LOW'
+    assert_equal(all - low, c.ciphers)
+    c.ciphers = 'ALL:-MEDIUM'
+    assert_equal(all - medium, c.ciphers)
+    c.ciphers = 'ALL:-HIGH'
+    assert_equal(all - high, c.ciphers)
+    c.ciphers = 'ALL:-EXP'
+    assert_equal(all - exp, c.ciphers)
+    c.ciphers = 'ALL:-LOW:-MEDIUM'
+    assert_equal(all - low - medium, c.ciphers)
+    c.ciphers = 'ALL:-LOW:-MEDIUM:-HIGH'
+    assert_equal(all - low - medium - high, c.ciphers)
+    assert_raise(OpenSSL::SSL::SSLError) do
+      # should be empty for OpenSSL/0.9.8l. check OpenSSL changes if this test fail.
+      c.ciphers = 'ALL:-LOW:-MEDIUM:-HIGH:-EXP'
+    end
+
+    # !
+    c.ciphers = 'ALL:-LOW:LOW'
+    assert_equal(all.sort, c.ciphers.sort)
+    c.ciphers = 'ALL:!LOW:LOW'
+    assert_equal(all - low, c.ciphers)
+
+    # +
+    c.ciphers = 'HIGH:LOW:+LOW'
+    assert_equal(high + low, c.ciphers)
+    c.ciphers = 'HIGH:LOW:+HIGH'
+    assert_equal(low + high, c.ciphers)
+  end
+
   def test_post_connection_check
     sslerr = OpenSSL::SSL::SSLError
 

@@ -136,15 +136,9 @@ public class SSLSocket extends RubyObject {
 
     private void ossl_ssl_setup() throws NoSuchAlgorithmException, KeyManagementException, IOException {
         if(null == engine) {
-            ThreadContext tc = getRuntime().getCurrentContext();
-            SSLContext ctx = SSLContext.getInstance(rubyCtx.getProtocol());
-            rubyCtx.callMethod(tc, "verify_mode");
-            ctx.init(new javax.net.ssl.KeyManager[]{rubyCtx.getKM()}, new javax.net.ssl.TrustManager[]{rubyCtx.getTM()}, null);
             String peerHost = ((SocketChannel)c).socket().getInetAddress().getHostName();
             int peerPort = ((SocketChannel)c).socket().getPort();
-            engine = ctx.createSSLEngine(peerHost,peerPort);
-            engine.setEnabledCipherSuites(rubyCtx.getCipherSuites(engine));
-            engine.setEnabledProtocols(rubyCtx.getEnabledProtocols(engine));
+            engine = rubyCtx.createSSLEngine(peerHost, peerPort);
             SSLSession session = engine.getSession();
             peerNetData = ByteBuffer.allocate(session.getPacketBufferSize());
             peerAppData = ByteBuffer.allocate(session.getApplicationBufferSize());		

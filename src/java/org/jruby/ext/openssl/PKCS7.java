@@ -148,7 +148,7 @@ public class PKCS7 extends RubyObject {
 
         @JRubyMethod(meta=true, rest=true)
         public static IRubyObject write_smime(IRubyObject recv, IRubyObject[] args) {
-            System.err.println("WARNING: un-implemented method called PKCS7#write_smime");
+            System.err.println("WARNING: unimplemented method called PKCS7#write_smime");
             return recv.getRuntime().getNil();
         }
 
@@ -558,7 +558,7 @@ public class PKCS7 extends RubyObject {
 
         @JRubyMethod
         public IRubyObject initialize(IRubyObject arg1, IRubyObject arg2, IRubyObject arg3) {
-            System.err.println("WARNING: un-implemented method called SignerInfo#initialize");
+            System.err.println("WARNING: unimplemented method called SignerInfo#initialize");
             return this;
         }
 
@@ -575,7 +575,7 @@ public class PKCS7 extends RubyObject {
 
         @JRubyMethod
         public IRubyObject signed_time() {
-            System.err.println("WARNING: un-implemented method called SignerInfo#signed_time");
+            System.err.println("WARNING: unimplemented method called SignerInfo#signed_time");
             return getRuntime().getNil();
         }
     }
@@ -612,7 +612,7 @@ public class PKCS7 extends RubyObject {
 
         @JRubyMethod
         public IRubyObject initialize(IRubyObject arg) {
-            System.err.println("WARNING: un-implemented method called RecipientInfo#initialize");
+            System.err.println("WARNING: unimplemented method called RecipientInfo#initialize");
             return this;
         }
 
@@ -628,7 +628,7 @@ public class PKCS7 extends RubyObject {
 
         @JRubyMethod
         public IRubyObject enc_key() {
-            System.err.println("WARNING: un-implemented method called RecipientInfo#enc_key");
+            System.err.println("WARNING: unimplemented method called RecipientInfo#enc_key");
             return getRuntime().getNil();
         }
     }
