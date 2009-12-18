@@ -345,6 +345,13 @@ bQSlVx3I9SiqevP0vEiXGzmb4m1blFzdH5HHZk4ZUWqWYyTqOdXTSfwFp53VAUhi
 EOP
     store = OpenSSL::X509::Store.new
     store.add_cert(@ca_cert)
+    # just checks pubkey's n to avoid certificate expiration.
+    # this test is for PKCS#7, not for certificate verification.
+    store.verify_callback = proc { |ok, ctx|
+      # !! CAUTION: NEVER DO THIS KIND OF NEGLIGENCE !!
+      [@ca_cert.public_key.n, @ee1_cert.public_key.n].include?(ctx.current_cert.public_key.n)
+      # should return 'ok' here
+    }
 
     p7 = OpenSSL::PKCS7.new(cruby_sign)
     assert(p7.verify([], store))
@@ -460,6 +467,13 @@ EOP
     data = "aaaaa\nbbbbb\nccccc\n"
     store = OpenSSL::X509::Store.new
     store.add_cert(@ca_cert)
+    # just checks pubkey's n to avoid certificate expiration.
+    # this test is for PKCS#7, not for certificate verification.
+    store.verify_callback = proc { |ok, ctx|
+      # !! CAUTION: NEVER DO THIS KIND OF NEGLIGENCE !!
+      [@ca_cert.public_key.n, @ee1_cert.public_key.n].include?(ctx.current_cert.public_key.n)
+      # should return 'ok' here
+    }
 
     p7 = OpenSSL::PKCS7.new(cruby_sign)
     assert(!p7.verify([], store))

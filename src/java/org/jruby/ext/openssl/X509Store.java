@@ -34,13 +34,13 @@ import java.io.IOException;
 
 import java.io.Reader;
 import org.jruby.Ruby;
+import org.jruby.RubyBoolean;
 import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
 import org.jruby.RubyHash;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
-import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
@@ -237,46 +237,34 @@ public class X509Store extends RubyObject {
     }
 
     private final static Store.VerifyCallbackFunction ossl_verify_cb = new Store.VerifyCallbackFunction() {
-            public int call(Object a1, Object a2) throws Exception {
-                StoreContext ctx = (StoreContext)a2;
-                int ok = ((Integer)a1).intValue();
-                IRubyObject proc = (IRubyObject)ctx.getExtraData(1);
-                if(null == proc) {
-                    proc = (IRubyObject)ctx.ctx.getExtraData(0);
-                }
-                if(null == proc) {
-                    return ok;
-                }
-                if(!proc.isNil()) {
-                    System.err.println("WARNING: unimplemented method called: ossl_verify_cb");
-                    System.err.println("GOJS");
-                }
 
-                /*
-    if (!NIL_P(proc)) {
-	rctx = rb_protect((VALUE(*)(VALUE))ossl_x509stctx_new,
-			  (VALUE)ctx, &state);
-	ret = Qfalse;
-	if (!state) {
-	    args.proc = proc;
-	    args.preverify_ok = ok ? Qtrue : Qfalse;
-	    args.store_ctx = rctx;
-	    ret = rb_ensure(ossl_call_verify_cb_proc, (VALUE)&args,
-			    ossl_x509stctx_clear_ptr, rctx);
-	}
-	if (ret == Qtrue) {
-	    X509_STORE_CTX_set_error(ctx, X509_V_OK);
-	    ok = 1;
-	}
-	else{
-	    if (X509_STORE_CTX_get_error(ctx) == X509_V_OK) {
-		X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_REJECTED);
-	    }
-	    ok = 0;
-	}
-    }
-                */
+        public int call(Object a1, Object a2) throws Exception {
+            StoreContext ctx = (StoreContext) a2;
+            int ok = ((Integer) a1).intValue();
+            IRubyObject proc = (IRubyObject) ctx.getExtraData(1);
+            if (null == proc) {
+                proc = (IRubyObject) ctx.ctx.getExtraData(0);
+            }
+            if (null == proc) {
                 return ok;
             }
-        };
+            if (!proc.isNil()) {
+                Ruby rt = proc.getRuntime();
+                RubyClass cStoreContext = (RubyClass) (((RubyModule) (rt.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreContext"));
+                X509StoreCtx rctx = new X509StoreCtx(rt, cStoreContext, ctx);
+                RubyBoolean rok = rt.newBoolean(ok != 0);
+                IRubyObject ret = proc.callMethod(rt.getCurrentContext(), "call", new IRubyObject[]{rok, rctx});
+                if (ret.isTrue()) {
+                    ctx.setError(X509Utils.V_OK);
+                    ok = 1;
+                } else {
+                    if (ctx.getError() == X509Utils.V_OK) {
+                        ctx.setError(X509Utils.V_ERR_CERT_REJECTED);
+                    }
+                    ok = 0;
+                }
+            }
+            return ok;
+        }
+    };
 }// X509Store

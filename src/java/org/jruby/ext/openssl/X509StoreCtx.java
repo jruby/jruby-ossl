@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.security.cert.CertificateEncodingException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -71,14 +72,22 @@ public class X509StoreCtx extends RubyObject {
     private RubyClass cX509Cert;
 
     public X509StoreCtx(Ruby runtime, RubyClass type) {
-        super(runtime,type);
+        super(runtime, type);
         ctx = new StoreContext();
-        cStoreError = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreError")); 
-        cX509Cert = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
-   }
+        cStoreError = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreError"));
+        cX509Cert = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
+    }
 
+    // constructor for creating callback parameter object of verify_cb
+    X509StoreCtx(Ruby runtime, RubyClass type, StoreContext ctx) {
+        super(runtime, type);
+        this.ctx = ctx;
+        cStoreError = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreError"));
+        cX509Cert = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
+    }
+    
     private void raise(String msg) {
-        throw new RaiseException(getRuntime(),cStoreError, msg, true);
+        throw new RaiseException(getRuntime(), cStoreError, msg, true);
     }
 
     @JRubyMethod(name="initialize", rest=true, frame=true)
@@ -163,9 +172,10 @@ public class X509StoreCtx extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject current_cert() {
-        System.err.println("WARNING: unimplemented method called: StoreContext#current_cert");
-        return getRuntime().getNil();
+    public IRubyObject current_cert() throws CertificateEncodingException {
+        Ruby rt = getRuntime();
+        X509AuxCertificate x509 = ctx.getCurrentCertificate();
+        return cX509Cert.callMethod(rt.getCurrentContext(), "new", RubyString.newString(rt, x509.getEncoded()));
     }
 
     @JRubyMethod

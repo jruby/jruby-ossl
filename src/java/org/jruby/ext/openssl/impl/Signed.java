@@ -201,7 +201,7 @@ public class Signed {
         vector.add(new DERInteger(version));
         vector.add(digestAlgorithmsToASN1Set());
         vector.add(contents.asASN1());
-        if (cert != null) {
+        if (cert != null && cert.size() > 0) {
             if (cert.size() > 1) {
                 vector.add(new DERTaggedObject(false, 0, certificatesToASN1Set()));
             } else {
@@ -227,11 +227,10 @@ public class Signed {
     }
 
     // This imlementation is stupid and wasteful. Ouch.
-    private DERSet certificatesToASN1Set() {
+    private ASN1Set certificatesToASN1Set() {
         try {
             ASN1EncodableVector vector = new ASN1EncodableVector();
             for(X509AuxCertificate c : cert) {
-                //return (DERSequence)(new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
                 vector.add(new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
             }
             return new DERSet(vector);
@@ -242,9 +241,8 @@ public class Signed {
 
     private DERSequence firstCertificatesToASN1() {
         try {
-            for (X509AuxCertificate c : cert) {
-                return (DERSequence) (new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
-            }
+            X509AuxCertificate c = cert.iterator().next();
+            return (DERSequence) (new ASN1InputStream(new ByteArrayInputStream(c.getEncoded())).readObject());
         } catch (Exception e) {}
         return null;
     }

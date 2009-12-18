@@ -331,6 +331,7 @@ public class PKCS7 {
                 } else if(cert_ctx.init(store, signer, null) == 0) {
                     throw new PKCS7Exception(F_PKCS7_VERIFY, -1);
                 }
+                cert_ctx.setExtraData(1, store.getExtraData(1));
                 if((flags & NOCRL) == 0) {
                     cert_ctx.setCRLs((List<X509CRL>)getSign().getCrl());
                 }

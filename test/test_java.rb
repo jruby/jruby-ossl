@@ -95,6 +95,5 @@ CRL
   require File.join(File.dirname(__FILE__), 'test_java_bio')
   require File.join(File.dirname(__FILE__), 'test_java_mime')
   require File.join(File.dirname(__FILE__), 'test_java_pkcs7')
-# recover this once JRUBY-4356 is fixed.
-#  require File.join(File.dirname(__FILE__), 'test_java_smime')
+  require File.join(File.dirname(__FILE__), 'test_java_smime')
 end
