@@ -244,6 +244,32 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     }
   end
 
+  def test_sysread_buffer
+    start_server(PORT, OpenSSL::SSL::VERIFY_NONE, true){|server, port|
+      sock = TCPSocket.new("127.0.0.1", port)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock)
+      ssl.sync_close = true
+      ssl.connect
+      ITERATIONS.times{|i|
+        # the given buffer is cleared before concatenating.
+        # NB: SSLSocket#readpartial depends sysread.
+        str = "x" * i * 100 + "\n"
+        ssl.syswrite(str)
+        buf = "asdf"
+        assert_equal(buf.object_id, ssl.sysread(0, buf).object_id)
+        assert_equal("", buf)
+
+        buf = "asdf"
+        assert_equal(buf.object_id, ssl.sysread(str.size, buf).object_id)
+        assert_equal(str, buf)
+
+        ssl.syswrite(str)
+        assert_equal(str, ssl.sysread(str.size, nil))
+      }
+      ssl.close
+    }
+  end
+
   def test_client_auth
     vflag = OpenSSL::SSL::VERIFY_PEER|OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT
     start_server(PORT, vflag, true){|server, port|

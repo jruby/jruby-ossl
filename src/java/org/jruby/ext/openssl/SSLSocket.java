@@ -65,6 +65,7 @@ import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
+import org.jruby.util.ByteList;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -409,15 +410,15 @@ public class SSLSocket extends RubyObject {
     public IRubyObject sysread(ThreadContext context, IRubyObject[] args) {
         Ruby runtime = context.getRuntime();
         int len = RubyNumeric.fix2int(args[0]);
-        IRubyObject str = getRuntime().getNil();
+        RubyString str = null;
         
-        if (args.length == 2) {
-            str = args[1];
-        }
-        if (str.isNil()) {
+        if (args.length == 2 && !args[1].isNil()) {
+            str = args[1].convertToString();
+        } else {
             str = getRuntime().newString("");
         }
         if(len == 0) {
+            str.clear();
             return str;
         }
         if (len < 0) {
@@ -427,7 +428,7 @@ public class SSLSocket extends RubyObject {
         // So we need to make sure to only block when there is no data left to process
         if(engine == null || !(peerAppData.hasRemaining() || peerNetData.position() > 0)) {
             waitSelect(rsel);
-         }
+        }
 
         ByteBuffer dst = ByteBuffer.allocate(len);
         try {
@@ -450,8 +451,7 @@ public class SSLSocket extends RubyObject {
             if(eof){
                 throw getRuntime().newEOFError();
             }
-
-            str.callMethod(getRuntime().getCurrentContext(),"<<",RubyString.newString(getRuntime(), out));
+            str.setValue(new ByteList(out));
             return str;
         } catch (IOException ioe) {
             throw getRuntime().newEOFError();
