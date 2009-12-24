@@ -262,6 +262,12 @@ public class SSLSocket extends RubyObject {
                 if(readAndUnwrap() == -1 && hsStatus != SSLEngineResult.HandshakeStatus.FINISHED) {
                     throw new SSLHandshakeException("Socket closed");
                 }
+                // during initialHandshake, calling readAndUnwrap that results UNDERFLOW
+                // does not mean writable. we explicitly wait for readable channel to avoid
+                // busy loop.
+                if (initialHandshake && status == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
+                    waitSelect(rsel);
+                }
             } else if(hsStatus == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
                 if (netData.hasRemaining()) {
                     while(flushData()) {};
@@ -348,7 +354,6 @@ public class SSLSocket extends RubyObject {
 
     private int readAndUnwrap() throws IOException {
         int bytesRead = c.read(peerNetData);
-
         if(bytesRead == -1) {
             //            engine.closeInbound();			
             if ((peerNetData.position() == 0) || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
