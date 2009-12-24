@@ -480,22 +480,21 @@ public class CipherStrings {
                     index++;
                     break;
             }
-            String name = part.substring(index);
-
-            // TODO: handle + in the name here at some point
-
-            Def pattern = Definitions.get(name);
-            if (pattern != null) {
-                List<Def> matching = getMatching(pattern, all);
+            List<Def> matching = getMatching(part.substring(index), all);
+            if (matching != null) {
                 if (index > 0) {
                     switch (part.charAt(0)) {
                         case '!':
                             currentList.removeAll(matching);
                             removed.addAll(matching);
                             break;
-                        case '+':
-                            currentList.removeAll(matching);
-                            currentList.addAll(matching);
+                        case '+':   // '+' is for moving entry in the list.
+                            for (Def ele : matching) {
+                                if (!removed.contains(ele) && currentList.contains(ele)) {
+                                    currentList.remove(ele);
+                                    currentList.add(ele);
+                                }
+                            }
                             break;
                         case '-':
                             currentList.removeAll(matching);
@@ -503,7 +502,7 @@ public class CipherStrings {
                     }
                 } else {
                     for (Def ele : matching) {
-                        if (!removed.contains(ele)) {
+                        if (!removed.contains(ele) && !currentList.contains(ele)) {
                             currentList.add(ele);
                         }
                     }
@@ -513,7 +512,28 @@ public class CipherStrings {
         return currentList;
     }
 
-    private static List<Def> getMatching(Def pattern, String[] all) {
+    private static List<Def> getMatching(String definition, String[] all) {
+        List<Def> matching = null;
+        for (String name : definition.split("[+]")) {
+            Def pattern = Definitions.get(name);
+            if (pattern != null) {
+                if (matching == null) {
+                    matching = getMatchingPattern(pattern, all);
+                } else {
+                    List<Def> updated = new ArrayList<Def>();
+                    for (Def ele : getMatchingPattern(pattern, all)) {
+                        if (matching.contains(ele)) {
+                            updated.add(ele);
+                        }
+                    }
+                    matching = updated;
+                }
+            }
+        }
+        return matching;
+    }
+    
+    private static List<Def> getMatchingPattern(Def pattern, String[] all) {
         List<Def> matching = new ArrayList<Def>();
         for (String entry : all) {
             String ossl = SuiteToOSSL.get(entry);

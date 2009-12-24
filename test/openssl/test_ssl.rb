@@ -599,12 +599,26 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     assert_equal(all.sort, c.ciphers.sort)
     c.ciphers = 'ALL:!LOW:LOW'
     assert_equal(all - low, c.ciphers)
+    c.ciphers = 'ALL:!LOW:+LOW'
+    assert_equal(all - low, c.ciphers)
 
     # +
     c.ciphers = 'HIGH:LOW:+LOW'
     assert_equal(high + low, c.ciphers)
     c.ciphers = 'HIGH:LOW:+HIGH'
     assert_equal(low + high, c.ciphers)
+
+    # name+name
+    c.ciphers = 'RC4'
+    rc4 = c.ciphers
+    c.ciphers = 'RSA'
+    rsa = c.ciphers
+    c.ciphers = 'RC4+RSA'
+    assert_equal(rc4&rsa, c.ciphers) 
+    c.ciphers = 'RSA+RC4'
+    assert_equal(rc4&rsa, c.ciphers) 
+    c.ciphers = 'ALL:RSA+RC4'
+    assert_equal(all + ((rc4&rsa) - all), c.ciphers) 
   end
 
   def test_post_connection_check
