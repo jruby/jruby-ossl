@@ -40,7 +40,6 @@ import java.util.Iterator;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -59,6 +58,7 @@ import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.x509store.X509Utils;
 import org.jruby.javasupport.JavaEmbedUtils;
 import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
@@ -93,6 +93,7 @@ public class SSLSocket extends RubyObject {
     public SSLSocket(Ruby runtime, RubyClass type) {
         super(runtime,type);
         cSSLError = (RubyClass)((RubyModule)getRuntime().getModule("OpenSSL").getConstant("SSL")).getConstant("SSLError");
+        verifyResult = X509Utils.V_OK;
     }
 
     private RubyClass cSSLError;
@@ -113,6 +114,8 @@ public class SSLSocket extends RubyObject {
     private Selector rsel;
     private Selector wsel;
     private Selector asel;
+
+    int verifyResult;
     
     @JRubyMethod(name = "initialize", rest = true, frame = true)
     public IRubyObject _initialize(IRubyObject[] args, Block unused) {
@@ -163,7 +166,6 @@ public class SSLSocket extends RubyObject {
         if (!rubyCtx.isProtocolForClient()) {
             throw new RaiseException(runtime, cSSLError, "called a function you should not call", false);
         }
-
         try {
             ossl_ssl_setup();
             engine.setUseClientMode(true);
@@ -183,7 +185,6 @@ public class SSLSocket extends RubyObject {
             throw SSL.newSSLError(runtime, ex);
         } catch (IOException ex) {
             throw SSL.newSSLError(runtime, ex);
-        
         }
         return this;
     }
@@ -230,8 +231,11 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod
     public IRubyObject verify_result() {
-        // TODO: implement
-        return getRuntime().getNil();
+        if (engine == null) {
+            getRuntime().getWarnings().warn("SSL session is not started yet.");
+            return getRuntime().getNil();
+        }
+        return getRuntime().newFixnum(verifyResult);
     }
 
     private void waitSelect(Selector sel) {
@@ -270,7 +274,7 @@ public class SSLSocket extends RubyObject {
                 }
             } else if(hsStatus == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
                 if (netData.hasRemaining()) {
-                    while(flushData()) {};
+                    while(flushData()) {}
                 }
                 netData.clear();
                 res = engine.wrap(dummy, netData);
@@ -290,6 +294,7 @@ public class SSLSocket extends RubyObject {
             task.run();
         }
         hsStatus = engine.getHandshakeStatus();
+        verifyResult = rubyCtx.getLastVerifyResult();
     }
 
     private boolean flushData() throws IOException {		
@@ -355,7 +360,7 @@ public class SSLSocket extends RubyObject {
     private int readAndUnwrap() throws IOException {
         int bytesRead = c.read(peerNetData);
         if(bytesRead == -1) {
-            //            engine.closeInbound();			
+            engine.closeInbound();			
             if ((peerNetData.position() == 0) || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
                 return -1;
             }

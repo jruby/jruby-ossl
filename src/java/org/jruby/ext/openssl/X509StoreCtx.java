@@ -36,6 +36,7 @@ import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
+import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
@@ -155,8 +156,8 @@ public class X509StoreCtx extends RubyObject {
 
     @JRubyMethod(name="error=")
     public IRubyObject set_error(IRubyObject arg) {
-        System.err.println("WARNING: unimplemented method called: StoreContext#set_error");
-        return getRuntime().getNil();
+        ctx.setError(RubyNumeric.fix2int(arg));
+        return arg;
     }
 
     @JRubyMethod

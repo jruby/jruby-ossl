@@ -32,6 +32,7 @@ package org.jruby.ext.openssl;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -41,6 +42,7 @@ import javax.net.ssl.SSLEngine;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
+import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
@@ -48,9 +50,13 @@ import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.common.IRubyWarnings.ID;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.x509store.Certificate;
+import org.jruby.ext.openssl.x509store.Name;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
+import org.jruby.ext.openssl.x509store.X509Object;
+import org.jruby.ext.openssl.x509store.X509Utils;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -130,6 +136,8 @@ public class SSLContext extends RubyObject {
     private PKey t_key = null;
     private X509Cert t_cert = null;
     private java.security.cert.X509Certificate peer_cert;
+    /* TODO: should move to SSLSession after implemented */
+    private int verifyResult = 1; /* avoid 0 (= X509_V_OK) just in case */
 
     public void setPeer(java.security.cert.X509Certificate p) {
         this.peer_cert = p;
@@ -145,7 +153,7 @@ public class SSLContext extends RubyObject {
         t_key = (PKey)(((RubyArray)out).getList().get(1));
     }
 
-    public PKey getCallbackKey() {
+    PKey getCallbackKey() {
         IRubyObject cb = callMethod(getRuntime().getCurrentContext(),"client_cert_cb");
         if(t_key == null && !cb.isNil()) {
             initFromCallback(cb);
@@ -153,7 +161,7 @@ public class SSLContext extends RubyObject {
         return t_key;
     }
 
-    public X509Cert getCallbackCert() {
+    X509Cert getCallbackCert() {
         IRubyObject cb = callMethod(getRuntime().getCurrentContext(),"client_cert_cb");
         if(t_cert == null && !cb.isNil()) {
             initFromCallback(cb);
@@ -312,6 +320,102 @@ public class SSLContext extends RubyObject {
         return sb.toString();
     }
 
+    int getLastVerifyResult() {
+        return verifyResult;
+    }
+
+    void setLastVerifyResult(int verifyResult) {
+        this.verifyResult = verifyResult;
+    }
+
+    RubyFixnum getVerifyMode() {
+        IRubyObject value = getInstanceVariable("@verify_mode");
+        if (value != null && !value.isNil()) {
+            return (RubyFixnum) value;
+        } else {
+            return null;
+        }
+    }
+
+    PKey getPKey() {
+        IRubyObject value = getInstanceVariable("@key");
+        if (value != null && !value.isNil()) {
+            return (PKey) value;
+        } else {
+            return getCallbackKey();
+        }
+    }
+
+    X509Cert getCert() {
+        IRubyObject value = getInstanceVariable("@cert");
+        if (value != null && !value.isNil()) {
+            return (X509Cert) value;
+        } else {
+            return getCallbackCert();
+        }
+    }
+
+    StoreContext createStoreContext() {
+        StoreContext ctx = new StoreContext();
+        X509Store certStore = getCertStore();
+        Store store = null;
+        if (certStore != null) {
+            store = certStore.getStore();
+        }
+        if (ctx.init(store, null, null) == 0) {
+            return null;
+        }
+        String ca_file = getCaFile();
+        String ca_path = getCaPath();
+        if (ca_file != null || ca_path != null) {
+            if (ctx.loadVerifyLocations(ca_file, ca_path) == 0) {
+                getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
+            }
+        }
+        IRubyObject cb = getVerifyCallback();
+        if (cb != null) {
+            ctx.setVerifyCallback(X509Store.ossl_verify_cb);
+            ctx.setExtraData(1, cb);
+        }
+        return ctx;
+    }
+
+    private X509Store getCertStore() {
+        IRubyObject value = getInstanceVariable("@cert_store");
+        if (value != null && !value.isNil()) {
+            return (X509Store) value;
+        } else {
+            return null;
+        }
+    }
+
+    private String getCaFile() {
+        IRubyObject value = getInstanceVariable("@ca_file");
+        if (value != null && !value.isNil()) {
+            return value.convertToString().toString();
+        } else {
+            return null;
+        }
+    }
+
+    private String getCaPath() {
+        IRubyObject value = getInstanceVariable("@ca_path");
+        if (value != null && !value.isNil()) {
+            return value.convertToString().toString();
+        } else {
+            return null;
+        }
+    }
+
+    private IRubyObject getVerifyCallback() {
+        IRubyObject value = getInstanceVariable("@verify_callback");
+        if (value != null && !value.isNil()) {
+            return value;
+        } else {
+            return null;
+        }
+    }
+
     private KM getKM() {
         return new KM(this);
     }
@@ -321,7 +425,9 @@ public class SSLContext extends RubyObject {
     }
 
     private static class KM extends javax.net.ssl.X509ExtendedKeyManager {
-        private SSLContext ctt;
+
+        private final SSLContext ctt;
+        
         public KM(SSLContext ctt) {
             super();
             this.ctt = ctt;
@@ -329,17 +435,12 @@ public class SSLContext extends RubyObject {
 
         @Override
         public String chooseEngineClientAlias(String[] keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
-            PKey k = null;
-            if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {
-                k = (PKey)ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key");
-            } else {
-                k = ctt.getCallbackKey();
-            }
-            if(k == null) {
+            PKey k = ctt.getPKey();
+            if (k == null) {
                 return null;
             }
-            for(int i=0;i<keyType.length;i++) {
-                if(keyType[i].equalsIgnoreCase(k.getAlgorithm())) {
+            for (int i = 0; i < keyType.length; i++) {
+                if (keyType[i].equalsIgnoreCase(k.getAlgorithm())) {
                     return keyType[i];
                 }
             }
@@ -348,168 +449,130 @@ public class SSLContext extends RubyObject {
 
         @Override
         public String chooseEngineServerAlias(String keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
-            PKey k = null;
-            if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {
-                k = (PKey)ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key");
-            } else {
-                k = ctt.getCallbackKey();
-            }
-            if(k == null) {
+            PKey k = ctt.getPKey();
+            if (k == null) {
                 return null;
             }
-            if(keyType.equalsIgnoreCase(k.getAlgorithm())) {
+            if (keyType.equalsIgnoreCase(k.getAlgorithm())) {
                 return keyType;
             }
             return null;
         }
-        public String 	chooseClientAlias(String[] keyType, java.security.Principal[] issuers, java.net.Socket socket) {
+
+        public String chooseClientAlias(String[] keyType, java.security.Principal[] issuers, java.net.Socket socket) {
             return null;
         }
-        public String 	chooseServerAlias(String keyType, java.security.Principal[] issuers, java.net.Socket socket) {
+
+        public String chooseServerAlias(String keyType, java.security.Principal[] issuers, java.net.Socket socket) {
             return null;
         }
-        public java.security.cert.X509Certificate[] 	getCertificateChain(String alias) {
-            X509Cert c = null;
-            if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"cert").isNil()) {
-                c = (X509Cert)ctt.callMethod(ctt.getRuntime().getCurrentContext(),"cert");
-            } else {
-                c = ctt.getCallbackCert();
-            }
-            if(c == null) {
+
+        // c: ssl3_output_cert_chain
+        public java.security.cert.X509Certificate[] getCertificateChain(String alias) {
+            X509Cert c = ctt.getCert();
+            if (c == null) {
                 return null;
             }
-            return new java.security.cert.X509Certificate[]{c.getAuxCert()};
+            StoreContext ctx = ctt.createStoreContext();
+            X509AuxCertificate x = c.getAuxCert();
+            ArrayList<java.security.cert.X509Certificate> chain = new ArrayList<java.security.cert.X509Certificate>();
+            while (true) {
+                chain.add(x);
+                if (x.getIssuerDN().equals(x.getSubjectDN())) {
+                    break;
+                }
+                try {
+                    Name xn = new Name(c.getAuxCert().getIssuerX500Principal());
+                    X509Object[] s_obj = new X509Object[1];
+                    if (ctx.getBySubject(X509Utils.X509_LU_X509, xn, s_obj) <= 0) {
+                        break;
+                    }
+                    x = ((Certificate) s_obj[0]).x509;
+                } catch (Exception e) {
+                    break;
+                }
+            }
+            return chain.toArray(new java.security.cert.X509Certificate[0]);
         }
-        public String[] 	getClientAliases(String keyType, java.security.Principal[] issuers) {
+
+        public String[] getClientAliases(String keyType, java.security.Principal[] issuers) {
             return null;
         }
-        public java.security.PrivateKey 	getPrivateKey(String alias) {
-            PKey k = null;
-            if(!ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key").isNil()) {
-                k = (PKey)ctt.callMethod(ctt.getRuntime().getCurrentContext(),"key");
-            } else {
-                k = ctt.getCallbackKey();
-            }
-            if(k == null) {
+
+        public java.security.PrivateKey getPrivateKey(String alias) {
+            PKey k = ctt.getPKey();
+            if (k == null) {
                 return null;
             }
             return k.getPrivateKey();
         }
-        public String[] 	getServerAliases(String keyType, java.security.Principal[] issuers) {
+
+        public String[] getServerAliases(String keyType, java.security.Principal[] issuers) {
             return null;
         }
     }
 
     private static class TM implements javax.net.ssl.X509TrustManager {
+
         private SSLContext ctt;
+
         public TM(SSLContext ctt) {
             this.ctt = ctt;
         }
 
         public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
-            if(ctt.callMethod(ctt.getRuntime().getCurrentContext(),"verify_mode").isNil()) {
-                if(chain != null && chain.length > 0) {
-                    ctt.setPeer(chain[0]);
-                }
-                return;
-            }
-
-            int verify_mode = RubyNumeric.fix2int(ctt.callMethod(ctt.getRuntime().getCurrentContext(),"verify_mode"));
-            if(chain != null && chain.length > 0) {
-                ctt.setPeer(chain[0]);
-                if((verify_mode & 0x1) != 0) { // verify_peer
-                    X509AuxCertificate x = StoreContext.ensureAux(chain[0]);
-                    StoreContext ctx = new StoreContext();
-                    IRubyObject str = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"cert_store");
-                    Store store = null;
-                    if(!str.isNil()) {
-                        store = ((X509Store)str).getStore();
-                    }
-                    if(ctx.init(store,x,StoreContext.ensureAux(chain)) == 0) {
-                        throw new CertificateException("couldn't initialize store");
-                    }
-
-                    ctx.setDefault("ssl_client");
-
-                    IRubyObject val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_file");
-                    String ca_file = val.isNil() ? null : val.convertToString().toString();
-                    val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_path");
-                    String ca_path = val.isNil() ? null : val.convertToString().toString();
-
-                    if(ca_file != null || ca_path != null) {
-                        if(ctx.loadVerifyLocations(ca_file, ca_path) == 0) {
-                            ctt.getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
-                        }
-                    }
-
-                    try {
-                        if(ctx.verifyCertificate() == 0) {
-                            throw new CertificateException("certificate verify failed");
-                        }
-                    } catch(Exception e) {
-                        throw new CertificateException("certificate verify failed");
-                    }
-                }
-            } else {
-                if((verify_mode & 0x2) != 0) { // fail if no peer cer
-                    throw new CertificateException("no peer certificate");
-                }
-            }
+            checkTrusted("ssl_client", chain);
         }
 
         public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
-            if(ctt.callMethod(ctt.getRuntime().getCurrentContext(),"verify_mode").isNil()) {
-                if(chain != null && chain.length > 0) {
-                    ctt.setPeer(chain[0]);
-                }
+            checkTrusted("ssl_server", chain);
+        }
+
+        // TODO: check CRuby compatibility
+        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+            return new java.security.cert.X509Certificate[0];
+        }
+
+        // c: ssl_verify_cert_chain
+        private void checkTrusted(String purpose, X509Certificate[] chain) throws CertificateException {
+            if (chain != null && chain.length > 0) {
+                ctt.setPeer(chain[0]);
+            }
+            if (ctt.getVerifyMode() == null) {
                 return;
             }
-
-            int verify_mode = RubyNumeric.fix2int(ctt.callMethod(ctt.getRuntime().getCurrentContext(),"verify_mode"));
-            if(chain != null && chain.length > 0) {
+            int verify_mode = RubyNumeric.fix2int(ctt.getVerifyMode());
+            if (chain != null && chain.length > 0) {
                 ctt.setPeer(chain[0]);
-                if((verify_mode & 0x1) != 0) { // verify_peer
-                    X509AuxCertificate x = StoreContext.ensureAux(chain[0]);
-                    StoreContext ctx = new StoreContext();
-                    IRubyObject str = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"cert_store");
-                    Store store = null;
-                    if(!str.isNil()) {
-                        store = ((X509Store)str).getStore();
-                    }
-                    if(ctx.init(store,x,StoreContext.ensureAux(chain)) == 0) {
+                if ((verify_mode & 0x1) != 0) {
+                    // verify_peer
+                    StoreContext ctx = ctt.createStoreContext();
+                    if (ctx == null) {
                         throw new CertificateException("couldn't initialize store");
                     }
-
-                    ctx.setDefault("ssl_server");
-
-                    IRubyObject val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_file");
-                    String ca_file = val.isNil() ? null : val.convertToString().toString();
-                    val = ctt.callMethod(ctt.getRuntime().getCurrentContext(),"ca_path");
-                    String ca_path = val.isNil() ? null : val.convertToString().toString();
-
-                    if(ca_file != null || ca_path != null) {
-                        if(ctx.loadVerifyLocations(ca_file, ca_path) == 0) {
-                            ctt.getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
-                        }
-                    }
-
-                    try {
-                        if(ctx.verifyCertificate() == 0) {
-                            throw new CertificateException("certificate verify failed");
-                        }
-                    } catch(Exception e) {
-                        throw new CertificateException("certificate verify failed");
-                    }
+                    ctx.setCertificate(chain[0]);
+                    ctx.setChain(chain);
+                    ctx.setDefault(purpose);
+                    verifyChain(ctx);
                 }
             } else {
-                if((verify_mode & 0x2) != 0) { // fail if no peer cer
+                if ((verify_mode & 0x2) != 0) {
+                    // fail if no peer cert
                     throw new CertificateException("no peer certificate");
                 }
             }
         }
 
-        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-            return new java.security.cert.X509Certificate[0];
+        private void verifyChain(StoreContext ctx) throws CertificateException {
+            try {
+                int ok = ctx.verifyCertificate();
+                ctt.setLastVerifyResult(ctx.error);
+                if (ok == 0) {
+                    throw new CertificateException("certificate verify failed");
+                }
+            } catch (Exception e) {
+                throw new CertificateException("certificate verify failed", e);
+            }
         }
     }
 }// SSLContext

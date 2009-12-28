@@ -164,6 +164,9 @@ public class StoreContext {
     }
 
     public static List<X509AuxCertificate> ensureAux(Collection inp) {
+        if (inp == null) {
+            return null;
+        }
         List<X509AuxCertificate> out = new ArrayList<X509AuxCertificate>();
         for(Object o : inp) {
             out.add(ensureAux((X509Certificate)o));
@@ -172,6 +175,9 @@ public class StoreContext {
     }
 
     public static List<X509AuxCertificate> ensureAux(X509Certificate[] inp) {
+        if (inp == null) {
+            return null;
+        }
         List<X509AuxCertificate> o = new ArrayList<X509AuxCertificate>();
         for(X509Certificate c : inp) {
             o.add(ensureAux(c));
@@ -180,6 +186,9 @@ public class StoreContext {
     }
 
     public static X509AuxCertificate ensureAux(X509Certificate i) {
+        if (i == null) {
+            return null;
+        }
         if(i instanceof X509AuxCertificate) {
             return (X509AuxCertificate)i;
         } else {
@@ -389,14 +398,22 @@ public class StoreContext {
      */
     public void setCertificate(X509AuxCertificate x) {
         this.certificate = x;
-    } 
+    }
+
+    public void setCertificate(X509Certificate x) {
+        this.certificate = ensureAux(x);
+    }
 
     /**
      * c: X509_STORE_CTX_set_chain
      */
     public void setChain(List sk) {
         this.untrusted = ensureAux(sk);
-    } 
+    }
+
+    public void setChain(X509Certificate[] sk) {
+        this.untrusted = ensureAux(sk);
+    }
 
     /**
      * c: X509_STORE_CTX_set0_crls

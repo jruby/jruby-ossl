@@ -436,6 +436,7 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
       ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
       assert_raise(OpenSSL::SSL::SSLError){ ssl.connect }
       assert_equal(OpenSSL::X509::V_ERR_SELF_SIGNED_CERT_IN_CHAIN, ssl.verify_result)
+      sock.close # TODO: ssls.accept should not block w/o this. not sending closing alert?
 
       sock = TCPSocket.new("127.0.0.1", port)
       ctx = OpenSSL::SSL::SSLContext.new
@@ -448,6 +449,7 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
       ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
       ssl.connect
       assert_equal(OpenSSL::X509::V_OK, ssl.verify_result)
+      sock.close # TODO: ssls.accept should not block w/o this. not sending closing alert?
 
       sock = TCPSocket.new("127.0.0.1", port)
       ctx = OpenSSL::SSL::SSLContext.new
@@ -460,6 +462,7 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
       ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
       assert_raise(OpenSSL::SSL::SSLError){ ssl.connect }
       assert_equal(OpenSSL::X509::V_ERR_APPLICATION_VERIFICATION, ssl.verify_result)
+      sock.close # TODO: ssls.accept should not block w/o this. not sending closing alert?
     }
   end
 

@@ -236,7 +236,7 @@ public class X509Store extends RubyObject {
         return result;
     }
 
-    private final static Store.VerifyCallbackFunction ossl_verify_cb = new Store.VerifyCallbackFunction() {
+    public final static Store.VerifyCallbackFunction ossl_verify_cb = new Store.VerifyCallbackFunction() {
 
         public int call(Object a1, Object a2) throws Exception {
             StoreContext ctx = (StoreContext) a2;
