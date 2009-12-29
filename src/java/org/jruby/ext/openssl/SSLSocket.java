@@ -174,16 +174,22 @@ public class SSLSocket extends RubyObject {
             initialHandshake = true;
             doHandshake();
         } catch(SSLHandshakeException e) {
+            // unlike server side, client should close outbound channel even if
+            // we have remaining data to be sent.
+            forceClose();
             Throwable v = e;
             while(v.getCause() != null && (v instanceof SSLHandshakeException)) {
                 v = v.getCause();
             }
             throw SSL.newSSLError(runtime, v);
         } catch (NoSuchAlgorithmException ex) {
+            forceClose();
             throw SSL.newSSLError(runtime, ex);
         } catch (KeyManagementException ex) {
+            forceClose();
             throw SSL.newSSLError(runtime, ex);
         } catch (IOException ex) {
+            forceClose();
             throw SSL.newSSLError(runtime, ex);
         }
         return this;
@@ -225,7 +231,6 @@ public class SSLSocket extends RubyObject {
         } catch (IOException ex) {
             throw SSL.newSSLError(runtime, ex);
         }
-
         return this;
     }
 
@@ -489,10 +494,16 @@ public class SSLSocket extends RubyObject {
         }
     }
 
-    private void close()  {
+    // do shutdown even if we have remaining data to be sent.
+    // call this when you get an exception from client side.
+    private void forceClose() {
+        close(true);
+    }
+
+    private void close(boolean force)  {
         if (engine == null) throw getRuntime().newEOFError();
         engine.closeOutbound();
-        if (netData.hasRemaining()) {
+        if (!force && netData.hasRemaining()) {
             return;
         } else {
             try {
@@ -505,7 +516,7 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod
     public IRubyObject sysclose()  {
-        close();
+        close(false);
         ThreadContext tc = getRuntime().getCurrentContext();
         if(callMethod(tc,"sync_close").isTrue()) {
             callMethod(tc,"io").callMethod(tc,"close");
