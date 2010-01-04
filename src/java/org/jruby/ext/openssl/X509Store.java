@@ -148,33 +148,11 @@ public class X509Store extends RubyObject {
 
     @JRubyMethod
     public IRubyObject add_file(IRubyObject arg) {
-        String path = arg.toString();
-        FileReader in = null;
+        String file = arg.toString();
         try {
-            in = new FileReader(path);
-            Reader r = new BufferedReader(in);
-            for (;;) {
-                Object o = PEMInputOutput.readPEM(r, null);
-                if (o == null) {
-                    break;
-                }
-                if (o instanceof X509AuxCertificate && store.addCertificate((X509AuxCertificate) o) != 1) {
-                    raise("can't store certificate");
-                } else if (o instanceof X509CRL && store.addCRL((java.security.cert.CRL) o) != 1) {
-                    raise("can't store crl");
-                }
-            }
-        }
-        catch (FileNotFoundException e) {
-            raise("file not found: "+ e.getMessage());
-        }
-        catch (IOException e) {
-            raise("error while reading file: "+ e.getMessage());
-        }
-        finally {
-            if (in != null) {
-                try { in.close(); } catch(Exception e) {}
-            }
+            store.loadLocations(file, null);
+        } catch (Exception e) {
+            raise("loading file failed: " + e.getMessage());
         }
         return this;
     }

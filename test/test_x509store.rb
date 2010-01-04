@@ -86,6 +86,14 @@ class TestX509Store < Test::Unit::TestCase
     assert_equal(true, @store.verify(cert))
   end
 
+  # jruby-openssl/0.6 raises "can't store certificate" because of duplicated
+  # subject. ruby-openssl just ignores the second certificate.
+  def test_add_file_JRUBY_4409
+    assert_nothing_raised do
+      @store.add_file("test/fixture/ca-bundle.crt")
+    end
+  end
+
   def test_set_default_paths
     @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
     cert = OpenSSL::X509::Certificate.new(File.read("test/fixture/purpose/sslserver.pem"))
