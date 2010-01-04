@@ -463,6 +463,74 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     }
   end
 
+  def test_extra_chain_cert
+    start_server(PORT, OpenSSL::SSL::VERIFY_PEER, true){|server, port|
+      sock = TCPSocket.new("127.0.0.1", port)
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.set_params
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      assert_raise(OpenSSL::SSL::SSLError){ ssl.connect }
+      assert_equal(OpenSSL::X509::V_ERR_SELF_SIGNED_CERT_IN_CHAIN, ssl.verify_result)
+    }
+    # server returns a chain w/o root cert so the client verification fails
+    # with UNABLE_TO_GET_ISSUER_CERT_LOCALLY not SELF_SIGNED_CERT_IN_CHAIN.
+    args = {}
+    args[:ctx_proc] = proc { |server_ctx|
+      server_ctx.cert = @svr_cert
+      server_ctx.key = @svr_key
+      server_ctx.extra_chain_cert = [@svr_cert]
+    }
+    start_server(PORT, OpenSSL::SSL::VERIFY_PEER, true, args){|server, port|
+      sock = TCPSocket.new("127.0.0.1", port)
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.set_params
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      assert_raise(OpenSSL::SSL::SSLError){ ssl.connect }
+      assert_equal(OpenSSL::X509::V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY, ssl.verify_result)
+    }
+  end
+
+  def test_client_ca
+    args = {}
+    vflag = OpenSSL::SSL::VERIFY_PEER|OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT
+
+    # client_ca as a cert
+    args[:ctx_proc] = proc { |server_ctx|
+      server_ctx.cert = @svr_cert
+      server_ctx.key = @svr_key
+      server_ctx.client_ca = @ca_cert
+    }
+    start_server(PORT, vflag, true, args){|server, port|
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.key = @cli_key
+      ctx.cert = @cli_cert
+      sock = TCPSocket.new("127.0.0.1", port)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      ssl.sync_close = true
+      ssl.connect
+      ssl.puts("foo")
+      assert_equal("foo\n", ssl.gets)
+    }
+
+    # client_ca as an array
+    args[:ctx_proc] = proc { |server_ctx|
+      server_ctx.cert = @svr_cert
+      server_ctx.key = @svr_key
+      server_ctx.client_ca = [@ca_cert, @svr_cert]
+    }
+    start_server(PORT, vflag, true, args){|server, port|
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.key = @cli_key
+      ctx.cert = @cli_cert
+      sock = TCPSocket.new("127.0.0.1", port)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      ssl.sync_close = true
+      ssl.connect
+      ssl.puts("foo")
+      assert_equal("foo\n", ssl.gets)
+    }
+  end
+
   def test_sslctx_ssl_version_client
     start_server(PORT, OpenSSL::SSL::VERIFY_NONE, true){|server, port|
       sock = TCPSocket.new("127.0.0.1", port)

@@ -57,7 +57,13 @@ import org.jruby.ext.openssl.x509store.StoreContext;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.X509Object;
 import org.jruby.ext.openssl.x509store.X509Utils;
+import org.jruby.javasupport.util.RuntimeHelpers;
+import org.jruby.runtime.Arity;
+import org.jruby.runtime.Block;
+import org.jruby.runtime.BlockCallback;
+import org.jruby.runtime.CallBlock;
 import org.jruby.runtime.ObjectAllocator;
+import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 
 /**
@@ -355,6 +361,29 @@ public class SSLContext extends RubyObject {
         }
     }
 
+    X509Cert[] getExtraChainCert() {
+        IRubyObject value = getInstanceVariable("@extra_chain_cert");
+        if (value != null && !value.isNil()) {
+            return convertToX509Certs(value);
+        } else {
+            return null;
+        }
+    }
+
+    X509Cert[] getClientCa() {
+        IRubyObject value = getInstanceVariable("@client_ca");
+        if (value != null && !value.isNil()) {
+            if (value.respondsTo("each")) {
+                return convertToX509Certs(value);
+            } else {
+                return new X509Cert[]{(X509Cert) value};
+            }
+        } else {
+            return null;
+        }
+    }
+
+    // c: ossl_sslctx_setup
     StoreContext createStoreContext() {
         StoreContext ctx = new StoreContext();
         X509Store certStore = getCertStore();
@@ -365,6 +394,7 @@ public class SSLContext extends RubyObject {
         if (ctx.init(store, null, null) == 0) {
             return null;
         }
+        // TODO: handle tmp_dh_callback
         String ca_file = getCaFile();
         String ca_path = getCaPath();
         if (ca_file != null || ca_path != null) {
@@ -372,11 +402,51 @@ public class SSLContext extends RubyObject {
                 getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
             }
         }
+        // TODO: set verify mode
         IRubyObject cb = getVerifyCallback();
         if (cb != null) {
             ctx.setVerifyCallback(X509Store.ossl_verify_cb);
             ctx.setExtraData(1, cb);
         }
+        /* TODO
+    val = ossl_sslctx_get_timeout(self);
+    if(!NIL_P(val)) SSL_CTX_set_timeout(ctx, NUM2LONG(val));
+
+    val = ossl_sslctx_get_verify_dep(self);
+    if(!NIL_P(val)) SSL_CTX_set_verify_depth(ctx, NUM2LONG(val));
+
+    val = ossl_sslctx_get_options(self);
+    if(!NIL_P(val)) SSL_CTX_set_options(ctx, NUM2LONG(val));
+    rb_obj_freeze(self);
+
+    val = ossl_sslctx_get_sess_id_ctx(self);
+    if (!NIL_P(val)){
+        StringValue(val);
+        if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)RSTRING_PTR(val),
+                                            RSTRING_LEN(val))){
+            ossl_raise(eSSLError, "SSL_CTX_set_session_id_context:");
+        }
+    }
+
+    if (RTEST(rb_iv_get(self, "@session_get_cb"))) {
+        SSL_CTX_sess_set_get_cb(ctx, ossl_sslctx_session_get_cb);
+        OSSL_Debug("SSL SESSION get callback added");
+    }
+    if (RTEST(rb_iv_get(self, "@session_new_cb"))) {
+        SSL_CTX_sess_set_new_cb(ctx, ossl_sslctx_session_new_cb);
+        OSSL_Debug("SSL SESSION new callback added");
+    }
+    if (RTEST(rb_iv_get(self, "@session_remove_cb"))) {
+        SSL_CTX_sess_set_remove_cb(ctx, ossl_sslctx_session_remove_cb);
+        OSSL_Debug("SSL SESSION remove callback added");
+    }
+
+    val = rb_iv_get(self, "@servername_cb");
+    if (!NIL_P(val)) {
+        SSL_CTX_set_tlsext_servername_callback(ctx, ssl_servername_cb);
+        OSSL_Debug("SSL TLSEXT servername callback added");
+    }
+         */
         return ctx;
     }
 
@@ -414,6 +484,19 @@ public class SSLContext extends RubyObject {
         } else {
             return null;
         }
+    }
+
+    private X509Cert[] convertToX509Certs(IRubyObject value) {
+        final ArrayList<X509Cert> result = new ArrayList<X509Cert>();
+        ThreadContext ctx = getRuntime().getCurrentContext();
+        RuntimeHelpers.invoke(ctx, value, "each", CallBlock.newCallClosure(value, null, Arity.NO_ARGUMENTS, new BlockCallback() {
+
+            public IRubyObject call(ThreadContext context, IRubyObject[] args, Block block) {
+                result.add((X509Cert) args[0]);
+                return context.getRuntime().getNil();
+            }
+        }, ctx));
+        return result.toArray(new X509Cert[0]);
     }
 
     private KM getKM() {
@@ -469,27 +552,37 @@ public class SSLContext extends RubyObject {
 
         // c: ssl3_output_cert_chain
         public java.security.cert.X509Certificate[] getCertificateChain(String alias) {
-            X509Cert c = ctt.getCert();
-            if (c == null) {
-                return null;
-            }
-            StoreContext ctx = ctt.createStoreContext();
-            X509AuxCertificate x = c.getAuxCert();
             ArrayList<java.security.cert.X509Certificate> chain = new ArrayList<java.security.cert.X509Certificate>();
-            while (true) {
-                chain.add(x);
-                if (x.getIssuerDN().equals(x.getSubjectDN())) {
-                    break;
+            X509Cert[] ary = ctt.getExtraChainCert();
+            if (ary != null) {
+                for (X509Cert ele : ary) {
+                    chain.add(ele.getAuxCert());
                 }
-                try {
-                    Name xn = new Name(c.getAuxCert().getIssuerX500Principal());
-                    X509Object[] s_obj = new X509Object[1];
-                    if (ctx.getBySubject(X509Utils.X509_LU_X509, xn, s_obj) <= 0) {
+            } else {
+                X509Cert c = ctt.getCert();
+                if (c == null) {
+                    return null;
+                }
+                StoreContext ctx = ctt.createStoreContext();
+                if (ctx == null) {
+                    return null;
+                }
+                X509AuxCertificate x = c.getAuxCert();
+                while (true) {
+                    chain.add(x);
+                    if (x.getIssuerDN().equals(x.getSubjectDN())) {
                         break;
                     }
-                    x = ((Certificate) s_obj[0]).x509;
-                } catch (Exception e) {
-                    break;
+                    try {
+                        Name xn = new Name(c.getAuxCert().getIssuerX500Principal());
+                        X509Object[] s_obj = new X509Object[1];
+                        if (ctx.getBySubject(X509Utils.X509_LU_X509, xn, s_obj) <= 0) {
+                            break;
+                        }
+                        x = ((Certificate) s_obj[0]).x509;
+                    } catch (Exception e) {
+                        break;
+                    }
                 }
             }
             return chain.toArray(new java.security.cert.X509Certificate[0]);
@@ -528,9 +621,15 @@ public class SSLContext extends RubyObject {
             checkTrusted("ssl_server", chain);
         }
 
-        // TODO: check CRuby compatibility
         public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-            return new java.security.cert.X509Certificate[0];
+            ArrayList<java.security.cert.X509Certificate> chain = new ArrayList<java.security.cert.X509Certificate>();
+            X509Cert[] certs = ctt.getClientCa();
+            if (certs != null) {
+                for (X509Cert ele : certs) {
+                    chain.add(ele.getAuxCert());
+                }
+            }
+            return chain.toArray(new java.security.cert.X509Certificate[0]);
         }
 
         // c: ssl_verify_cert_chain
