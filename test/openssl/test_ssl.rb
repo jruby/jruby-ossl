@@ -689,6 +689,39 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     assert_equal(all + ((rc4&rsa) - all), c.ciphers) 
   end
 
+  def test_sslctx_options
+    args = {}
+    args[:ctx_proc] = proc { |server_ctx|
+      # TLSv1 only
+      server_ctx.options = OpenSSL::SSL::OP_NO_SSLv2|OpenSSL::SSL::OP_NO_SSLv3
+    }
+    start_server(PORT, OpenSSL::SSL::VERIFY_NONE, true, args){|server, port|
+      sock = TCPSocket.new("127.0.0.1", port)
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.set_params
+      ctx.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      ctx.options = OpenSSL::SSL::OP_NO_TLSv1
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      assert_raise(OpenSSL::SSL::SSLError, Errno::ECONNRESET) do
+        ssl.connect
+      end
+      ssl.close
+      sock.close
+      #
+      sock = TCPSocket.new("127.0.0.1", port)
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.set_params
+      ctx.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      ctx.options = OpenSSL::SSL::OP_NO_SSLv3
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      assert_nothing_raised do
+        ssl.connect
+      end
+      ssl.close
+      sock.close
+    }
+  end
+
   def test_post_connection_check
     sslerr = OpenSSL::SSL::SSLError
 

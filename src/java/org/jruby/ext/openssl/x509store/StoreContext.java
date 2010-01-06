@@ -617,9 +617,9 @@ public class StoreContext {
     }
 
     /**
-     * c: X509_STORE_get_by_subject
+     * c: X509_STORE_get_by_subject (it gets X509_STORE_CTX as the first parameter)
      */
-    public int getBySubject(int type,Name name,X509Object[] ret) throws Exception { 
+    public int getBySubject(int type,Name name,X509Object[] ret) throws Exception {
         Store c = ctx;
 
         X509Object tmp = X509Object.retrieveBySubject(c.objs,type,name);

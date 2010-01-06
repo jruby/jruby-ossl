@@ -364,8 +364,13 @@ public class SSLSocket extends RubyObject {
 
     private int readAndUnwrap() throws IOException {
         int bytesRead = c.read(peerNetData);
-        if(bytesRead == -1) {
-            engine.closeInbound();			
+        if (bytesRead == -1) {
+            try {
+                engine.closeInbound();
+            } catch (SSLException ssle) {
+                // ignore any error on close. possibly an error like this;
+                // Inbound closed before receiving peer's close_notify: possible truncation attack?
+            }
             if ((peerNetData.position() == 0) || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
                 return -1;
             }

@@ -27,10 +27,10 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
-
-
+import java.security.GeneralSecurityException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -44,7 +44,6 @@ import org.jruby.RubyArray;
 import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
-import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
@@ -71,10 +70,10 @@ import org.jruby.runtime.builtin.IRubyObject;
  */
 public class SSLContext extends RubyObject {
     private final static String[] ctx_attrs = {
-    "cert", "key", "client_ca", "ca_file", "ca_path",
-    "timeout", "verify_mode", "verify_depth",
-    "verify_callback", "options", "cert_store", "extra_chain_cert",
-    "client_cert_cb", "tmp_dh_callback", "session_id_context"};
+        "cert", "key", "client_ca", "ca_file", "ca_path",
+        "timeout", "verify_mode", "verify_depth",
+        "verify_callback", "options", "cert_store", "extra_chain_cert",
+        "client_cert_cb", "tmp_dh_callback", "session_id_context"};
 
     // Mapping table for OpenSSL's SSL_METHOD -> JSSE's SSLContext algorithm.
     private final static Map<String, String> SSL_VERSION_OSSL2JSSE;
@@ -141,39 +140,10 @@ public class SSLContext extends RubyObject {
     private boolean protocolForClient = true;
     private PKey t_key = null;
     private X509Cert t_cert = null;
-    private java.security.cert.X509Certificate peer_cert;
     /* TODO: should move to SSLSession after implemented */
     private int verifyResult = 1; /* avoid 0 (= X509_V_OK) just in case */
 
-    public void setPeer(java.security.cert.X509Certificate p) {
-        this.peer_cert = p;
-    }
-
-    public java.security.cert.X509Certificate getPeer() {
-        return this.peer_cert;
-    }
-
-    private void initFromCallback(IRubyObject cb) {
-        IRubyObject out = cb.callMethod(getRuntime().getCurrentContext(),"call",this);
-        t_cert = (X509Cert)(((RubyArray)out).getList().get(0));
-        t_key = (PKey)(((RubyArray)out).getList().get(1));
-    }
-
-    PKey getCallbackKey() {
-        IRubyObject cb = callMethod(getRuntime().getCurrentContext(),"client_cert_cb");
-        if(t_key == null && !cb.isNil()) {
-            initFromCallback(cb);
-        }
-        return t_key;
-    }
-
-    X509Cert getCallbackCert() {
-        IRubyObject cb = callMethod(getRuntime().getCurrentContext(),"client_cert_cb");
-        if(t_cert == null && !cb.isNil()) {
-            initFromCallback(cb);
-        }
-        return t_cert;
-    }
+    private InternalContext internalCtx = null;
 
     @JRubyMethod(rest=true)
     public IRubyObject initialize(IRubyObject[] args) {
@@ -185,8 +155,132 @@ public class SSLContext extends RubyObject {
         if (isFrozen()) {
             return getRuntime().getNil();
         }
-        // should do good things for performance: SSLContext, KM and TM setup and cache.
         this.freeze(getRuntime().getCurrentContext());
+        
+        internalCtx = new InternalContext();
+        internalCtx.protocol = protocol;
+        internalCtx.protocolForServer = protocolForServer;
+        internalCtx.protocolForClient = protocolForClient;
+
+        // TODO: handle tmp_dh_callback
+
+        X509Store certStore = getCertStore();
+        if (certStore != null) {
+            internalCtx.store = certStore.getStore();
+        } else {
+            internalCtx.store = new Store();
+        }
+
+        IRubyObject value = getInstanceVariable("@extra_chain_cert");
+        if (value != null && !value.isNil()) {
+            internalCtx.extraChainCert = new ArrayList<X509AuxCertificate>();
+            for (X509Cert ele : convertToX509Certs(value)) {
+                internalCtx.extraChainCert.add(ele.getAuxCert());
+            }
+        }
+
+        value = getInstanceVariable("@key");
+        PKey key = null;
+        if (value != null && !value.isNil()) {
+            Utils.checkKind(getRuntime(), value, "OpenSSL::PKey::PKey");
+            key = (PKey) value;
+        } else {
+            key = getCallbackKey();
+        }
+        value = getInstanceVariable("@cert");
+        X509Cert cert = null;
+        if (value != null && !value.isNil()) {
+            Utils.checkKind(getRuntime(), value, "OpenSSL::X509::Certificate");
+            cert = (X509Cert) value;
+        } else {
+            cert = getCallbackCert();
+        }
+        if (key != null && cert != null) {
+            internalCtx.keyAlgorithm = key.getAlgorithm();
+            internalCtx.privateKey = key.getPrivateKey();
+            internalCtx.cert = cert.getAuxCert();
+        }
+
+        value = getInstanceVariable("@client_ca");
+        if (value != null && !value.isNil()) {
+            if (value.respondsTo("each")) {
+                for (X509Cert ele : convertToX509Certs(value)) {
+                    internalCtx.clientCa.add(ele.getAuxCert());
+                }
+            } else {
+                Utils.checkKind(getRuntime(), value, "OpenSSL::X509::Certificate");
+                internalCtx.clientCa.add(((X509Cert) value).getAuxCert());
+            }
+        }
+
+        String caFile = getCaFile();
+        String caPath = getCaPath();
+        if (caFile != null || caPath != null) {
+            try {
+                if (internalCtx.store.loadLocations(caFile, caPath) == 0) {
+                    getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
+                }
+            } catch (Exception e) {
+                throw new RaiseException(getRuntime(), cSSLError, e.getMessage(), false);
+            }
+        }
+
+        value = getInstanceVariable("@verify_mode");
+        if (value != null && !value.isNil()) {
+            internalCtx.verifyMode = RubyFixnum.fix2int(value);
+        } else {
+            internalCtx.verifyMode = SSL.VERIFY_NONE;
+        }
+        value = getInstanceVariable("@verify_callback");
+        if (value != null && !value.isNil()) {
+            internalCtx.store.setExtraData(1, value);
+        }
+
+        value = getInstanceVariable("@timeout");
+        if (value != null && !value.isNil()) {
+            internalCtx.timeout = RubyFixnum.fix2int(value);
+        }
+        
+        value = getInstanceVariable("@verify_depth");
+        if (value != null && !value.isNil()) {
+            internalCtx.store.setDepth(RubyFixnum.fix2int(value));
+        }
+
+        /* TODO: should be implemented for SSLSession
+    val = ossl_sslctx_get_sess_id_ctx(self);
+    if (!NIL_P(val)){
+        StringValue(val);
+        if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)RSTRING_PTR(val),
+                                            RSTRING_LEN(val))){
+            ossl_raise(eSSLError, "SSL_CTX_set_session_id_context:");
+        }
+    }
+
+    if (RTEST(rb_iv_get(self, "@session_get_cb"))) {
+        SSL_CTX_sess_set_get_cb(ctx, ossl_sslctx_session_get_cb);
+        OSSL_Debug("SSL SESSION get callback added");
+    }
+    if (RTEST(rb_iv_get(self, "@session_new_cb"))) {
+        SSL_CTX_sess_set_new_cb(ctx, ossl_sslctx_session_new_cb);
+        OSSL_Debug("SSL SESSION new callback added");
+    }
+    if (RTEST(rb_iv_get(self, "@session_remove_cb"))) {
+        SSL_CTX_sess_set_remove_cb(ctx, ossl_sslctx_session_remove_cb);
+        OSSL_Debug("SSL SESSION remove callback added");
+    }
+
+    val = rb_iv_get(self, "@servername_cb");
+    if (!NIL_P(val)) {
+        SSL_CTX_set_tlsext_servername_callback(ctx, ssl_servername_cb);
+        OSSL_Debug("SSL TLSEXT servername callback added");
+    }
+         */
+
+        try {
+            internalCtx.init();
+        } catch(GeneralSecurityException gse) {
+            throw new RaiseException(getRuntime(), cSSLError, gse.getMessage(), false);
+        }
         return getRuntime().getTrue();
     }
 
@@ -195,7 +289,8 @@ public class SSLContext extends RubyObject {
         List<IRubyObject> list = new ArrayList<IRubyObject>();
         Ruby rt = getRuntime();
         try {
-            List<CipherStrings.Def> ciphs = CipherStrings.getMatchingCiphers(ciphers, createSSLEngine().getSupportedCipherSuites());
+            String[] supported = getCipherSuites(createDummySSLEngine());
+            List<CipherStrings.Def> ciphs = CipherStrings.getMatchingCiphers(ciphers, supported);
             for (CipherStrings.Def def : ciphs) {
                 RubyArray ele = getRuntime().newArray(4);
                 ele.set(0, rt.newString(def.name));
@@ -204,10 +299,8 @@ public class SSLContext extends RubyObject {
                 ele.set(3, rt.newFixnum(def.alg_bits));
                 list.add(ele);
             }
-        } catch (NoSuchAlgorithmException nsae) {
-            // ignore
-        } catch (KeyManagementException kme) {
-            // ignore
+        } catch (GeneralSecurityException gse) {
+            throw new RaiseException(getRuntime(), cSSLError, gse.getMessage(), false);
         }
         return rt.newArray(list);
     }
@@ -225,7 +318,7 @@ public class SSLContext extends RubyObject {
             }
             ciphers = builder.toString();
         } else {
-            ciphers = val.toString();
+            ciphers = val.convertToString().toString();
         }
         RubyArray ary = (RubyArray)ciphers();
         if (ary.size() == 0) {
@@ -261,26 +354,26 @@ public class SSLContext extends RubyObject {
         return protocolForClient;
     }
 
-    // should keep SSLContext as a member for introducin SSLSession. later...
-    SSLEngine createSSLEngine() throws NoSuchAlgorithmException, KeyManagementException {
-        SSLEngine engine = createSSLContext().createSSLEngine();
-        engine.setEnabledCipherSuites(getCipherSuites(engine));
-        engine.setEnabledProtocols(getEnabledProtocols(engine));
-        return engine;
+    int getLastVerifyResult() {
+        return verifyResult;
+    }
+
+    void setLastVerifyResult(int verifyResult) {
+        this.verifyResult = verifyResult;
+    }
+
+    SSLEngine createDummySSLEngine() throws GeneralSecurityException {
+        javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance(protocol);
+        ctx.init(null, null, null);
+        return ctx.createSSLEngine();
     }
 
     // should keep SSLContext as a member for introducin SSLSession. later...
     SSLEngine createSSLEngine(String peerHost, int peerPort) throws NoSuchAlgorithmException, KeyManagementException {
-        SSLEngine engine = createSSLContext().createSSLEngine(peerHost, peerPort);
+        SSLEngine engine = internalCtx.getSSLContext().createSSLEngine(peerHost, peerPort);
         engine.setEnabledCipherSuites(getCipherSuites(engine));
         engine.setEnabledProtocols(getEnabledProtocols(engine));
         return engine;
-    }
-
-    private javax.net.ssl.SSLContext createSSLContext() throws NoSuchAlgorithmException, KeyManagementException {
-        javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance(protocol);
-        ctx.init(new javax.net.ssl.KeyManager[]{getKM()}, new javax.net.ssl.TrustManager[]{getTM()}, null);
-        return ctx;
     }
 
     private String[] getCipherSuites(SSLEngine engine) {
@@ -294,8 +387,18 @@ public class SSLContext extends RubyObject {
 
     private String[] getEnabledProtocols(SSLEngine engine) {
         List<String> candidates = new ArrayList<String>();
+        long options = getOptions();
         if (ENABLED_PROTOCOLS.get(protocol) != null) {
             for (String enabled : ENABLED_PROTOCOLS.get(protocol)) {
+                if (((options & SSL.OP_NO_SSLv2) != 0) && enabled.equals("SSLv2")) {
+                    continue;
+                }
+                if (((options & SSL.OP_NO_SSLv3) != 0) && enabled.equals("SSLv3")) {
+                    continue;
+                }
+                if (((options & SSL.OP_NO_TLSv1) != 0) && enabled.equals("TLSv1")) {
+                    continue;
+                }
                 for (String allowed : engine.getEnabledProtocols()) {
                     if (allowed.equals(enabled)) {
                         candidates.add(allowed);
@@ -325,134 +428,41 @@ public class SSLContext extends RubyObject {
         }
         return sb.toString();
     }
-
-    int getLastVerifyResult() {
-        return verifyResult;
+    
+    private PKey getCallbackKey() {
+        if (t_key != null) {
+            return t_key;
+        }
+        initFromCallback();
+        return t_key;
     }
 
-    void setLastVerifyResult(int verifyResult) {
-        this.verifyResult = verifyResult;
+    private X509Cert getCallbackCert() {
+        if (t_cert != null) {
+            return t_cert;
+        }
+        initFromCallback();
+        return t_cert;
     }
 
-    RubyFixnum getVerifyMode() {
-        IRubyObject value = getInstanceVariable("@verify_mode");
+    private void initFromCallback() {
+        IRubyObject value = getInstanceVariable("@client_cert_cb");
         if (value != null && !value.isNil()) {
-            return (RubyFixnum) value;
-        } else {
-            return null;
+            IRubyObject out = value.callMethod(getRuntime().getCurrentContext(), "call", this);
+            Utils.checkKind(getRuntime(), out, "Array");
+            IRubyObject cert = (IRubyObject) ((RubyArray) out).getList().get(0);
+            IRubyObject key = (IRubyObject) ((RubyArray) out).getList().get(1);
+            Utils.checkKind(getRuntime(), cert, "OpenSSL::X509::Certificate");
+            Utils.checkKind(getRuntime(), key, "OpenSSL::PKey::PKey");
+            t_cert = (X509Cert) cert;
+            t_key = (PKey) key;
         }
-    }
-
-    PKey getPKey() {
-        IRubyObject value = getInstanceVariable("@key");
-        if (value != null && !value.isNil()) {
-            return (PKey) value;
-        } else {
-            return getCallbackKey();
-        }
-    }
-
-    X509Cert getCert() {
-        IRubyObject value = getInstanceVariable("@cert");
-        if (value != null && !value.isNil()) {
-            return (X509Cert) value;
-        } else {
-            return getCallbackCert();
-        }
-    }
-
-    X509Cert[] getExtraChainCert() {
-        IRubyObject value = getInstanceVariable("@extra_chain_cert");
-        if (value != null && !value.isNil()) {
-            return convertToX509Certs(value);
-        } else {
-            return null;
-        }
-    }
-
-    X509Cert[] getClientCa() {
-        IRubyObject value = getInstanceVariable("@client_ca");
-        if (value != null && !value.isNil()) {
-            if (value.respondsTo("each")) {
-                return convertToX509Certs(value);
-            } else {
-                return new X509Cert[]{(X509Cert) value};
-            }
-        } else {
-            return null;
-        }
-    }
-
-    // c: ossl_sslctx_setup
-    StoreContext createStoreContext() {
-        StoreContext ctx = new StoreContext();
-        X509Store certStore = getCertStore();
-        Store store = null;
-        if (certStore != null) {
-            store = certStore.getStore();
-        }
-        if (ctx.init(store, null, null) == 0) {
-            return null;
-        }
-        // TODO: handle tmp_dh_callback
-        String ca_file = getCaFile();
-        String ca_path = getCaPath();
-        if (ca_file != null || ca_path != null) {
-            if (ctx.loadVerifyLocations(ca_file, ca_path) == 0) {
-                getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
-            }
-        }
-        // TODO: set verify mode
-        IRubyObject cb = getVerifyCallback();
-        if (cb != null) {
-            ctx.setVerifyCallback(X509Store.ossl_verify_cb);
-            ctx.setExtraData(1, cb);
-        }
-        /* TODO
-    val = ossl_sslctx_get_timeout(self);
-    if(!NIL_P(val)) SSL_CTX_set_timeout(ctx, NUM2LONG(val));
-
-    val = ossl_sslctx_get_verify_dep(self);
-    if(!NIL_P(val)) SSL_CTX_set_verify_depth(ctx, NUM2LONG(val));
-
-    val = ossl_sslctx_get_options(self);
-    if(!NIL_P(val)) SSL_CTX_set_options(ctx, NUM2LONG(val));
-    rb_obj_freeze(self);
-
-    val = ossl_sslctx_get_sess_id_ctx(self);
-    if (!NIL_P(val)){
-        StringValue(val);
-        if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)RSTRING_PTR(val),
-                                            RSTRING_LEN(val))){
-            ossl_raise(eSSLError, "SSL_CTX_set_session_id_context:");
-        }
-    }
-
-    if (RTEST(rb_iv_get(self, "@session_get_cb"))) {
-        SSL_CTX_sess_set_get_cb(ctx, ossl_sslctx_session_get_cb);
-        OSSL_Debug("SSL SESSION get callback added");
-    }
-    if (RTEST(rb_iv_get(self, "@session_new_cb"))) {
-        SSL_CTX_sess_set_new_cb(ctx, ossl_sslctx_session_new_cb);
-        OSSL_Debug("SSL SESSION new callback added");
-    }
-    if (RTEST(rb_iv_get(self, "@session_remove_cb"))) {
-        SSL_CTX_sess_set_remove_cb(ctx, ossl_sslctx_session_remove_cb);
-        OSSL_Debug("SSL SESSION remove callback added");
-    }
-
-    val = rb_iv_get(self, "@servername_cb");
-    if (!NIL_P(val)) {
-        SSL_CTX_set_tlsext_servername_callback(ctx, ssl_servername_cb);
-        OSSL_Debug("SSL TLSEXT servername callback added");
-    }
-         */
-        return ctx;
     }
 
     private X509Store getCertStore() {
         IRubyObject value = getInstanceVariable("@cert_store");
-        if (value != null && !value.isNil()) {
+        if (value != null && !value.isNil() && (value instanceof X509Store)) {
+            Utils.checkKind(getRuntime(), value, "OpenSSL::X509::Store");
             return (X509Store) value;
         } else {
             return null;
@@ -477,21 +487,22 @@ public class SSLContext extends RubyObject {
         }
     }
 
-    private IRubyObject getVerifyCallback() {
-        IRubyObject value = getInstanceVariable("@verify_callback");
+    private long getOptions() {
+        IRubyObject value = getInstanceVariable("@options");
         if (value != null && !value.isNil()) {
-            return value;
+            return RubyFixnum.fix2long(value);
         } else {
-            return null;
+            return 0;
         }
     }
-
+    
     private X509Cert[] convertToX509Certs(IRubyObject value) {
         final ArrayList<X509Cert> result = new ArrayList<X509Cert>();
         ThreadContext ctx = getRuntime().getCurrentContext();
         RuntimeHelpers.invoke(ctx, value, "each", CallBlock.newCallClosure(value, null, Arity.NO_ARGUMENTS, new BlockCallback() {
 
             public IRubyObject call(ThreadContext context, IRubyObject[] args, Block block) {
+                Utils.checkKind(getRuntime(), args[0], "OpenSSL::X509::Certificate");
                 result.add((X509Cert) args[0]);
                 return context.getRuntime().getNil();
             }
@@ -499,31 +510,78 @@ public class SSLContext extends RubyObject {
         return result.toArray(new X509Cert[0]);
     }
 
-    private KM getKM() {
-        return new KM(this);
-    }
+    /**
+     * c: SSL_CTX
+     */
+    private class InternalContext {
 
-    private TM getTM() {
-        return new TM(this);
+        Store store = null;
+        int verifyMode = SSL.VERIFY_NONE;
+        X509AuxCertificate cert = null;
+        String keyAlgorithm = null;
+        PrivateKey privateKey = null;
+        List<X509AuxCertificate> extraChainCert = null;
+        List<X509AuxCertificate> clientCa = new ArrayList<X509AuxCertificate>();
+        int timeout = 0;
+        String protocol = null;
+        boolean protocolForServer = true;
+        boolean protocolForClient = true;
+        private javax.net.ssl.SSLContext sslCtx = null;
+
+        void setLastVerifyResultInternal(int lastVerifyResult) {
+            setLastVerifyResult(lastVerifyResult);
+        }
+
+        javax.net.ssl.SSLContext getSSLContext() {
+            return sslCtx;
+        }
+
+        void init() throws GeneralSecurityException {
+            KM km = new KM(this);
+            TM tm = new TM(this);
+            sslCtx = javax.net.ssl.SSLContext.getInstance(protocol);
+            if (protocolForClient) {
+                sslCtx.getClientSessionContext().setSessionTimeout(timeout);
+            }
+            if (protocolForServer) {
+                sslCtx.getServerSessionContext().setSessionTimeout(timeout);
+            }
+            sslCtx.init(new javax.net.ssl.KeyManager[]{km}, new javax.net.ssl.TrustManager[]{tm}, null);
+        }
+
+        StoreContext createStoreContext() {
+            if (store == null) {
+                return null;
+            }
+            StoreContext ctx = new StoreContext();
+            if (ctx.init(store, null, null) == 0) {
+                return null;
+            }
+            // for verify_cb
+            ctx.setExtraData(1, store.getExtraData(1));
+            return ctx;
+        }
     }
 
     private static class KM extends javax.net.ssl.X509ExtendedKeyManager {
 
-        private final SSLContext ctt;
+        private final InternalContext ctx;
         
-        public KM(SSLContext ctt) {
+        public KM(InternalContext ctx) {
             super();
-            this.ctt = ctt;
+            this.ctx = ctx;
         }
 
         @Override
         public String chooseEngineClientAlias(String[] keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
-            PKey k = ctt.getPKey();
-            if (k == null) {
+            if (ctx == null) {
+                return null;
+            }
+            if (ctx.privateKey == null) {
                 return null;
             }
             for (int i = 0; i < keyType.length; i++) {
-                if (keyType[i].equalsIgnoreCase(k.getAlgorithm())) {
+                if (keyType[i].equalsIgnoreCase(ctx.keyAlgorithm)) {
                     return keyType[i];
                 }
             }
@@ -532,11 +590,10 @@ public class SSLContext extends RubyObject {
 
         @Override
         public String chooseEngineServerAlias(String keyType, java.security.Principal[] issuers, javax.net.ssl.SSLEngine engine) {
-            PKey k = ctt.getPKey();
-            if (k == null) {
+            if (ctx == null || ctx.privateKey == null) {
                 return null;
             }
-            if (keyType.equalsIgnoreCase(k.getAlgorithm())) {
+            if (keyType.equalsIgnoreCase(ctx.keyAlgorithm)) {
                 return keyType;
             }
             return null;
@@ -552,31 +609,24 @@ public class SSLContext extends RubyObject {
 
         // c: ssl3_output_cert_chain
         public java.security.cert.X509Certificate[] getCertificateChain(String alias) {
+            if (ctx == null) {
+                return null;
+            }
             ArrayList<java.security.cert.X509Certificate> chain = new ArrayList<java.security.cert.X509Certificate>();
-            X509Cert[] ary = ctt.getExtraChainCert();
-            if (ary != null) {
-                for (X509Cert ele : ary) {
-                    chain.add(ele.getAuxCert());
-                }
-            } else {
-                X509Cert c = ctt.getCert();
-                if (c == null) {
-                    return null;
-                }
-                StoreContext ctx = ctt.createStoreContext();
-                if (ctx == null) {
-                    return null;
-                }
-                X509AuxCertificate x = c.getAuxCert();
+            if (ctx.extraChainCert != null) {
+                chain.addAll(ctx.extraChainCert);
+            } else if (ctx.cert != null) {
+                StoreContext storeCtx = ctx.createStoreContext();
+                X509AuxCertificate x = ctx.cert;
                 while (true) {
                     chain.add(x);
                     if (x.getIssuerDN().equals(x.getSubjectDN())) {
                         break;
                     }
                     try {
-                        Name xn = new Name(c.getAuxCert().getIssuerX500Principal());
+                        Name xn = new Name(x.getIssuerX500Principal());
                         X509Object[] s_obj = new X509Object[1];
-                        if (ctx.getBySubject(X509Utils.X509_LU_X509, xn, s_obj) <= 0) {
+                        if (storeCtx.getBySubject(X509Utils.X509_LU_X509, xn, s_obj) <= 0) {
                             break;
                         }
                         x = ((Certificate) s_obj[0]).x509;
@@ -593,11 +643,10 @@ public class SSLContext extends RubyObject {
         }
 
         public java.security.PrivateKey getPrivateKey(String alias) {
-            PKey k = ctt.getPKey();
-            if (k == null) {
+            if (ctx == null || ctx.privateKey == null) {
                 return null;
             }
-            return k.getPrivateKey();
+            return ctx.privateKey;
         }
 
         public String[] getServerAliases(String keyType, java.security.Principal[] issuers) {
@@ -607,10 +656,11 @@ public class SSLContext extends RubyObject {
 
     private static class TM implements javax.net.ssl.X509TrustManager {
 
-        private SSLContext ctt;
+        private InternalContext ctx;
 
-        public TM(SSLContext ctt) {
-            this.ctt = ctt;
+        public TM(InternalContext ctx) {
+            super();
+            this.ctx = ctx;
         }
 
         public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
@@ -622,50 +672,43 @@ public class SSLContext extends RubyObject {
         }
 
         public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-            ArrayList<java.security.cert.X509Certificate> chain = new ArrayList<java.security.cert.X509Certificate>();
-            X509Cert[] certs = ctt.getClientCa();
-            if (certs != null) {
-                for (X509Cert ele : certs) {
-                    chain.add(ele.getAuxCert());
-                }
+            if (ctx == null) {
+                return null;
             }
+            ArrayList<java.security.cert.X509Certificate> chain = new ArrayList<java.security.cert.X509Certificate>();
+            chain.addAll(ctx.clientCa);
             return chain.toArray(new java.security.cert.X509Certificate[0]);
         }
 
         // c: ssl_verify_cert_chain
         private void checkTrusted(String purpose, X509Certificate[] chain) throws CertificateException {
-            if (chain != null && chain.length > 0) {
-                ctt.setPeer(chain[0]);
+            if (ctx == null) {
+                throw new CertificateException("uninitialized trust manager");
             }
-            if (ctt.getVerifyMode() == null) {
-                return;
-            }
-            int verify_mode = RubyNumeric.fix2int(ctt.getVerifyMode());
             if (chain != null && chain.length > 0) {
-                ctt.setPeer(chain[0]);
-                if ((verify_mode & 0x1) != 0) {
+                if ((ctx.verifyMode & SSL.VERIFY_PEER) != 0) {
                     // verify_peer
-                    StoreContext ctx = ctt.createStoreContext();
-                    if (ctx == null) {
+                    StoreContext storeCtx = ctx.createStoreContext();
+                    if (storeCtx == null) {
                         throw new CertificateException("couldn't initialize store");
                     }
-                    ctx.setCertificate(chain[0]);
-                    ctx.setChain(chain);
-                    ctx.setDefault(purpose);
-                    verifyChain(ctx);
+                    storeCtx.setCertificate(chain[0]);
+                    storeCtx.setChain(chain);
+                    storeCtx.setDefault(purpose);
+                    verifyChain(storeCtx);
                 }
             } else {
-                if ((verify_mode & 0x2) != 0) {
+                if ((ctx.verifyMode & SSL.VERIFY_FAIL_IF_NO_PEER_CERT) != 0) {
                     // fail if no peer cert
                     throw new CertificateException("no peer certificate");
                 }
             }
         }
 
-        private void verifyChain(StoreContext ctx) throws CertificateException {
+        private void verifyChain(StoreContext storeCtx) throws CertificateException {
             try {
-                int ok = ctx.verifyCertificate();
-                ctt.setLastVerifyResult(ctx.error);
+                int ok = storeCtx.verifyCertificate();
+                ctx.setLastVerifyResultInternal(storeCtx.error);
                 if (ok == 0) {
                     throw new CertificateException("certificate verify failed");
                 }

@@ -27,6 +27,10 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import org.jruby.Ruby;
+import org.jruby.RubyObject;
+import org.jruby.runtime.builtin.IRubyObject;
+
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
@@ -56,5 +60,11 @@ public class Utils {
             sap = ""+(char)sep;
         }
         return out.toString().toUpperCase();
+    }
+
+    public static void checkKind(Ruby rt, IRubyObject obj, String path) {
+        if (((RubyObject) obj).kind_of_p(rt.getCurrentContext(), rt.getClassFromPath(path)).isFalse()) {
+            throw rt.newTypeError(String.format("wrong argument (%s)! (Expected kind of %s)", obj.getMetaClass().getName(), path));
+        }
     }
 }// Utils

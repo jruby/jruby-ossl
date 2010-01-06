@@ -36,6 +36,28 @@ import org.jruby.exceptions.RaiseException;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class SSL {
+
+    public static final int VERIFY_NONE =                                   0x00;
+    public static final int VERIFY_PEER =                                   0x01;
+    public static final int VERIFY_FAIL_IF_NO_PEER_CERT =                   0x02;
+    public static final int VERIFY_CLIENT_ONCE =                            0x04;
+
+    public static final long OP_ALL =                                       0x00000FFFL;
+    public static final long OP_NO_TICKET =                                 0x00004000L;
+    public static final long OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION =    0x00010000L;
+    public static final long OP_SINGLE_ECDH_USE =                           0x00080000L;
+    public static final long OP_SINGLE_DH_USE =                             0x00100000L;
+    public static final long OP_EPHEMERAL_RSA =                             0x00200000L;
+    public static final long OP_CIPHER_SERVER_PREFERENCE =                  0x00400000L;
+    public static final long OP_TLS_ROLLBACK_BUG =                          0x00800000L;
+    public static final long OP_NO_SSLv2 =                                  0x01000000L; // supported
+    public static final long OP_NO_SSLv3 =                                  0x02000000L; // supported
+    public static final long OP_NO_TLSv1 =                                  0x04000000L; // supported
+    public static final long OP_PKCS1_CHECK_1 =                             0x08000000L;
+    public static final long OP_PKCS1_CHECK_2 =                             0x10000000L;
+    public static final long OP_NETSCAPE_CA_DN_BUG =                        0x20000000L;
+    public static final long OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG =           0x40000000L;
+
     public static void createSSL(Ruby runtime, RubyModule ossl) {
         RubyModule mSSL = ossl.defineModuleUnder("SSL");
         RubyClass openSSLError = ossl.getClass("OpenSSLError");
@@ -44,25 +66,26 @@ public class SSL {
         SSLContext.createSSLContext(runtime,mSSL);
         SSLSocket.createSSLSocket(runtime,mSSL);
 
-        mSSL.setConstant("VERIFY_NONE",runtime.newFixnum(0));
-        mSSL.setConstant("VERIFY_PEER",runtime.newFixnum(1));
-        mSSL.setConstant("VERIFY_FAIL_IF_NO_PEER_CERT",runtime.newFixnum(2));
-        mSSL.setConstant("VERIFY_CLIENT_ONCE",runtime.newFixnum(4));
+        mSSL.setConstant("VERIFY_NONE", runtime.newFixnum(VERIFY_NONE));
+        mSSL.setConstant("VERIFY_PEER", runtime.newFixnum(VERIFY_PEER));
+        mSSL.setConstant("VERIFY_FAIL_IF_NO_PEER_CERT", runtime.newFixnum(VERIFY_FAIL_IF_NO_PEER_CERT));
+        mSSL.setConstant("VERIFY_CLIENT_ONCE", runtime.newFixnum(VERIFY_CLIENT_ONCE));
 
-        mSSL.setConstant("OP_ALL",runtime.newFixnum(4095));
-        mSSL.setConstant("OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION",runtime.newFixnum(65536));
-        mSSL.setConstant("OP_SINGLE_ECDH_USE",runtime.newFixnum(524288));
-        mSSL.setConstant("OP_SINGLE_DH_USE",runtime.newFixnum(1048576));
-        mSSL.setConstant("OP_EPHEMERAL_RSA",runtime.newFixnum(2097152));
-        mSSL.setConstant("OP_CIPHER_SERVER_PREFERENCE",runtime.newFixnum(4194304));
-        mSSL.setConstant("OP_TLS_ROLLBACK_BUG",runtime.newFixnum(8388608));
-        mSSL.setConstant("OP_NO_SSLv2",runtime.newFixnum(16777216));
-        mSSL.setConstant("OP_NO_SSLv3",runtime.newFixnum(33554432));
-        mSSL.setConstant("OP_NO_TLSv1",runtime.newFixnum(67108864));
-        mSSL.setConstant("OP_PKCS1_CHECK_1",runtime.newFixnum(134217728));
-        mSSL.setConstant("OP_PKCS1_CHECK_2",runtime.newFixnum(268435456));
-        mSSL.setConstant("OP_NETSCAPE_CA_DN_BUG",runtime.newFixnum(536870912));
-        mSSL.setConstant("OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG",runtime.newFixnum(-1073741824));
+        mSSL.setConstant("OP_ALL", runtime.newFixnum(OP_ALL));
+        mSSL.setConstant("OP_NO_TICKET", runtime.newFixnum(OP_NO_TICKET));
+        mSSL.setConstant("OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION", runtime.newFixnum(OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION));
+        mSSL.setConstant("OP_SINGLE_ECDH_USE", runtime.newFixnum(OP_SINGLE_ECDH_USE));
+        mSSL.setConstant("OP_SINGLE_DH_USE", runtime.newFixnum(OP_SINGLE_DH_USE));
+        mSSL.setConstant("OP_EPHEMERAL_RSA", runtime.newFixnum(OP_EPHEMERAL_RSA));
+        mSSL.setConstant("OP_CIPHER_SERVER_PREFERENCE", runtime.newFixnum(OP_CIPHER_SERVER_PREFERENCE));
+        mSSL.setConstant("OP_TLS_ROLLBACK_BUG", runtime.newFixnum(OP_TLS_ROLLBACK_BUG));
+        mSSL.setConstant("OP_NO_SSLv2", runtime.newFixnum(OP_NO_SSLv2));
+        mSSL.setConstant("OP_NO_SSLv3", runtime.newFixnum(OP_NO_SSLv3));
+        mSSL.setConstant("OP_NO_TLSv1", runtime.newFixnum(OP_NO_TLSv1));
+        mSSL.setConstant("OP_PKCS1_CHECK_1", runtime.newFixnum(OP_PKCS1_CHECK_1));
+        mSSL.setConstant("OP_PKCS1_CHECK_2", runtime.newFixnum(OP_PKCS1_CHECK_2));
+        mSSL.setConstant("OP_NETSCAPE_CA_DN_BUG", runtime.newFixnum(OP_NETSCAPE_CA_DN_BUG));
+        mSSL.setConstant("OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG", runtime.newFixnum(OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG));
     }
 
     public static RaiseException newSSLError(Ruby runtime, Throwable t) {
