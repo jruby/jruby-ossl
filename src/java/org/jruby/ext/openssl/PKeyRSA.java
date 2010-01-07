@@ -116,14 +116,17 @@ public class PKeyRSA extends PKey {
     private transient volatile BigInteger rsa_dmq1;
     private transient volatile BigInteger rsa_iqmp;
     
+    @Override
     PublicKey getPublicKey() {
         return pubKey;
     }
 
+    @Override
     PrivateKey getPrivateKey() {
         return privKey;
     }
 
+    @Override
     String getAlgorithm() {
         return "RSA";
     }
@@ -159,6 +162,7 @@ public class PKeyRSA extends PKey {
         IRubyObject pass = null;
         char[] passwd = null;
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2) == 0) {
+            // TODO: is this OK?
         } else {
             arg = args[0];
             if(args.length > 1) {
@@ -180,27 +184,30 @@ public class PKeyRSA extends PKey {
                     throw newRSAError(getRuntime(), null);
                 }
             } else {
-                if(pass != null && !pass.isNil()) {
+                if (pass != null && !pass.isNil()) {
                     passwd = pass.toString().toCharArray();
                 }
-                String input = arg.toString();
+                arg = Utils.toDerIfPossible(getRuntime(), arg);
+                String input = arg.convertToString().toString();
 
                 Object val = null;
                 KeyFactory fact = null;
                 try {
                     fact = KeyFactory.getInstance("RSA", OpenSSLReal.PROVIDER);
                 } catch(Exception e) {
-                    throw getRuntime().newLoadError("unsupported key algorithm (RSA)");
+                    throw getRuntime().newRuntimeError("unsupported key algorithm (RSA)");
                 }
 
                 if(null == val) {
+                    // PEM_read_bio_RSAPrivateKey
                     try {
-                        val = PEMInputOutput.readRSAPrivateKey(new StringReader(input),passwd);
+                        val = PEMInputOutput.readPrivateKey(new StringReader(input),passwd);
                     } catch(Exception e) {
                         val = null;
                     }
                 }
                 if(null == val) {
+                    // PEM_read_bio_RSAPublicKey
                     try {
                         val = PEMInputOutput.readRSAPublicKey(new StringReader(input),passwd);
                     } catch(Exception e) {
@@ -208,6 +215,7 @@ public class PKeyRSA extends PKey {
                     }
                 }
                 if(null == val) {
+                    // PEM_read_bio_RSA_PUBKEY
                     try {
                         val = PEMInputOutput.readRSAPubKey(new StringReader(input),passwd);
                     } catch(Exception e) {
@@ -215,6 +223,7 @@ public class PKeyRSA extends PKey {
                     }
                 }
                 if(null == val) {
+                    // d2i_RSAPrivateKey_bio
                     try {
                         DERSequence seq = (DERSequence)(new ASN1InputStream(ByteList.plain(input)).readObject());
                         if(seq.size() == 9) {
@@ -235,6 +244,7 @@ public class PKeyRSA extends PKey {
                     }
                 }
                 if(null == val) {
+                    // d2i_RSAPublicKey_bio
                     try {
                         DERSequence seq = (DERSequence)(new ASN1InputStream(ByteList.plain(input)).readObject());
                         if(seq.size() == 2) {
@@ -249,6 +259,7 @@ public class PKeyRSA extends PKey {
                     }
                 }
                 if(null == val) {
+                    // try to read SubjectPublicKeyInfo.
                     try {
                         val = fact.generatePublic(new X509EncodedKeySpec(ByteList.plain(input)));
                     } catch(Exception e) {
@@ -256,6 +267,7 @@ public class PKeyRSA extends PKey {
                     }
                 }
                 if(null == val) {
+                    // try toread PrivateKeyInfo.
                     try {
                         val = fact.generatePrivate(new PKCS8EncodedKeySpec(ByteList.plain(input)));
                     } catch(Exception e) {

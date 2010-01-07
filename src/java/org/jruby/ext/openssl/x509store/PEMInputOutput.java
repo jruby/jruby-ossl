@@ -84,6 +84,7 @@ import org.bouncycastle.cms.CMSSignedData;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.spec.DSAPrivateKeySpec;
@@ -97,8 +98,14 @@ import java.util.StringTokenizer;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import org.bouncycastle.asn1.pkcs.PKCS12PBEParams;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.jruby.ext.openssl.impl.ASN1Registry;
 
 /**
  * Helper class to read and write PEM files correctly.
@@ -152,6 +159,9 @@ public class PEMInputOutput {
         return new BufferedWriter(out);
     }
 
+    /**
+     * c: PEM_X509_INFO_read_bio
+     */
     public static Object readPEM(Reader in,char[] f) throws IOException {
         BufferedReader _in = makeBuffered(in);
         String  line;
@@ -266,6 +276,66 @@ public class PEMInputOutput {
       return null; 
   }
 
+    /**
+     * c: PEM_read_PrivateKey + PEM_read_bio_PrivateKey
+     * CAUTION: KeyPair#getPublic() may be null.
+     */
+    public static KeyPair readPrivateKey(Reader in, char[] password) throws IOException {
+        BufferedReader _in = makeBuffered(in);
+        String line;
+        while ((line = _in.readLine()) != null) {
+            if (line.indexOf(BEF_G + PEM_STRING_RSA) != -1) {
+                try {
+                    return readKeyPair(_in, password, "RSA", BEF_E + PEM_STRING_RSA);
+                } catch (Exception e) {
+                    throw new IOException("problem creating RSA private key: " + e.toString());
+                }
+            } else if (line.indexOf(BEF_G + PEM_STRING_DSA) != -1) {
+                try {
+                    return readKeyPair(_in, password, "DSA", BEF_E + PEM_STRING_DSA);
+                } catch (Exception e) {
+                    throw new IOException("problem creating DSA private key: " + e.toString());
+                }
+            } else if (line.indexOf(BEF_G + PEM_STRING_ECPRIVATEKEY) != -1) {
+                throw new IOException("EC private key not supported");
+            } else if (line.indexOf(BEF_G + PEM_STRING_PKCS8INF) != -1) {
+                try {
+                    byte[] bytes = readBytes(_in, BEF_E + PEM_STRING_PKCS8INF);
+                    ByteArrayInputStream bIn = new ByteArrayInputStream(bytes);
+                    ASN1InputStream aIn = new ASN1InputStream(bIn);
+                    PrivateKeyInfo info = new PrivateKeyInfo((ASN1Sequence) aIn.readObject());
+                    String type = getPrivateKeyTypeFromObjectId(info.getAlgorithmId().getObjectId());
+                    return readPrivateKeySequence(info.getPrivateKey().getDEREncoded(), type);
+                } catch (Exception e) {
+                    throw new IOException("problem creating private key: " + e.toString());
+                }
+            } else if (line.indexOf(BEF_G + PEM_STRING_PKCS8) != -1) {
+                try {
+                    byte[] bytes = readBytes(_in, BEF_E + PEM_STRING_PKCS8);
+                    ByteArrayInputStream bIn = new ByteArrayInputStream(bytes);
+                    ASN1InputStream aIn = new ASN1InputStream(bIn);
+                    org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo eIn = new org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo((ASN1Sequence) aIn.readObject());
+                    AlgorithmIdentifier algId = eIn.getEncryptionAlgorithm();
+                    String algorithm = ASN1Registry.o2a(algId.getObjectId());
+                    algorithm = (algorithm.split("-"))[0];
+                    PKCS12PBEParams pbeParams = new PKCS12PBEParams((ASN1Sequence) algId.getParameters());
+                    SecretKeyFactory fact = SecretKeyFactory.getInstance(algorithm, OpenSSLReal.PROVIDER);
+                    PBEKeySpec pbeSpec = new PBEKeySpec(password);
+                    SecretKey key = fact.generateSecret(pbeSpec);
+                    PBEParameterSpec defParams = new PBEParameterSpec(pbeParams.getIV(), pbeParams.getIterations().intValue());
+                    Cipher cipher = Cipher.getInstance(algorithm, OpenSSLReal.PROVIDER);
+                    cipher.init(Cipher.UNWRAP_MODE, key, defParams);
+                    // wrappedKeyAlgorithm is unknown ("")
+                    PrivateKey privKey = (PrivateKey) cipher.unwrap(eIn.getEncryptedData(), "", Cipher.PRIVATE_KEY);
+                    return new KeyPair(null, privKey);
+                } catch (Exception e) {
+                    throw new IOException("problem creating private key: " + e.toString());
+                }
+            }
+        }
+        return null;
+    }
+
     public static DSAPublicKey readDSAPubKey(Reader in, char[] f) throws IOException {
         //        System.out.println("WARNING: read_DSA_PUBKEY");
         return null;
@@ -298,7 +368,11 @@ public class PEMInputOutput {
         }
         return null; 
     }
-    /** reads an RSA public key encoded in an SubjectPublicKeyInfo RSA structure. */
+
+    /**
+     * reads an RSA public key encoded in an SubjectPublicKeyInfo RSA structure.
+     * c: PEM_read_bio_RSA_PUBKEY
+     */
     public static RSAPublicKey readRSAPubKey(Reader in, char[] f) throws IOException {
         BufferedReader _in = makeBuffered(in);
         String  line;
@@ -319,7 +393,11 @@ public class PEMInputOutput {
         }
         return null; 
     }
-    /** reads an RSA public key encoded in an PKCS#1 RSA structure. */
+
+    /**
+     * reads an RSA public key encoded in an PKCS#1 RSA structure.
+     * c: PEM_read_bio_RSAPublicKey
+     */
     public static RSAPublicKey readRSAPublicKey(Reader in, char[] f) throws IOException {
         BufferedReader _in = makeBuffered(in);
         String  line;
@@ -340,6 +418,10 @@ public class PEMInputOutput {
         }
         return null; 
     }
+
+    /**
+     * c: PEM_read_bio_RSAPrivateKey
+     */
     public static KeyPair readRSAPrivateKey(Reader in, char[] f) throws IOException {
         BufferedReader _in = makeBuffered(in);
         String  line;
@@ -798,7 +880,15 @@ public class PEMInputOutput {
         out.newLine();
         out.flush();
     }
-    
+
+    private static String getPrivateKeyTypeFromObjectId(DERObjectIdentifier oid) {
+        if (ASN1Registry.obj2nid(oid) == ASN1Registry.NID_rsaEncryption) {
+            return "RSA";
+        } else {
+            return "DSA";
+        }
+    }
+
     private static byte[] readBytes(BufferedReader in, String endMarker) throws IOException {
         String          line;
         StringBuffer    buf = new StringBuffer();
@@ -935,54 +1025,37 @@ public class PEMInputOutput {
         } else {
             keyBytes = Base64.decode(buf.toString());
         }
+        return readPrivateKeySequence(keyBytes, type);
+    }
 
-        KeySpec                 pubSpec, privSpec;
-        ByteArrayInputStream    bIn = new ByteArrayInputStream(keyBytes);
-        ASN1InputStream         aIn = new ASN1InputStream(bIn);
-        ASN1Sequence            seq = (ASN1Sequence)aIn.readObject();
-
-        if (type.equals("RSA"))
-        {
-            //DERInteger              v = (DERInteger)seq.getObjectAt(0);
-            DERInteger              mod = (DERInteger)seq.getObjectAt(1);
-            DERInteger              pubExp = (DERInteger)seq.getObjectAt(2);
-            DERInteger              privExp = (DERInteger)seq.getObjectAt(3);
-            DERInteger              p1 = (DERInteger)seq.getObjectAt(4);
-            DERInteger              p2 = (DERInteger)seq.getObjectAt(5);
-            DERInteger              exp1 = (DERInteger)seq.getObjectAt(6);
-            DERInteger              exp2 = (DERInteger)seq.getObjectAt(7);
-            DERInteger              crtCoef = (DERInteger)seq.getObjectAt(8);
-
-            pubSpec = new RSAPublicKeySpec(
-                        mod.getValue(), pubExp.getValue());
-            privSpec = new RSAPrivateCrtKeySpec(
-                    mod.getValue(), pubExp.getValue(), privExp.getValue(),
-                    p1.getValue(), p2.getValue(),
-                    exp1.getValue(), exp2.getValue(),
-                    crtCoef.getValue());
+    private static KeyPair readPrivateKeySequence(byte[] in, String type) throws Exception {
+        KeySpec pubSpec = null;
+        KeySpec privSpec = null;
+        ByteArrayInputStream bIn = new ByteArrayInputStream(in);
+        ASN1InputStream aIn = new ASN1InputStream(bIn);
+        ASN1Sequence seq = (ASN1Sequence) aIn.readObject();
+        if (type.equals("RSA")) {
+            DERInteger mod = (DERInteger) seq.getObjectAt(1);
+            DERInteger pubExp = (DERInteger) seq.getObjectAt(2);
+            DERInteger privExp = (DERInteger) seq.getObjectAt(3);
+            DERInteger p1 = (DERInteger) seq.getObjectAt(4);
+            DERInteger p2 = (DERInteger) seq.getObjectAt(5);
+            DERInteger exp1 = (DERInteger) seq.getObjectAt(6);
+            DERInteger exp2 = (DERInteger) seq.getObjectAt(7);
+            DERInteger crtCoef = (DERInteger) seq.getObjectAt(8);
+            pubSpec = new RSAPublicKeySpec(mod.getValue(), pubExp.getValue());
+            privSpec = new RSAPrivateCrtKeySpec(mod.getValue(), pubExp.getValue(), privExp.getValue(), p1.getValue(), p2.getValue(), exp1.getValue(), exp2.getValue(), crtCoef.getValue());
+        } else { // assume "DSA" for now.
+            DERInteger p = (DERInteger) seq.getObjectAt(1);
+            DERInteger q = (DERInteger) seq.getObjectAt(2);
+            DERInteger g = (DERInteger) seq.getObjectAt(3);
+            DERInteger y = (DERInteger) seq.getObjectAt(4);
+            DERInteger x = (DERInteger) seq.getObjectAt(5);
+            privSpec = new DSAPrivateKeySpec(x.getValue(), p.getValue(), q.getValue(), g.getValue());
+            pubSpec = new DSAPublicKeySpec(y.getValue(), p.getValue(), q.getValue(), g.getValue());
         }
-        else    // "DSA"
-        {
-            //DERInteger              v = (DERInteger)seq.getObjectAt(0);
-            DERInteger              p = (DERInteger)seq.getObjectAt(1);
-            DERInteger              q = (DERInteger)seq.getObjectAt(2);
-            DERInteger              g = (DERInteger)seq.getObjectAt(3);
-            DERInteger              y = (DERInteger)seq.getObjectAt(4);
-            DERInteger              x = (DERInteger)seq.getObjectAt(5);
-
-            privSpec = new DSAPrivateKeySpec(
-                        x.getValue(), p.getValue(),
-                            q.getValue(), g.getValue());
-            pubSpec = new DSAPublicKeySpec(
-                        y.getValue(), p.getValue(),
-                            q.getValue(), g.getValue());
-        }
-
-        KeyFactory          fact = KeyFactory.getInstance(type, OpenSSLReal.PROVIDER);
-
-        return new KeyPair(
-                    fact.generatePublic(pubSpec),
-                    fact.generatePrivate(privSpec));
+        KeyFactory fact = KeyFactory.getInstance(type, OpenSSLReal.PROVIDER);
+        return new KeyPair(fact.generatePublic(pubSpec), fact.generatePrivate(privSpec));
     }
 
     /**
