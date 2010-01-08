@@ -30,6 +30,7 @@ package org.jruby.ext.openssl.impl;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.TimeZone;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -64,6 +66,7 @@ import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
 import org.jruby.ext.openssl.OpenSSLReal;
+import org.jruby.ext.openssl.SimpleSecretKey;
 import org.jruby.ext.openssl.x509store.Name;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
@@ -674,7 +677,7 @@ public class PKCS7 {
             dataBody = getSignedAndEnveloped().getEncData().getEncData().getOctets();
             encAlg = getSignedAndEnveloped().getEncData().getAlgorithm();
             try {
-                evpCipher = EVP.getCipher(encAlg.getObjectId());
+                evpCipher = getCipher(encAlg.getObjectId());
             } catch(Exception e) {
                 throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
             }
@@ -685,7 +688,7 @@ public class PKCS7 {
             dataBody = getEnveloped().getEncData().getEncData().getOctets();
             encAlg = getEnveloped().getEncData().getAlgorithm();
             try {
-                evpCipher = EVP.getCipher(encAlg.getObjectId());
+                evpCipher = getCipher(encAlg.getObjectId());
             } catch(Exception e) {
                 throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
             }
@@ -795,6 +798,18 @@ public class PKCS7 {
         out.push(bio);
         bio = null;
         return out;
+    }
+
+    // Without Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files,
+    // getting Cipher object via OID(1.2.840.113549.3.7 - DES-EDE3-CBC) causes 'Illegal Key Length'
+    // exception. To avoid this, we get Cipher object via algo name(DESede/cbc/PKCS5Padding).
+    private static Cipher getCipher(DERObjectIdentifier oid) throws NoSuchAlgorithmException,
+            NoSuchPaddingException {
+        // check DES-EDE3-CBC
+        if (oid.getId().equals("1.2.840.113549.3.7")) {
+            return Cipher.getInstance("DESede/cbc/PKCS5Padding", OpenSSLReal.PROVIDER);
+        }
+        return EVP.getCipher(oid);
     }
 
     /** c: PKCS7_dataInit

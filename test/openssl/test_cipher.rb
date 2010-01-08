@@ -159,7 +159,9 @@ class OpenSSL::TestCipher < Test::Unit::TestCase
       %w(ECB CBC CFB OFB).each{|mode|
         c1 = OpenSSL::Cipher::AES256.new(mode)
         c1.encrypt
-        c1.pkcs5_keyivgen("passwd")
+        assert_nothing_raised('This test fails w/o Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files') do
+          c1.pkcs5_keyivgen("passwd")
+        end
         ct = c1.update(pt) + c1.final
 
         c2 = OpenSSL::Cipher::AES256.new(mode)

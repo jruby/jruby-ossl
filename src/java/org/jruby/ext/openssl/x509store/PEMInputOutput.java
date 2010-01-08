@@ -1014,8 +1014,7 @@ public class PEMInputOutput {
                 String  alg = "DES";
                 byte[]  iv = Hex.decode(tknz.nextToken());
                 Key     sKey = getKey(passwd,alg, 8, iv);
-                Cipher  c = Cipher.getInstance(
-                                               "DES/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
+                Cipher  c = Cipher.getInstance("DES/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
 
                 c.init(Cipher.DECRYPT_MODE, sKey, new IvParameterSpec(iv));
                 keyBytes = c.doFinal(Base64.decode(buf.toString()));
