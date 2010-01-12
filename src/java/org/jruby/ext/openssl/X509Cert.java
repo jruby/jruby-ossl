@@ -159,6 +159,9 @@ public class X509Cert extends RubyObject {
         } catch (CertificateException ex) {
             throw newCertificateError(runtime, ex);
         }
+        if (cert == null) {
+            throw newCertificateError(runtime, (String) null);
+        }
 
         set_serial(RubyNumeric.str2inum(runtime,runtime.newString(cert.getSerialNumber().toString()),10));
         set_not_before(RubyTime.newTime(runtime,cert.getNotBefore().getTime()));
@@ -423,13 +426,20 @@ public class X509Cert extends RubyObject {
         generator.setSignatureAlgorithm(digAlg + "WITH" + keyAlg);
 
         OpenSSLReal.doWithBCProvider(new Runnable() {
-                public void run() {
-                    try {
-                        cert = generator.generate(((PKey)key).getPrivateKey(),"BC");
-                    } catch(GeneralSecurityException e) {
-                    }
+
+            public void run() {
+                try {
+                    cert = generator.generate(((PKey)key).getPrivateKey(),"BC");
+                } catch (GeneralSecurityException gse) {
+                    throw newCertificateError(getRuntime(), gse.getMessage());
+                } catch (IllegalStateException ise) {
+                    throw newCertificateError(getRuntime(), ise.getMessage());
                 }
-            });
+            }
+        });
+        if (cert == null) {
+            throw newCertificateError(runtime, (String) null);
+        }
 
         changed = false;
         return this;
