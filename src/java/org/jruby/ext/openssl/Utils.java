@@ -67,11 +67,4 @@ public class Utils {
             throw rt.newTypeError(String.format("wrong argument (%s)! (Expected kind of %s)", obj.getMetaClass().getName(), path));
         }
     }
-
-    public static IRubyObject toDerIfPossible(Ruby rt, IRubyObject obj) {
-        if (obj.respondsTo("to_der")) {
-            return obj.callMethod(rt.getCurrentContext(), "to_der");
-        }
-        return obj;
-    }
 }// Utils

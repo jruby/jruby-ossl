@@ -187,7 +187,7 @@ public class PKeyRSA extends PKey {
                 if (pass != null && !pass.isNil()) {
                     passwd = pass.toString().toCharArray();
                 }
-                arg = Utils.toDerIfPossible(getRuntime(), arg);
+                arg = OpenSSLImpl.to_der_if_possible(arg);
                 String input = arg.convertToString().toString();
 
                 Object val = null;

@@ -397,7 +397,7 @@ public class Cipher extends RubyObject {
         try {
             keyBytes = key.convertToString().getBytes();
         } catch(Exception e) {
-            e.printStackTrace();
+            if (DEBUG) e.printStackTrace();
             throw new RaiseException(getRuntime(), ciphErr, null, true);
         }
         if(keyBytes.length < keyLen) {
@@ -420,7 +420,7 @@ public class Cipher extends RubyObject {
         try {
             ivBytes = iv.convertToString().getBytes();
         } catch (Exception e) {
-            e.printStackTrace();
+            if (DEBUG) e.printStackTrace();
             throw new RaiseException(getRuntime(), ciphErr, null, true);
         }
         if (ivBytes.length < ivLen) {
