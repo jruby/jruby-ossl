@@ -49,7 +49,6 @@ import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
-import org.bouncycastle.jce.provider.PEMUtil;
 import org.bouncycastle.x509.X509V2CRLGenerator;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
@@ -61,7 +60,6 @@ import org.jruby.RubyString;
 import org.jruby.RubyTime;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.ext.openssl.impl.utils.Base64;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
@@ -186,6 +184,7 @@ public class X509CRL extends RubyObject {
         return this;
     }
 
+    @Override
     @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         System.err.println("WARNING: unimplemented method called: CRL#init_copy");
@@ -390,8 +389,8 @@ public class X509CRL extends RubyObject {
         }
 
         for(Iterator<IRubyObject> iter = extensions.iterator();iter.hasNext();) {
-            Object arg = iter.next();
-            generator.addExtension(((X509Extensions.Extension)arg).getRealOid(),((X509Extensions.Extension)arg).getRealCritical(),((X509Extensions.Extension)arg).getRealValueBytes());
+            X509Extensions.Extension ag = (X509Extensions.Extension)iter.next();
+            generator.addExtension(ag.getRealOid(), ag.getRealCritical(), ag.getRealValueBytes());
         }
 
         OpenSSLReal.doWithBCProvider(new Runnable() {

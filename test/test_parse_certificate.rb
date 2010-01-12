@@ -18,7 +18,7 @@ class TestParseCertificate < Test::Unit::TestCase
   end
 
   def test_loading_key_raise_certificate_error
-      key_file = File.expand_path('fixture/localhost_keypair.pem', File.dirname(__FILE__))
+    key_file = File.expand_path('fixture/keypair.pem', File.dirname(__FILE__))
     assert_raises(OpenSSL::X509::CertificateError) do
       OpenSSL::X509::Certificate.new(File.read(key_file))
     end

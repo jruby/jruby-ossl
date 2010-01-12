@@ -661,9 +661,14 @@ public class X509Extensions {
             } else if(getRealOid().equals(new DERObjectIdentifier("2.5.29.35"))) { // authorityKeyIdentifier
                 DERSequence seq = (DERSequence)(new ASN1InputStream(getRealValueBytes()).readObject());
                 StringBuffer out1 = new StringBuffer();
-                if(seq.size() > 0) {
+                if (seq.size() > 0) {
                     out1.append("keyid:");
-                    out1.append(Utils.toHex(((DEROctetString)seq.getObjectAt(0)).getOctets(),':'));
+                    DERObject keyid = seq.getObjectAt(0).getDERObject();
+                    if (keyid instanceof DEROctetString) {
+                        out1.append(Utils.toHex(((DEROctetString) keyid).getOctets(), ':'));
+                    } else {
+                        out1.append(Utils.toHex(keyid.getDEREncoded(), ':'));
+                    }
                 }
                 return getRuntime().newString(out1.toString());
             } else if(getRealOid().equals(new DERObjectIdentifier("2.5.29.21"))) { // CRLReason
