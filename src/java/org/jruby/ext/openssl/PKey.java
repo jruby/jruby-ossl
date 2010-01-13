@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -41,7 +42,6 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -71,6 +71,7 @@ public abstract class PKey extends RubyObject {
         super(runtime,type);
     }
 
+    @Override
     @JRubyMethod
     public IRubyObject initialize() {
         return this;
@@ -150,5 +151,22 @@ public abstract class PKey extends RubyObject {
             throw newPKeyError(getRuntime(), "invalid key");
         }
         return getRuntime().newBoolean(valid);
+    }
+
+    protected static void addSplittedAndFormatted(StringBuilder result, BigInteger value) {
+        String v = value.toString(16);
+        if ((v.length() % 2) != 0) {
+            v = "0" + v;
+        }
+        String sep = "";
+        for (int i = 0; i < v.length(); i += 2) {
+            result.append(sep);
+            if ((i % 30) == 0) {
+                result.append("\n    ");
+            }
+            result.append(v.substring(i, i + 2));
+            sep = ":";
+        }
+        result.append("\n");
     }
 }// PKey

@@ -336,10 +336,27 @@ public class PEMInputOutput {
         return null;
     }
 
+    /*
+     * c: PEM_read_bio_DSA_PUBKEY
+     */
     public static DSAPublicKey readDSAPubKey(Reader in, char[] f) throws IOException {
-        //        System.out.println("WARNING: read_DSA_PUBKEY");
+        BufferedReader _in = makeBuffered(in);
+        String  line;
+        while ((line = _in.readLine()) != null) {
+            if(line.indexOf(BEF_G+PEM_STRING_DSA_PUBLIC) != -1) {
+                try {
+                    return (DSAPublicKey)readPublicKey(_in,"DSA",BEF_E+PEM_STRING_DSA_PUBLIC);
+                } catch (Exception e) {
+                    throw new IOException("problem creating DSA public key: " + e.toString());
+                }
+            }
+        }
         return null;
     }
+
+    /*
+     * c: PEM_read_bio_DSAPublicKey
+     */
     public static DSAPublicKey readDSAPublicKey(Reader in, char[] f) throws IOException {
         BufferedReader _in = makeBuffered(in);
         String  line;
@@ -354,6 +371,10 @@ public class PEMInputOutput {
         }
         return null; 
     }
+
+    /*
+     * c: PEM_read_bio_DSAPrivateKey
+     */
     public static KeyPair readDSAPrivateKey(Reader in, char[] f) throws IOException {
         BufferedReader _in = makeBuffered(in);
         String  line;
@@ -563,22 +584,32 @@ public class PEMInputOutput {
 
     public static void writeDSAPublicKey(Writer _out, DSAPublicKey obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        byte[] encoding = obj.getEncoded();
-        out.write(BEF_G + PEM_STRING_PUBLIC + AFT);
+        byte[] encoding = null;
+        if (obj != null) {
+            encoding = obj.getEncoded();
+        } else {
+            encoding = new byte[]{'0', 0};
+        }
+        out.write(BEF_G + PEM_STRING_DSA_PUBLIC + AFT);
         out.newLine();
-        writeEncoded(out,encoding);
-        out.write(BEF_E + PEM_STRING_PUBLIC + AFT);
+        writeEncoded(out, encoding);
+        out.write(BEF_E + PEM_STRING_DSA_PUBLIC + AFT);
         out.newLine();
         out.flush();
     }
     /** writes an RSA public key encoded in an PKCS#1 RSA structure. */
     public static void writeRSAPublicKey(Writer _out, RSAPublicKey obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        byte[] encoding = obj.getEncoded();
-        out.write(BEF_G + PEM_STRING_PUBLIC + AFT);
+        byte[] encoding = null;
+        if (obj != null) {
+            encoding = obj.getEncoded();
+        } else {
+            encoding = new byte[]{'0', 0};
+        }
+        out.write(BEF_G + PEM_STRING_RSA_PUBLIC + AFT);
         out.newLine();
-        writeEncoded(out,encoding);
-        out.write(BEF_E + PEM_STRING_PUBLIC + AFT);
+        writeEncoded(out, encoding);
+        out.write(BEF_E + PEM_STRING_RSA_PUBLIC + AFT);
         out.newLine();
         out.flush();
     }
@@ -745,12 +776,12 @@ public class PEMInputOutput {
             OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
             pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(f), salt);
             SecretKey secretKey = null;
-            if(algo.equalsIgnoreCase("DESEDE")) {
+            if(algo.equalsIgnoreCase("DESede/CBC/PKCS5Padding")) {
                 // generate key
                 int keyLength = 24;
                 secretKey = new SecretKeySpec(((KeyParameter)pGen.generateDerivedParameters(keyLength * 8)).getKey(), algo);
             } else {
-                throw new IOException("unknown algorithm in write_DSAPrivateKey");
+                throw new IOException("unknown algorithm in write_DSAPrivateKey: " + algo);
             }
 
             // cipher  

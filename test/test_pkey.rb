@@ -42,6 +42,7 @@ class TestPKey < Test::Unit::TestCase
   end
 
   def test_can_generate_dsa_key
+    OpenSSL::PKey::DSA.generate(512)
   end
 
   # http://github.com/jruby/jruby-openssl/issues#issue/1
@@ -101,5 +102,91 @@ __EOP__
       assert_equal(pkey.e, pkey2.e)
       assert_equal(pkey.d, pkey2.d)
     end
+  end
+
+  # jruby-openssl/0.6 causes NPE
+  def test_generate_pkey_rsa_empty
+    assert_nothing_raised do
+      OpenSSL::PKey::RSA.new.to_pem
+    end
+  end
+
+  def test_generate_pkey_rsa_length
+    assert_nothing_raised do
+      OpenSSL::PKey::RSA.new(512).to_pem
+    end
+  end
+
+  def test_generate_pkey_rsa_to_text
+    assert_match(
+      /Private-Key: \(512 bit\)/,
+      OpenSSL::PKey::RSA.new(512).to_text
+    )
+  end
+
+  def test_load_pkey_rsa
+    pkey = OpenSSL::PKey::RSA.new(512)
+    assert_equal(pkey.to_pem, OpenSSL::PKey::RSA.new(pkey.to_pem).to_pem)
+  end
+
+  def test_load_pkey_rsa_public
+    pkey = OpenSSL::PKey::RSA.new(512).public_key
+    assert_equal(pkey.to_pem, OpenSSL::PKey::RSA.new(pkey.to_pem).to_pem)
+  end
+
+  def test_load_pkey_rsa_der
+    pkey = OpenSSL::PKey::RSA.new(512)
+    assert_equal(pkey.to_der, OpenSSL::PKey::RSA.new(pkey.to_der).to_der)
+  end
+
+  def test_load_pkey_rsa_public_der
+    pkey = OpenSSL::PKey::RSA.new(512).public_key
+    assert_equal(pkey.to_der, OpenSSL::PKey::RSA.new(pkey.to_der).to_der)
+  end
+
+  # jruby-openssl/0.6 causes NPE
+  def test_generate_pkey_dsa_empty
+    assert_nothing_raised do
+      OpenSSL::PKey::DSA.new.to_pem
+    end
+  end
+
+  # jruby-openssl/0.6 ignores fixnum arg => to_pem returned 65 bytes with 'MAA='
+  def test_generate_pkey_dsa_length
+    assert(OpenSSL::PKey::DSA.new(512).to_pem.size > 100)
+  end
+
+  # jruby-openssl/0.6 returns nil for DSA#to_text
+  def test_generate_pkey_dsa_to_text
+    assert_match(
+      /Private-Key: \(512 bit\)/,
+      OpenSSL::PKey::DSA.new(512).to_text
+    )
+  end
+
+  def test_load_pkey_dsa
+    pkey = OpenSSL::PKey::DSA.new(512)
+    assert_equal(pkey.to_pem, OpenSSL::PKey::DSA.new(pkey.to_pem).to_pem)
+  end
+
+  def test_load_pkey_dsa_public
+    pkey = OpenSSL::PKey::DSA.new(512).public_key
+    assert_equal(pkey.to_pem, OpenSSL::PKey::DSA.new(pkey.to_pem).to_pem)
+  end
+
+  def test_load_pkey_dsa_der
+    pkey = OpenSSL::PKey::DSA.new(512)
+    assert_equal(pkey.to_der, OpenSSL::PKey::DSA.new(pkey.to_der).to_der)
+  end
+
+  def test_load_pkey_dsa_public_der
+    pkey = OpenSSL::PKey::DSA.new(512).public_key
+    assert_equal(pkey.to_der, OpenSSL::PKey::DSA.new(pkey.to_der).to_der)
+  end
+
+  def test_load_pkey_dsa_net_ssh
+    blob = "0\201\367\002\001\000\002A\000\203\316/\037u\272&J\265\003l3\315d\324h\372{\t8\252#\331_\026\006\035\270\266\255\343\353Z\302\276\335\336\306\220\375\202L\244\244J\206>\346\b\315\211\302L\246x\247u\a\376\366\345\302\016#\002\025\000\244\274\302\221Og\275/\302+\356\346\360\024\373wI\2573\361\002@\027\215\270r*\f\213\350C\245\021:\350 \006\\\376\345\022`\210b\262\3643\023XLKS\320\370\002\276\347A\nU\204\276\324\256`=\026\240\330\306J\316V\213\024\e\030\215\355\006\037q\337\356ln\002@\017\257\034\f\260\333'S\271#\237\230E\321\312\027\021\226\331\251Vj\220\305\316\036\v\266+\000\230\270\177B\003?t\a\305]e\344\261\334\023\253\323\251\223M\2175)a(\004\"lI8\312\303\307\a\002\024_\aznW\345\343\203V\326\246ua\203\376\201o\350\302\002"
+    pkey = OpenSSL::PKey::DSA.new(blob)
+    assert_equal(blob, pkey.to_der)
   end
 end

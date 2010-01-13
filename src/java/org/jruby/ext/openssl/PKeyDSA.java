@@ -33,30 +33,34 @@ import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.interfaces.DSAKey;
 import java.security.interfaces.DSAParams;
 import java.security.interfaces.DSAPrivateKey;
 import java.security.interfaces.DSAPublicKey;
+import java.security.spec.DSAPrivateKeySpec;
 import java.security.spec.DSAPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERSequence;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
+import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
-import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
@@ -104,33 +108,62 @@ public class PKeyDSA extends PKey {
     private static final int SPEC_Q = 2;
     private static final int SPEC_G = 3;
     
-
+    @Override
     PublicKey getPublicKey() {
         return pubKey;
     }
 
+    @Override
     PrivateKey getPrivateKey() {
         return privKey;
     }
 
+    @Override
     String getAlgorithm() {
         return "DSA";
     }
 
-    @JRubyMethod(rest=true)
+    @JRubyMethod(name = "generate", meta = true)
+    public static IRubyObject generate(IRubyObject recv, IRubyObject arg) {
+        int keysize = RubyNumeric.fix2int(arg);
+        PKeyDSA dsa = new PKeyDSA(recv.getRuntime(), (RubyClass) recv);
+        dsaGenerate(dsa, keysize);
+        return dsa;
+    }
+
+    /*
+     * c: dsa_generate
+     */
+    private static void dsaGenerate(PKeyDSA dsa, int keysize) throws RaiseException {
+        try {
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("DSA", OpenSSLReal.PROVIDER);
+            gen.initialize(keysize, new SecureRandom());
+            KeyPair pair = gen.generateKeyPair();
+            dsa.privKey = (DSAPrivateKey) (pair.getPrivate());
+            dsa.pubKey = (DSAPublicKey) (pair.getPublic());
+        } catch (Exception e) {
+            throw newDSAError(dsa.getRuntime(), e.getMessage());
+        }
+    }
+
+    @JRubyMethod(rest = true)
     public IRubyObject initialize(IRubyObject[] args) {
         IRubyObject arg;
         IRubyObject pass = null;
         char[] passwd = null;
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2) == 0) {
+        if (org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 0, 2) == 0) {
+            privKey = null;
+            pubKey = null;
         } else {
             arg = args[0];
-            if(args.length > 1) {
+            if (args.length > 1) {
                 pass = args[1];
             }
-            if(arg instanceof RubyFixnum) {
+            if (arg instanceof RubyFixnum) {
+                int keysize = RubyNumeric.fix2int(arg);
+                dsaGenerate(this, keysize);
             } else {
-                if(pass != null && !pass.isNil()) {
+                if (pass != null && !pass.isNil()) {
                     passwd = pass.toString().toCharArray();
                 }
                 String input = arg.toString();
@@ -138,63 +171,102 @@ public class PKeyDSA extends PKey {
                 Object val = null;
                 KeyFactory fact = null;
                 try {
-                    fact = KeyFactory.getInstance("DSA",OpenSSLReal.PROVIDER);
-                } catch(NoSuchAlgorithmException e) {
+                    fact = KeyFactory.getInstance("DSA", OpenSSLReal.PROVIDER);
+                } catch (NoSuchAlgorithmException e) {
                     throw getRuntime().newLoadError("unsupported key algorithm (DSA)");
                 }
-                if(null == val) {
+                if (null == val) {
+                    // PEM_read_bio_DSAPrivateKey
                     try {
-                        val = PEMInputOutput.readDSAPrivateKey(new StringReader(input),passwd);
-                    } catch(Exception e3) {
+                        val = PEMInputOutput.readDSAPrivateKey(new StringReader(input), passwd);
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
+                    // PEM_read_bio_DSAPublicKey
                     try {
-                        val = PEMInputOutput.readDSAPublicKey(new StringReader(input),passwd);
-                    } catch(Exception e3) {
+                        val = PEMInputOutput.readDSAPublicKey(new StringReader(input), passwd);
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
+                    // PEM_read_bio_DSA_PUBKEY
                     try {
-                        val = PEMInputOutput.readDSAPubKey(new StringReader(input),passwd);
-                    } catch(Exception e3) {
+                        val = PEMInputOutput.readDSAPubKey(new StringReader(input), passwd);
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
+                    // d2i_DSAPrivateKey_bio
+                    try {
+                        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
+                        if (seq.size() == 6) {
+                            BigInteger p = ((DERInteger) seq.getObjectAt(1)).getValue();
+                            BigInteger q = ((DERInteger) seq.getObjectAt(2)).getValue();
+                            BigInteger g = ((DERInteger) seq.getObjectAt(3)).getValue();
+                            BigInteger y = ((DERInteger) seq.getObjectAt(4)).getValue();
+                            BigInteger x = ((DERInteger) seq.getObjectAt(5)).getValue();
+                            PrivateKey priv = fact.generatePrivate(new DSAPrivateKeySpec(x, p, q, g));
+                            PublicKey pub = fact.generatePublic(new DSAPublicKeySpec(y, p, q, g));
+                            val = new KeyPair(pub, priv);
+                        } else {
+                            val = null;
+                        }
+                    } catch (Exception e) {
+                        val = null;
+                    }
+                }
+                if (null == val) {
+                    // d2i_DSA_PUBKEY_bio
+                    try {
+                        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
+                        if (seq.size() == 4) {
+                            BigInteger y = ((DERInteger) seq.getObjectAt(0)).getValue();
+                            BigInteger p = ((DERInteger) seq.getObjectAt(1)).getValue();
+                            BigInteger q = ((DERInteger) seq.getObjectAt(2)).getValue();
+                            BigInteger g = ((DERInteger) seq.getObjectAt(3)).getValue();
+                            val = fact.generatePublic(new DSAPublicKeySpec(y, p, q, g));
+                        } else {
+                            val = null;
+                        }
+                    } catch (Exception e) {
+                        val = null;
+                    }
+                }
+                if (null == val) {
                     try {
                         val = fact.generatePrivate(new PKCS8EncodedKeySpec(ByteList.plain(input)));
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
                     try {
                         val = fact.generatePublic(new X509EncodedKeySpec(ByteList.plain(input)));
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
                     throw newDSAError(getRuntime(), "Neither PUB key nor PRIV key:");
                 }
 
-                if(val instanceof KeyPair) {
-                    privKey = (DSAPrivateKey)(((KeyPair)val).getPrivate());
-                    pubKey = (DSAPublicKey)(((KeyPair)val).getPublic());
-                } else if(val instanceof DSAPrivateKey) {
-                    privKey = (DSAPrivateKey)val;
-                } else if(val instanceof DSAPublicKey) {
-                    pubKey = (DSAPublicKey)val;
+                if (val instanceof KeyPair) {
+                    privKey = (DSAPrivateKey) (((KeyPair) val).getPrivate());
+                    pubKey = (DSAPublicKey) (((KeyPair) val).getPublic());
+                } else if (val instanceof DSAPrivateKey) {
+                    privKey = (DSAPrivateKey) val;
+                } else if (val instanceof DSAPublicKey) {
+                    pubKey = (DSAPublicKey) val;
                     privKey = null;
                 } else {
                     throw newDSAError(getRuntime(), "Neither PUB key nor PRIV key:");
                 }
             }
         }
-
         return this;
     }
 
@@ -229,7 +301,22 @@ public class PKeyDSA extends PKey {
 
     @JRubyMethod
     public IRubyObject to_text() throws Exception {
-        return getRuntime().getNil();
+        StringBuilder result = new StringBuilder();
+        if (privKey != null) {
+            int len = privKey.getParams().getP().bitLength();
+            result.append("Private-Key: (").append(len).append(" bit)").append("\n");
+            result.append("priv:");
+            addSplittedAndFormatted(result, privKey.getX());
+        }
+        result.append("pub:");
+        addSplittedAndFormatted(result, pubKey.getY());
+        result.append("P:");
+        addSplittedAndFormatted(result, pubKey.getParams().getP());
+        result.append("Q:");
+        addSplittedAndFormatted(result, pubKey.getParams().getQ());
+        result.append("G:");
+        addSplittedAndFormatted(result, pubKey.getParams().getG());
+        return getRuntime().newString(result.toString());
     }
 
     @JRubyMethod
@@ -281,11 +368,13 @@ public class PKeyDSA extends PKey {
 
     @JRubyMethod
     public IRubyObject syssign(IRubyObject arg) {
+        // TODO
         return getRuntime().getNil();
     }
 
     @JRubyMethod
     public IRubyObject sysverify(IRubyObject arg, IRubyObject arg2) {
+        // TODO
         return getRuntime().getNil();
     }
     

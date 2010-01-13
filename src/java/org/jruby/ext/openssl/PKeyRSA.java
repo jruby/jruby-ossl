@@ -35,6 +35,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
@@ -131,58 +132,58 @@ public class PKeyRSA extends PKey {
         return "RSA";
     }
 
-    @JRubyMethod(name="generate", meta=true, rest=true)
+    @JRubyMethod(name = "generate", meta = true, rest = true)
     public static IRubyObject generate(IRubyObject recv, IRubyObject[] args) {
         BigInteger exp = RSAKeyGenParameterSpec.F4;
-        if(Arity.checkArgumentCount(recv.getRuntime(),args,1,2) == 2) {
-            if(args[1] instanceof RubyFixnum) {
+        if (Arity.checkArgumentCount(recv.getRuntime(), args, 1, 2) == 2) {
+            if (args[1] instanceof RubyFixnum) {
                 exp = BigInteger.valueOf(RubyNumeric.num2long(args[1]));
             } else {
-                exp = ((RubyBignum)args[1]).getValue();
+                exp = ((RubyBignum) args[1]).getValue();
             }
-        }       
+        }
         int keysize = RubyNumeric.fix2int(args[0]);
         RSAKeyGenParameterSpec spec = new RSAKeyGenParameterSpec(keysize, exp);
+        PKeyRSA rsa = new PKeyRSA(recv.getRuntime(), (RubyClass) recv);
+        rsaGenerate(rsa, keysize, exp);
+        return rsa;
+    }
+
+    /*
+     * c: rsa_generate
+     */
+    private static void rsaGenerate(PKeyRSA rsa, int keysize, BigInteger exp) throws RaiseException {
         try {
-            KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA",OpenSSLReal.PROVIDER);
-            gen.initialize(spec);
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA", OpenSSLReal.PROVIDER);
+            gen.initialize(new RSAKeyGenParameterSpec(keysize, exp), new SecureRandom());
             KeyPair pair = gen.generateKeyPair();
-            PKeyRSA rsa = new PKeyRSA(recv.getRuntime(), (RubyClass)recv);
-            rsa.privKey = (RSAPrivateCrtKey)(pair.getPrivate());
-            rsa.pubKey = (RSAPublicKey)(pair.getPublic());
-            return rsa;
-        } catch(Exception e) {
-            throw newRSAError(recv.getRuntime(), null);
+            rsa.privKey = (RSAPrivateCrtKey) (pair.getPrivate());
+            rsa.pubKey = (RSAPublicKey) (pair.getPublic());
+        } catch (Exception e) {
+            throw newRSAError(rsa.getRuntime(), e.getMessage());
         }
     }
 
-    @JRubyMethod(frame=true, rest=true)
+    @JRubyMethod(frame = true, rest = true)
     public IRubyObject initialize(IRubyObject[] args, Block block) {
         IRubyObject arg;
         IRubyObject pass = null;
         char[] passwd = null;
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2) == 0) {
-            // TODO: is this OK?
+        if (org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 0, 2) == 0) {
+            privKey = null;
+            pubKey = null;
         } else {
             arg = args[0];
-            if(args.length > 1) {
+            if (args.length > 1) {
                 pass = args[1];
             }
-            if(arg instanceof RubyFixnum) {
-                int keyLen = RubyNumeric.fix2int(arg);
-                BigInteger pubExp = RSAKeyGenParameterSpec.F4;
-                if(null != pass && !pass.isNil()) {
-                    pubExp = BigInteger.valueOf(RubyNumeric.num2long(pass));
+            if (arg instanceof RubyFixnum) {
+                int keysize = RubyNumeric.fix2int(arg);
+                BigInteger exp = RSAKeyGenParameterSpec.F4;
+                if (null != pass && !pass.isNil()) {
+                    exp = BigInteger.valueOf(RubyNumeric.num2long(pass));
                 }
-                try {
-                    KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA",OpenSSLReal.PROVIDER);
-                    gen.initialize(new RSAKeyGenParameterSpec(keyLen,pubExp));
-                    KeyPair pair = gen.generateKeyPair();
-                    privKey = (RSAPrivateCrtKey)(pair.getPrivate());
-                    pubKey = (RSAPublicKey)(pair.getPublic());
-                } catch(Exception e) {
-                    throw newRSAError(getRuntime(), null);
-                }
+                rsaGenerate(this, keysize, exp);
             } else {
                 if (pass != null && !pass.isNil()) {
                     passwd = pass.toString().toCharArray();
@@ -194,109 +195,107 @@ public class PKeyRSA extends PKey {
                 KeyFactory fact = null;
                 try {
                     fact = KeyFactory.getInstance("RSA", OpenSSLReal.PROVIDER);
-                } catch(Exception e) {
+                } catch (Exception e) {
                     throw getRuntime().newRuntimeError("unsupported key algorithm (RSA)");
                 }
-
-                if(null == val) {
+                if (null == val) {
                     // PEM_read_bio_RSAPrivateKey
                     try {
-                        val = PEMInputOutput.readPrivateKey(new StringReader(input),passwd);
-                    } catch(Exception e) {
+                        val = PEMInputOutput.readPrivateKey(new StringReader(input), passwd);
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
                     // PEM_read_bio_RSAPublicKey
                     try {
-                        val = PEMInputOutput.readRSAPublicKey(new StringReader(input),passwd);
-                    } catch(Exception e) {
+                        val = PEMInputOutput.readRSAPublicKey(new StringReader(input), passwd);
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
                     // PEM_read_bio_RSA_PUBKEY
                     try {
-                        val = PEMInputOutput.readRSAPubKey(new StringReader(input),passwd);
-                    } catch(Exception e) {
+                        val = PEMInputOutput.readRSAPubKey(new StringReader(input), passwd);
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
                     // d2i_RSAPrivateKey_bio
                     try {
-                        DERSequence seq = (DERSequence)(new ASN1InputStream(ByteList.plain(input)).readObject());
-                        if(seq.size() == 9) {
-                            BigInteger mod = ((DERInteger)seq.getObjectAt(1)).getValue();
-                            BigInteger pubexp = ((DERInteger)seq.getObjectAt(2)).getValue();
-                            BigInteger privexp = ((DERInteger)seq.getObjectAt(3)).getValue();
-                            BigInteger primep = ((DERInteger)seq.getObjectAt(4)).getValue();
-                            BigInteger primeq = ((DERInteger)seq.getObjectAt(5)).getValue();
-                            BigInteger primeep = ((DERInteger)seq.getObjectAt(6)).getValue();
-                            BigInteger primeeq = ((DERInteger)seq.getObjectAt(7)).getValue();
-                            BigInteger crtcoeff = ((DERInteger)seq.getObjectAt(8)).getValue();
-                            val = fact.generatePrivate(new RSAPrivateCrtKeySpec(mod,pubexp,privexp,primep,primeq,primeep,primeeq,crtcoeff));
+                        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
+                        if (seq.size() == 9) {
+                            BigInteger mod = ((DERInteger) seq.getObjectAt(1)).getValue();
+                            BigInteger pubexp = ((DERInteger) seq.getObjectAt(2)).getValue();
+                            BigInteger privexp = ((DERInteger) seq.getObjectAt(3)).getValue();
+                            BigInteger primep = ((DERInteger) seq.getObjectAt(4)).getValue();
+                            BigInteger primeq = ((DERInteger) seq.getObjectAt(5)).getValue();
+                            BigInteger primeep = ((DERInteger) seq.getObjectAt(6)).getValue();
+                            BigInteger primeeq = ((DERInteger) seq.getObjectAt(7)).getValue();
+                            BigInteger crtcoeff = ((DERInteger) seq.getObjectAt(8)).getValue();
+                            val = fact.generatePrivate(new RSAPrivateCrtKeySpec(mod, pubexp, privexp, primep, primeq, primeep, primeeq, crtcoeff));
                         } else {
                             val = null;
                         }
-                    } catch(Exception ex) {
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
                     // d2i_RSAPublicKey_bio
                     try {
-                        DERSequence seq = (DERSequence)(new ASN1InputStream(ByteList.plain(input)).readObject());
-                        if(seq.size() == 2) {
-                            BigInteger mod = ((DERInteger)seq.getObjectAt(0)).getValue();
-                            BigInteger pubexp = ((DERInteger)seq.getObjectAt(1)).getValue();
-                            val = fact.generatePublic(new RSAPublicKeySpec(mod,pubexp));
+                        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
+                        if (seq.size() == 2) {
+                            BigInteger mod = ((DERInteger) seq.getObjectAt(0)).getValue();
+                            BigInteger pubexp = ((DERInteger) seq.getObjectAt(1)).getValue();
+                            val = fact.generatePublic(new RSAPublicKeySpec(mod, pubexp));
                         } else {
                             val = null;
                         }
-                    } catch(Exception ex) {
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
+                if (null == val) {
+                    // try to read PrivateKeyInfo.
+                    try {
+                        val = fact.generatePrivate(new PKCS8EncodedKeySpec(ByteList.plain(input)));
+                    } catch (Exception e) {
+                        val = null;
+                    }
+                }
+                if (null == val) {
                     // try to read SubjectPublicKeyInfo.
                     try {
                         val = fact.generatePublic(new X509EncodedKeySpec(ByteList.plain(input)));
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         val = null;
                     }
                 }
-                if(null == val) {
-                    // try toread PrivateKeyInfo.
-                    try {
-                        val = fact.generatePrivate(new PKCS8EncodedKeySpec(ByteList.plain(input)));
-                    } catch(Exception e) {
-                        val = null;
-                    }
-                }
-                if(null == val) {
+                if (null == val) {
                     throw newRSAError(getRuntime(), "Neither PUB key nor PRIV key:");
                 }
 
-                if(val instanceof KeyPair) {
-                    privKey = (RSAPrivateCrtKey)(((KeyPair)val).getPrivate());
-                    pubKey = (RSAPublicKey)(((KeyPair)val).getPublic());
-                } else if(val instanceof RSAPrivateCrtKey) {
-                    privKey = (RSAPrivateCrtKey)val;
+                if (val instanceof KeyPair) {
+                    privKey = (RSAPrivateCrtKey) (((KeyPair) val).getPrivate());
+                    pubKey = (RSAPublicKey) (((KeyPair) val).getPublic());
+                } else if (val instanceof RSAPrivateCrtKey) {
+                    privKey = (RSAPrivateCrtKey) val;
                     try {
-                        pubKey = (RSAPublicKey)(fact.generatePublic(new RSAPublicKeySpec(privKey.getModulus(),privKey.getPublicExponent())));
-                    } catch(Exception e) {
+                        pubKey = (RSAPublicKey) (fact.generatePublic(new RSAPublicKeySpec(privKey.getModulus(), privKey.getPublicExponent())));
+                    } catch (Exception e) {
                         throw newRSAError(getRuntime(), "Something rotten with private key");
                     }
-                } else if(val instanceof RSAPublicKey) {
-                    pubKey = (RSAPublicKey)val;
+                } else if (val instanceof RSAPublicKey) {
+                    pubKey = (RSAPublicKey) val;
                     privKey = null;
                 } else {
                     throw newRSAError(getRuntime(), "Neither PUB key nor PRIV key:");
                 }
             }
         }
-
         return this;
     }
 
@@ -340,23 +339,6 @@ public class PKeyRSA extends PKey {
         return val;
     }
 
-    private static void addSplittedAndFormatted(int keylen, StringBuilder result, BigInteger value) {
-        String v = value.toString(16);
-        if((v.length() % 2) != 0) {
-            v = "0" + v;
-        }
-        String sep = "";
-        for(int i = 0; i<v.length(); i+=2) {
-            result.append(sep);
-            if((i % 30) == 0) {
-                result.append("\n    ");
-            }
-            result.append(v.substring(i, i+2));
-            sep = ":";
-        }
-        result.append("\n");
-    }
-
     @JRubyMethod
     public IRubyObject params() throws Exception {
         ThreadContext ctx = getRuntime().getCurrentContext();
@@ -387,28 +369,28 @@ public class PKeyRSA extends PKey {
     @JRubyMethod
     public IRubyObject to_text() throws Exception {
         StringBuilder result = new StringBuilder();
-        if(privKey != null) {
+        if (privKey != null) {
             int len = privKey.getModulus().bitLength();
             result.append("Private-Key: (").append(len).append(" bit)").append("\n");
             result.append("modulus:");
-            addSplittedAndFormatted(len, result, privKey.getModulus());
+            addSplittedAndFormatted(result, privKey.getModulus());
             result.append("publicExponent: ").append(privKey.getPublicExponent()).append(" (0x").append(privKey.getPublicExponent().toString(16)).append(")\n");
             result.append("privateExponent:");
-            addSplittedAndFormatted(len, result, privKey.getPrivateExponent());
+            addSplittedAndFormatted(result, privKey.getPrivateExponent());
             result.append("prime1:");
-            addSplittedAndFormatted(len, result, privKey.getPrimeP());
+            addSplittedAndFormatted(result, privKey.getPrimeP());
             result.append("prime2:");
-            addSplittedAndFormatted(len, result, privKey.getPrimeQ());
+            addSplittedAndFormatted(result, privKey.getPrimeQ());
             result.append("exponent1:");
-            addSplittedAndFormatted(len, result, privKey.getPrimeExponentP());
+            addSplittedAndFormatted(result, privKey.getPrimeExponentP());
             result.append("exponent2:");
-            addSplittedAndFormatted(len, result, privKey.getPrimeExponentQ());
+            addSplittedAndFormatted(result, privKey.getPrimeExponentQ());
             result.append("coefficient:");
-            addSplittedAndFormatted(len, result, privKey.getCrtCoefficient());
+            addSplittedAndFormatted(result, privKey.getCrtCoefficient());
         } else {
             int len = pubKey.getModulus().bitLength();
             result.append("Modulus (").append(len).append(" bit):");
-            addSplittedAndFormatted(len, result, pubKey.getModulus());
+            addSplittedAndFormatted(result, pubKey.getModulus());
             result.append("Exponent: ").append(pubKey.getPublicExponent()).append(" (0x").append(pubKey.getPublicExponent().toString(16)).append(")\n");
         }
         return getRuntime().newString(result.toString());
