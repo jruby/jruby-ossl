@@ -38,6 +38,7 @@ import java.util.Set;
 import javax.crypto.spec.IvParameterSpec;
 
 import javax.crypto.spec.RC2ParameterSpec;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
@@ -178,15 +179,15 @@ public class Cipher extends RubyObject {
             String cryptoMode = null;
             String realName = null;
 
-            String padding_type;
+            String paddingType;
             if (padding == null || padding.equalsIgnoreCase("PKCS5Padding")) {
-                padding_type = "PKCS5Padding";
+                paddingType = "PKCS5Padding";
             } else if (padding.equals("0") || padding.equalsIgnoreCase("NoPadding")) {
-                padding_type = "NoPadding";
+                paddingType = "NoPadding";
             } else if (padding.equalsIgnoreCase("ISO10126Padding")) {
-                padding_type = "ISO10126Padding";
+                paddingType = "ISO10126Padding";
             } else {
-                padding_type = "PKCS5Padding";
+                paddingType = "PKCS5Padding";
             }
 
             if ("bf".equalsIgnoreCase(cryptoBase)) {
@@ -196,15 +197,15 @@ public class Cipher extends RubyObject {
             if (split.length == 3) {
                 cryptoVersion = split[1];
                 cryptoMode = split[2];
+            } else if (split.length == 2) {
+                cryptoMode = split[1];
             } else {
-                if (split.length == 2) {
-                    cryptoMode = split[1];
-                } else {
-                    cryptoMode = "CBC";
-                }
+                cryptoMode = "CBC";
             }
 
-            if (cryptoBase.equalsIgnoreCase("DES") && "EDE3".equalsIgnoreCase(cryptoVersion)) {
+            if (cryptoBase.equalsIgnoreCase("CAST")) {
+                realName = "CAST5";
+            } else if (cryptoBase.equalsIgnoreCase("DES") && "EDE3".equalsIgnoreCase(cryptoVersion)) {
                 realName = "DESede";
             } else {
                 realName = cryptoBase;
@@ -215,9 +216,15 @@ public class Cipher extends RubyObject {
                 cryptoMode = "CBC";
             }
 
-            realName = realName + "/" + cryptoMode + "/" + padding_type;
+            if (realName.equalsIgnoreCase("RC4")) {
+                realName = "RC4";
+                cryptoMode = "NONE";
+                paddingType = "NoPadding";
+            } else {
+                realName = realName + "/" + cryptoMode + "/" + paddingType;
+            }
 
-            return new String[]{cryptoBase, cryptoVersion, cryptoMode, realName, padding_type};
+            return new String[]{cryptoBase, cryptoVersion, cryptoMode, realName, paddingType};
         }
     }
 
@@ -279,7 +286,7 @@ public class Cipher extends RubyObject {
         System.out.println("*******************************");
     }
 
-    @JRubyMethod(required=1)
+    @JRubyMethod(required = 1)
     public IRubyObject initialize(IRubyObject str) {
         name = str.toString();
         if (!CipherModule.isSupportedCipher(name)) {
@@ -293,21 +300,24 @@ public class Cipher extends RubyObject {
         padding_type = values[4];
         ciph = getCipher();
 
-        if(hasLen() && null != cryptoVersion) {
+        if (hasLen() && null != cryptoVersion) {
             try {
                 keyLen = Integer.parseInt(cryptoVersion) / 8;
-            } catch(NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 keyLen = -1;
             }
         }
-        if(keyLen == -1) {
-            if("DES".equalsIgnoreCase(cryptoBase)) {
+        if (keyLen == -1) {
+            if ("DES".equalsIgnoreCase(cryptoBase)) {
                 ivLen = 8;
-                if("EDE3".equalsIgnoreCase(cryptoVersion)) {
+                if ("EDE3".equalsIgnoreCase(cryptoVersion)) {
                     keyLen = 24;
                 } else {
                     keyLen = 8;
                 }
+            } else if ("RC4".equalsIgnoreCase(cryptoBase)) {
+                ivLen = 0;
+                keyLen = 16;
             } else {
                 keyLen = 16;
                 try {
@@ -320,14 +330,14 @@ public class Cipher extends RubyObject {
             }
         }
 
-        if(ivLen == -1) {
-            if("AES".equalsIgnoreCase(cryptoBase)) {
+        if (ivLen == -1) {
+            if ("AES".equalsIgnoreCase(cryptoBase)) {
                 ivLen = 16;
             } else {
                 ivLen = 8;
             }
         }
-        
+
         return this;
     }
 
@@ -438,6 +448,10 @@ public class Cipher extends RubyObject {
 
     @JRubyMethod
     public IRubyObject block_size() {
+        if ("RC4".equalsIgnoreCase(cryptoBase)) {
+            // getBlockSize() returns 0 for stream cipher in JCE. OpenSSL returns 1 for RC4.
+            return getRuntime().newFixnum(1);
+        }
         return getRuntime().newFixnum(ciph.getBlockSize());
     }
 
@@ -588,7 +602,6 @@ public class Cipher extends RubyObject {
             System.out.println("*** doInitialize");
             dumpVars();
         }
-
         ciphInited = true;
         try {
             assert (key.length * 8 == keyLen) || (key.length == keyLen) : "Key wrong length";
@@ -599,8 +612,10 @@ public class Cipher extends RubyObject {
                     System.arraycopy("OpenSSL for JRuby rulez".getBytes(), 0,
                             this.realIV, 0, ivLen);
                 }
-                if ("RC2".equals(cryptoBase)) {
+                if ("RC2".equalsIgnoreCase(cryptoBase)) {
                     this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new RC2ParameterSpec(this.key.length * 8, this.realIV));
+                } else if ("RC4".equalsIgnoreCase(cryptoBase)) {
+                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
                 } else {
                     this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.realIV));
                 }
@@ -608,7 +623,9 @@ public class Cipher extends RubyObject {
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
             }
         } catch (Exception e) {
-            if (DEBUG) e.printStackTrace();
+            if (DEBUG) {
+                e.printStackTrace();
+            }
             throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
         }
     }
@@ -660,41 +677,42 @@ public class Cipher extends RubyObject {
         return update(data);
     }
 
-    @JRubyMethod(name="final")
+    @JRubyMethod(name = "final")
     public IRubyObject _final() {
-        if(!ciphInited) {
+        if (!ciphInited) {
             doInitialize();
         }
-
+        // trying to allow update after final like cruby-openssl. Bad idea.
+        if ("RC4".equalsIgnoreCase(cryptoBase)) {
+            return getRuntime().newString("");
+        }
         ByteList str = new ByteList(ByteList.NULL_ARRAY);
         try {
             byte[] out = ciph.doFinal();
-            if(out != null) {
-                str = new ByteList(out,false);
+            if (out != null) {
+                str = new ByteList(out, false);
                 // TODO: Modifying this line appears to fix the issue, but I do
                 // not have a good reason for why. Best I can tell, lastIv needs
                 // to be set regardless of encryptMode, so we'll go with this
                 // for now. JRUBY-3335.
                 //if(this.realIV != null && encryptMode) {
-                if(this.realIV != null) {
-                    if(lastIv == null) {
+                if (this.realIV != null) {
+                    if (lastIv == null) {
                         lastIv = new byte[ivLen];
                     }
                     byte[] tmpIv = out;
-                    if(tmpIv.length >= ivLen) {
-                        System.arraycopy(tmpIv, tmpIv.length-ivLen, lastIv, 0, ivLen);
+                    if (tmpIv.length >= ivLen) {
+                        System.arraycopy(tmpIv, tmpIv.length - ivLen, lastIv, 0, ivLen);
                     }
                 }
             }
-
-            if(this.realIV != null) {
+            if (this.realIV != null) {
                 this.realIV = lastIv;
                 doInitialize();
             }
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
         }
-
         return getRuntime().newString(str);
     }
 

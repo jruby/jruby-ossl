@@ -59,6 +59,24 @@ class TestCipher < Test::Unit::TestCase
 		    )
   end
 
+  def test_rc4
+    do_repeated_test(
+                     "RC4",
+                     "foobarbazboofarf",
+                     "/i|\257\336U\354\331\212\304E\021\246\351\235\303",
+                     "\020\367\370\316\212\262\266e\242\333\263\305z\340\204\200"
+		    )
+  end
+
+  def test_cast
+    do_repeated_test(
+                     "cast-cbc",
+                     "foobarbazboofarf",
+                     "`m^\225\277\307\247m`{\f\020fl\ry",
+                     "(\354\265\251,D\016\037\251\250V\207\367\214\276B"
+		    )
+  end
+
   # JRUBY-4326 (1)
   def test_cipher_unsupported_algorithm
     assert_raise(OpenSSL::Cipher::CipherError) do
