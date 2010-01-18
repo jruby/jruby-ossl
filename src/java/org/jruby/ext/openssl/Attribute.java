@@ -37,7 +37,6 @@ import org.jruby.RubyClass;
 import org.jruby.RubyModule;
 import org.jruby.RubyObject;
 import org.jruby.anno.JRubyMethod;
-import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -76,7 +75,7 @@ public class Attribute extends RubyObject {
         return val2;
     }
 
-    DERObject toASN1() throws Exception {
+    DERObject toASN1() {
         ASN1EncodableVector v1 = new ASN1EncodableVector();
         v1.add(getObjectIdentifier(oid.toString()));
         if(value instanceof ASN1.ASN1Constructive) {
@@ -90,7 +89,7 @@ public class Attribute extends RubyObject {
     }
 
     @JRubyMethod(name="initialize", required=1, optional=1)
-    public IRubyObject _initialize(IRubyObject[] str) throws Exception {
+    public IRubyObject _initialize(IRubyObject[] str) {
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),str,1,2) == 1) {
             IRubyObject _oid = OpenSSLImpl.to_der_if_possible(str[0]);
             set_oid(_oid);
@@ -124,7 +123,7 @@ public class Attribute extends RubyObject {
     }
 
     @JRubyMethod(name="value=")
-    public IRubyObject set_value(IRubyObject val) throws Exception {
+    public IRubyObject set_value(IRubyObject val) {
         IRubyObject tmp = OpenSSLImpl.to_der_if_possible(val);
         this.value = ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),tmp);
         return val;

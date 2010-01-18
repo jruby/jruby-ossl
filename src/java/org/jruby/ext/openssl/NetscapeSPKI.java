@@ -27,6 +27,8 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DERIA5String;
@@ -41,7 +43,7 @@ import org.jruby.RubyModule;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
-import org.jruby.runtime.Block;
+import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.ext.openssl.util.Base64Coder;
@@ -75,7 +77,7 @@ public class NetscapeSPKI extends RubyObject {
     private NetscapeCertRequest cert;
 
     @JRubyMethod(name="initialize", rest=true)
-    public IRubyObject _initialize(IRubyObject[] args) throws Exception {
+    public IRubyObject _initialize(IRubyObject[] args) {
         if(args.length > 0) {
             byte[] b = args[0].convertToString().getBytes();
             try {
@@ -114,11 +116,11 @@ public class NetscapeSPKI extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject to_der() throws Exception {
+    public IRubyObject to_der() {
         DERSequence b = (DERSequence)cert.toASN1Object();
         DERObjectIdentifier encType = null;
         DERBitString publicKey = new DERBitString(((PKey)public_key).to_der().convertToString().getBytes());
-        DERIA5String challenge = new DERIA5String(this.challenge.toString());
+        DERIA5String encodedChallenge = new DERIA5String(this.challenge.toString());
         DERObjectIdentifier sigAlg = null;
         DERBitString sig = null;
         encType = (DERObjectIdentifier)((DERSequence)((DERSequence)((DERSequence)b.getObjectAt(0)).getObjectAt(0)).getObjectAt(0)).getObjectAt(0);
@@ -135,17 +137,21 @@ public class NetscapeSPKI extends RubyObject {
         v3.add(new DERSequence(v4));
         v3.add(publicKey);
         v2.add(new DERSequence(v3));
-        v2.add(challenge);
+        v2.add(encodedChallenge);
         v1.add(new DERSequence(v2));
         v1_2.add(sigAlg);
         v1_2.add(new DERNull());
         v1.add(new DERSequence(v1_2));
         v1.add(sig);
-        return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
+        try {
+            return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
+        } catch (IOException ioe) {
+            throw newSPKIError(getRuntime(), ioe.getMessage());
+        }
     }
 
     @JRubyMethod(name={"to_pem","to_s"})
-    public IRubyObject to_pem() throws Exception {
+    public IRubyObject to_pem() {
         return getRuntime().newString(Base64Coder.encode(to_der().toString()));
     }
 
@@ -167,12 +173,15 @@ public class NetscapeSPKI extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject sign(final IRubyObject key, IRubyObject digest) throws Exception {
+    public IRubyObject sign(final IRubyObject key, IRubyObject digest) {
         String keyAlg = ((PKey)key).getAlgorithm();
         String digAlg = ((Digest)digest).getAlgorithm();
         DERObjectIdentifier alg = (DERObjectIdentifier)(ASN1.getOIDLookup(getRuntime()).get(keyAlg.toLowerCase() + "-" + digAlg.toLowerCase()));
-        cert = new NetscapeCertRequest(challenge.toString(),new AlgorithmIdentifier(alg),((PKey)public_key).getPublicKey());
-
+        try {
+            cert = new NetscapeCertRequest(challenge.toString(), new AlgorithmIdentifier(alg), ((PKey) public_key).getPublicKey());
+        } catch (GeneralSecurityException gse) {
+            throw newSPKIError(getRuntime(), gse.getMessage());
+        }
         OpenSSLReal.doWithBCProvider(new Runnable() {
                 public void run() {
                     try {
@@ -184,7 +193,7 @@ public class NetscapeSPKI extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject verify(final IRubyObject pkey) throws Exception {
+    public IRubyObject verify(final IRubyObject pkey) {
         cert.setPublicKey(((PKey)pkey).getPublicKey());
 
         final boolean[] result = new boolean[1];
@@ -208,5 +217,9 @@ public class NetscapeSPKI extends RubyObject {
     public IRubyObject set_challenge(IRubyObject arg) {
         this.challenge = arg;
         return arg;
+    }
+
+    private static RaiseException newSPKIError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstantAt("Netscape")).getClass("SPKIError"), message, true);
     }
 }// NetscapeSPKI

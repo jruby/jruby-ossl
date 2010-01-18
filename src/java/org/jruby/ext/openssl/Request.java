@@ -91,7 +91,7 @@ public class Request extends RubyObject {
     }
 
     @JRubyMethod(name="initialize", frame=true, rest=true)
-    public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
+    public IRubyObject _initialize(IRubyObject[] args, Block block) {
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             return this;
         }
@@ -164,6 +164,7 @@ public class Request extends RubyObject {
         return this;
     }
 
+    @Override
     @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         System.err.println("WARNING: unimplemented method called: init_copy");
@@ -192,7 +193,7 @@ public class Request extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject to_der() throws Exception {
+    public IRubyObject to_der() {
         return RubyString.newString(getRuntime(), req.getDEREncoded());
     }
 
@@ -254,21 +255,20 @@ public class Request extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject sign(final IRubyObject key, final IRubyObject digest) throws Exception {
+    public IRubyObject sign(final IRubyObject key, final IRubyObject digest) {
         final String keyAlg = ((PKey)public_key).getAlgorithm();
         final String digAlg = ((Digest)digest).getAlgorithm();
         
         if(("DSA".equalsIgnoreCase(keyAlg) && "MD5".equalsIgnoreCase(digAlg)) || 
            ("RSA".equalsIgnoreCase(keyAlg) && "DSS1".equals(((Digest)digest).name().toString())) ||
            ("DSA".equalsIgnoreCase(keyAlg) && "SHA1".equals(((Digest)digest).name().toString()))) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("RequestError")), null, true);
+            throw newX509ReqError(getRuntime(), null);
         }
 
         final ASN1EncodableVector v1 = new ASN1EncodableVector();
         for(Iterator<IRubyObject> iter = attrs.iterator();iter.hasNext();) {
             v1.add(((Attribute)iter.next()).toASN1());
         }
-
         
         OpenSSLReal.doWithBCProvider(new Runnable() {
                 public void run() {
@@ -306,7 +306,7 @@ public class Request extends RubyObject {
 
     @SuppressWarnings("unchecked")
     @JRubyMethod(name="attributes=")
-    public IRubyObject set_attributes(IRubyObject val) throws Exception {
+    public IRubyObject set_attributes(IRubyObject val) {
         valid = false;
         attrs.clear();
         attrs.addAll(((RubyArray)val).getList());
@@ -321,7 +321,7 @@ public class Request extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject add_attribute(IRubyObject val) throws Exception {
+    public IRubyObject add_attribute(IRubyObject val) {
         valid = false;
         attrs.add(val);
         if(req != null) {
@@ -332,5 +332,9 @@ public class Request extends RubyObject {
             req.setAttributes(new DERSet(v1));
         }
         return getRuntime().getNil();
+    }
+
+    private static RaiseException newX509ReqError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("X509")).getClass("RequestError"), message, true);
     }
 }// Request

@@ -227,29 +227,27 @@ public class X509Name extends RubyObject {
         return val2;
     }
 
-    @JRubyMethod(rest=true)
+    @JRubyMethod(rest = true)
     public IRubyObject add_entry(IRubyObject[] args) {
-        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,2,3);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 2, 3);
         String oid = args[0].toString();
         String value = args[1].toString();
-        IRubyObject type = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getClass("Name").getConstant("OBJECT_TYPE_TEMPLATE").callMethod(getRuntime().getCurrentContext(),"[]",args[0]);
-        if(args.length > 2 && !args[2].isNil()) {
+        IRubyObject type = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("X509"))).getClass("Name").getConstant("OBJECT_TYPE_TEMPLATE").callMethod(getRuntime().getCurrentContext(), "[]", args[0]);
+        if (args.length > 2 && !args[2].isNil()) {
             type = args[2];
         }
-
         DERObjectIdentifier oid_v;
         try {
             oid_v = getObjectIdentifier(oid);
-        } catch(IllegalArgumentException e) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("NameError")), "invalid field name", true);
+        } catch (IllegalArgumentException e) {
+            throw newX509NameError(getRuntime(), "invalid field name: " + e.getMessage());
         }
-        if(null == oid_v) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("NameError")), null, true);
+        if (null == oid_v) {
+            throw newX509NameError(getRuntime(), null);
         }
         oids.add(oid_v);
         values.add(value);
         types.add(type);
-
         return this;
     }
 
@@ -310,6 +308,7 @@ else
         return getRuntime().newString(sb.toString());
     }
 
+    @Override
     @JRubyMethod
     public RubyArray to_a() {
         List<IRubyObject> entries = new ArrayList<IRubyObject>();
@@ -343,6 +342,7 @@ else
         return new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values));
     }
 
+    @Override
     @JRubyMethod(name="eql?")
     public IRubyObject eql_p(IRubyObject other) {
         if(!(other instanceof X509Name)) {
@@ -354,6 +354,7 @@ else
         return nm.equals(o_nm) ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
+    @Override
     @JRubyMethod
     public RubyFixnum hash() {
         Name name = new Name(new org.bouncycastle.asn1.x509.X509Name(new Vector<Object>(oids),new Vector<Object>(values)));
@@ -361,7 +362,7 @@ else
     }
 
     @JRubyMethod
-    public IRubyObject to_der() throws Exception {
+    public IRubyObject to_der() {
         DERSequence seq = null;
         if(oids.size()>0) {
             ASN1EncodableVector  vec = new ASN1EncodableVector();
@@ -373,7 +374,6 @@ else
                 v.add(oid);
                 String  str = (String)values.get(i);
                 v.add(convert(oid,str,RubyNumeric.fix2int(((RubyFixnum)types.get(i)))));
- 
                 if (lstOid == null) {
                     sVec.add(new DERSequence(v));
                 } else {
@@ -392,14 +392,22 @@ else
         return RubyString.newString(getRuntime(), seq.getDEREncoded());
     }
 
-    private DERObject convert(DERObjectIdentifier oid, String value, int type) throws Exception {
-        Class<? extends ASN1Encodable> clzz = ASN1.classForId(type);
-        if(clzz != null) {
-            java.lang.reflect.Constructor ctor = clzz.getConstructor(new Class[]{String.class});
-            if(null != ctor) {
-                return (DERObject)ctor.newInstance(new Object[]{value});
+    private DERObject convert(DERObjectIdentifier oid, String value, int type) {
+        try {
+            Class<? extends ASN1Encodable> clzz = ASN1.classForId(type);
+            if (clzz != null) {
+                java.lang.reflect.Constructor ctor = clzz.getConstructor(new Class[]{String.class});
+                if (null != ctor) {
+                    return (DERObject) ctor.newInstance(new Object[]{value});
+                }
             }
+            return new X509DefaultEntryConverter().getConvertedValue(oid, value);
+        } catch (Exception e) {
+            throw newX509NameError(getRuntime(), e.getMessage());
         }
-        return new X509DefaultEntryConverter().getConvertedValue(oid, value);
+    }
+
+    private static RaiseException newX509NameError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("X509")).getClass("NameError"), message, true);
     }
 }// X509Name

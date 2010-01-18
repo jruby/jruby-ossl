@@ -28,10 +28,12 @@
 package org.jruby.ext.openssl;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
+import java.security.cert.CRLException;
 import java.security.cert.CertificateFactory;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -109,7 +111,7 @@ public class X509CRL extends RubyObject {
     }
 
     @JRubyMethod(name="initialize", rest=true, frame=true)
-    public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
+    public IRubyObject _initialize(IRubyObject[] args, Block block) {
         //        System.err.println("WARNING: unimplemented method called: CRL#initialize");
         extensions = new ArrayList<IRubyObject>();
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
@@ -120,11 +122,15 @@ public class X509CRL extends RubyObject {
             revoked = getRuntime().newArray();
             return this;
         }
-        
+
         ByteArrayInputStream bis = new ByteArrayInputStream(args[0].convertToString().getBytes());
-        CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
-        crl = (java.security.cert.X509CRL)cf.generateCRL(bis);
-        
+        try {
+            CertificateFactory cf = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
+            crl = (java.security.cert.X509CRL) cf.generateCRL(bis);
+        } catch (GeneralSecurityException gse) {
+            throw newX509CRLError(getRuntime(), gse.getMessage());
+        }
+
         byte[] crl_bytes = args[0].convertToString().getBytes();
         // Parse PEM if we ever get passed some PEM contents
         try {
@@ -138,7 +144,11 @@ public class X509CRL extends RubyObject {
             // this is not PEM encoded, let's use the default argument
         }
 
-        crl_v = new ASN1InputStream(new ByteArrayInputStream(crl_bytes)).readObject();
+        try {
+            crl_v = new ASN1InputStream(new ByteArrayInputStream(crl_bytes)).readObject();
+        } catch (IOException ioe) {
+            throw newX509CRLError(getRuntime(), ioe.getMessage());
+        }
 
         DEREncodable v0 = ((DERSequence)(((DERSequence)crl_v).getObjectAt(0))).getObjectAt(0);
         if(v0 instanceof DERInteger) {
@@ -195,17 +205,25 @@ public class X509CRL extends RubyObject {
         return this;
     }
 
-    @JRubyMethod(name={"to_pem","to_s"})
-    public IRubyObject to_pem() throws Exception {
+    @JRubyMethod(name = {"to_pem", "to_s"})
+    public IRubyObject to_pem() {
         StringWriter w = new StringWriter();
-        PEMInputOutput.writeX509CRL(w,crl);
-        w.close();
-        return getRuntime().newString(w.toString());
+        try {
+            PEMInputOutput.writeX509CRL(w, crl);
+            w.close();
+            return getRuntime().newString(w.toString());
+        } catch (IOException ioe) {
+            throw newX509CRLError(getRuntime(), ioe.getMessage());
+        }
     }
 
     @JRubyMethod
-    public IRubyObject to_der() throws Exception {
-        return RubyString.newString(getRuntime(), crl_v.getEncoded());
+    public IRubyObject to_der() {
+        try {
+            return RubyString.newString(getRuntime(), crl_v.getEncoded());
+        } catch (IOException ioe) {
+            throw newX509CRLError(getRuntime(), ioe.getMessage());
+        }
     }
 
     private static final String IND8 = "        ";
@@ -213,7 +231,7 @@ public class X509CRL extends RubyObject {
     private static final String IND16 = "                ";
     private static final DateFormat ASN_DATE = new SimpleDateFormat("MMM dd HH:mm:ss yyyy zzz");
     @JRubyMethod
-    public IRubyObject to_text() throws Exception {
+    public IRubyObject to_text() {
         StringBuffer sbe = new StringBuffer();
         sbe.append("Certificate Revocation List (CRL):\n");
         sbe.append(IND8).append("Version ").append(RubyNumeric.fix2int(version)+1).append(" (0x");
@@ -364,7 +382,7 @@ public class X509CRL extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject sign(final IRubyObject key, IRubyObject digest) throws Exception {
+    public IRubyObject sign(final IRubyObject key, IRubyObject digest) {
         //System.err.println("WARNING: unimplemented method called: CRL#sign");
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();
@@ -373,7 +391,7 @@ public class X509CRL extends RubyObject {
         if(("DSA".equalsIgnoreCase(keyAlg) && "MD5".equalsIgnoreCase(digAlg)) || 
            ("RSA".equalsIgnoreCase(keyAlg) && "DSS1".equals(((Digest)digest).name().toString())) ||
            ("DSA".equalsIgnoreCase(keyAlg) && "SHA1".equals(((Digest)digest).name().toString()))) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("CRLError")), null, true);
+            throw newX509CRLError(getRuntime(), null);
         }
 
         sig_alg = getRuntime().newString(digAlg);
@@ -388,9 +406,13 @@ public class X509CRL extends RubyObject {
             generator.addCRLEntry(serial,((RubyTime)t1).getJavaDate(),new org.bouncycastle.asn1.x509.X509Extensions(new Hashtable()));
         }
 
-        for(Iterator<IRubyObject> iter = extensions.iterator();iter.hasNext();) {
-            X509Extensions.Extension ag = (X509Extensions.Extension)iter.next();
-            generator.addExtension(ag.getRealOid(), ag.getRealCritical(), ag.getRealValueBytes());
+        try {
+            for (Iterator<IRubyObject> iter = extensions.iterator(); iter.hasNext();) {
+                X509Extensions.Extension ag = (X509Extensions.Extension) iter.next();
+                generator.addExtension(ag.getRealOid(), ag.getRealCritical(), ag.getRealValueBytes());
+            }
+        } catch (IOException ioe) {
+            throw newX509CRLError(getRuntime(), ioe.getMessage());
         }
 
         OpenSSLReal.doWithBCProvider(new Runnable() {
@@ -402,7 +424,13 @@ public class X509CRL extends RubyObject {
                 }
             });
 
-        crl_v = new ASN1InputStream(new ByteArrayInputStream(crl.getEncoded())).readObject();
+        try {
+            crl_v = new ASN1InputStream(new ByteArrayInputStream(crl.getEncoded())).readObject();
+        } catch (CRLException crle) {
+            throw newX509CRLError(getRuntime(), crle.getMessage());
+        } catch (IOException ioe) {
+            throw newX509CRLError(getRuntime(), ioe.getMessage());
+        }
         DERSequence v1 = (DERSequence)(((DERSequence)crl_v).getObjectAt(0));
         ASN1EncodableVector build1 = new ASN1EncodableVector();
         int copyIndex = 0;
@@ -441,5 +469,9 @@ public class X509CRL extends RubyObject {
             });
             
         return result[0] ? getRuntime().getTrue() : getRuntime().getFalse();
+    }
+
+    private static RaiseException newX509CRLError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("X509")).getClass("CRLError"), message, true);
     }
 }// X509CRL

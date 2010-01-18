@@ -27,12 +27,6 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-
-import java.io.Reader;
 import org.jruby.Ruby;
 import org.jruby.RubyBoolean;
 import org.jruby.RubyClass;
@@ -43,7 +37,6 @@ import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
@@ -95,7 +88,7 @@ public class X509Store extends RubyObject {
     }
 
     @JRubyMethod(name="initialize", rest=true, frame=true)
-    public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
+    public IRubyObject _initialize(IRubyObject[] args, Block block) {
         store.setVerifyCallbackFunction(ossl_verify_cb);
         this.set_verify_callback(getRuntime().getNil());
         this.setInstanceVariable("@flags",RubyFixnum.zero(getRuntime()));
@@ -123,7 +116,7 @@ public class X509Store extends RubyObject {
     }
 
     @JRubyMethod(name="purpose=")
-    public IRubyObject set_purpose(IRubyObject arg) throws Exception {
+    public IRubyObject set_purpose(IRubyObject arg) {
         store.setPurpose(RubyNumeric.fix2int(arg));
         return arg;
     }
@@ -191,7 +184,7 @@ public class X509Store extends RubyObject {
     }
 
     @JRubyMethod(rest=true, frame=true)
-    public IRubyObject verify(IRubyObject[] args, Block block) throws Exception {
+    public IRubyObject verify(IRubyObject[] args, Block block) {
         IRubyObject cert, chain;
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2) {
             chain = args[1];

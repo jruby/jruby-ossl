@@ -373,7 +373,7 @@ public class X509Cert extends RubyObject {
         return arg;
     }
 
-    private void lazyInitializePublicKey() throws RaiseException {
+    private void lazyInitializePublicKey() {
         if (public_key_encoded == null || public_key_algorithm == null) {
             throw new IllegalStateException("lazy public key initialization failed");
         }

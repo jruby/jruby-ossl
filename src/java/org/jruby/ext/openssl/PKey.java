@@ -28,6 +28,7 @@
 package org.jruby.ext.openssl;
 
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -90,19 +91,23 @@ public abstract class PKey extends RubyObject {
     }
 
     // FIXME: any compelling reason for abstract method here?
-    public abstract IRubyObject to_der() throws Exception;
+    public abstract IRubyObject to_der();
 
     @JRubyMethod
-    public IRubyObject sign(IRubyObject digest, IRubyObject data) throws Exception {
-        if(!this.callMethod(getRuntime().getCurrentContext(),"private?").isTrue()) {
+    public IRubyObject sign(IRubyObject digest, IRubyObject data) {
+        if (!this.callMethod(getRuntime().getCurrentContext(), "private?").isTrue()) {
             throw getRuntime().newArgumentError("Private key is needed.");
         }
-        Signature sig = Signature.getInstance(((Digest)digest).getAlgorithm() + "WITH" + getAlgorithm(),OpenSSLReal.PROVIDER);
-        sig.initSign(getPrivateKey());
-        byte[] inp = data.convertToString().getBytes();
-        sig.update(inp);
-        byte[] sigge = sig.sign();
-        return RubyString.newString(getRuntime(), sigge);
+        try {
+            Signature sig = Signature.getInstance(((Digest) digest).getAlgorithm() + "WITH" + getAlgorithm(), OpenSSLReal.PROVIDER);
+            sig.initSign(getPrivateKey());
+            byte[] inp = data.convertToString().getBytes();
+            sig.update(inp);
+            byte[] sigge = sig.sign();
+            return RubyString.newString(getRuntime(), sigge);
+        } catch (GeneralSecurityException gse) {
+            throw newPKeyError(getRuntime(), gse.getMessage());
+        }
         /*
     GetPKey(self, pkey);
     EVP_SignInit(&ctx, GetDigestPtr(digest));

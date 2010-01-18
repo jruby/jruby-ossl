@@ -28,6 +28,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.math.BigInteger;
@@ -87,7 +88,7 @@ public class PKeyDSA extends PKey {
     }
 
     public static RaiseException newDSAError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstantAt("PKey")).getClass("DSAError"), message, true);
+        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstant("PKey")).getClass("DSAError"), message, true);
     }
     
     public PKeyDSA(Ruby runtime, RubyClass type) {
@@ -281,10 +282,10 @@ public class PKeyDSA extends PKey {
     }
 
     @JRubyMethod
-    public IRubyObject to_der() throws Exception {
-        if(pubKey != null && privKey == null) {
+    public IRubyObject to_der() {
+        if (pubKey != null && privKey == null) {
             return RubyString.newString(getRuntime(), pubKey.getEncoded());
-        } else if(privKey != null && pubKey != null) {
+        } else if (privKey != null && pubKey != null) {
             DSAParams params = privKey.getParams();
             ASN1EncodableVector v1 = new ASN1EncodableVector();
             v1.add(new DERInteger(0));
@@ -293,14 +294,18 @@ public class PKeyDSA extends PKey {
             v1.add(new DERInteger(params.getG()));
             v1.add(new DERInteger(pubKey.getY()));
             v1.add(new DERInteger(privKey.getX()));
-            return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
+            try {
+                return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
+            } catch (IOException ioe) {
+                throw newDSAError(getRuntime(), ioe.getMessage());
+            }
         } else {
             return RubyString.newString(getRuntime(), privKey.getEncoded());
         }
     }
 
     @JRubyMethod
-    public IRubyObject to_text() throws Exception {
+    public IRubyObject to_text() {
         StringBuilder result = new StringBuilder();
         if (privKey != null) {
             int len = privKey.getParams().getP().bitLength();
@@ -327,25 +332,29 @@ public class PKeyDSA extends PKey {
         return val;
     }
 
-    @JRubyMethod(name={"export","to_pem","to_s"}, rest=true)
-    public IRubyObject export(IRubyObject[] args) throws Exception {
+    @JRubyMethod(name = {"export", "to_pem", "to_s"}, rest = true)
+    public IRubyObject export(IRubyObject[] args) {
         StringWriter w = new StringWriter();
-        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 0, 2);
         char[] passwd = null;
         String algo = null;
-        if(args.length > 0 && !args[0].isNil()) {
-            algo = ((Cipher)args[0]).getAlgorithm();
-            if(args.length > 1 && !args[1].isNil()) {
+        if (args.length > 0 && !args[0].isNil()) {
+            algo = ((Cipher) args[0]).getAlgorithm();
+            if (args.length > 1 && !args[1].isNil()) {
                 passwd = args[1].toString().toCharArray();
             }
         }
-        if(privKey != null) {
-            PEMInputOutput.writeDSAPrivateKey(w,privKey,algo,passwd);
-        } else {
-            PEMInputOutput.writeDSAPublicKey(w,pubKey);
+        try {
+            if (privKey != null) {
+                PEMInputOutput.writeDSAPrivateKey(w, privKey, algo, passwd);
+            } else {
+                PEMInputOutput.writeDSAPublicKey(w, pubKey);
+            }
+            w.close();
+            return getRuntime().newString(w.toString());
+        } catch (IOException ioe) {
+            throw newDSAError(getRuntime(), ioe.getMessage());
         }
-        w.close();
-        return getRuntime().newString(w.toString());
     }
 
     /* 

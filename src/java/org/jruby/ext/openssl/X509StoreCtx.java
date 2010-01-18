@@ -69,13 +69,11 @@ public class X509StoreCtx extends RubyObject {
     }
 
     private StoreContext ctx;
-    private RubyClass cStoreError;
     private RubyClass cX509Cert;
 
     public X509StoreCtx(Ruby runtime, RubyClass type) {
         super(runtime, type);
         ctx = new StoreContext();
-        cStoreError = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreError"));
         cX509Cert = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
     }
 
@@ -83,16 +81,11 @@ public class X509StoreCtx extends RubyObject {
     X509StoreCtx(Ruby runtime, RubyClass type, StoreContext ctx) {
         super(runtime, type);
         this.ctx = ctx;
-        cStoreError = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreError"));
         cX509Cert = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
-    }
-    
-    private void raise(String msg) {
-        throw new RaiseException(getRuntime(), cStoreError, msg, true);
     }
 
     @JRubyMethod(name="initialize", rest=true, frame=true)
-    public IRubyObject _initialize(IRubyObject[] args, Block block) throws Exception {
+    public IRubyObject _initialize(IRubyObject[] args, Block block) {
         IRubyObject store;
         IRubyObject cert = getRuntime().getNil();
         IRubyObject chain = getRuntime().getNil();
@@ -118,7 +111,7 @@ public class X509StoreCtx extends RubyObject {
             }
         }
         if(ctx.init(x509st,x509,x509s) != 1) {
-            raise(null);
+            throw newStoreError(getRuntime(), null);
         }
         IRubyObject t = api.getInstanceVariable(store,"@time");
         if(!t.isNil()) {
@@ -130,24 +123,33 @@ public class X509StoreCtx extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject verify() throws Exception {
-        ctx.setExtraData(1,getInstanceVariable("@verify_callback"));
-        int result = ctx.verifyCertificate();
-        return result != 0 ? getRuntime().getTrue() : getRuntime().getFalse();
+    public IRubyObject verify() {
+        ctx.setExtraData(1, getInstanceVariable("@verify_callback"));
+        try {
+            int result = ctx.verifyCertificate();
+            return result != 0 ? getRuntime().getTrue() : getRuntime().getFalse();
+        } catch (Exception e) {
+            // TODO: define suitable exception for jopenssl and catch it.
+            throw newStoreError(getRuntime(), e.getMessage());
+        }
     }
 
     @JRubyMethod
-    public IRubyObject chain() throws Exception {
+    public IRubyObject chain() {
         List<X509AuxCertificate> chain = ctx.getChain();
-        if(chain == null) {
+        if (chain == null) {
             return getRuntime().getNil();
         }
         List<IRubyObject> ary = new ArrayList<IRubyObject>();
-        for(X509AuxCertificate x509 : chain) {
-            ary.add(cX509Cert.callMethod(getRuntime().getCurrentContext(),"new",RubyString.newString(getRuntime(), x509.getEncoded())));
+        try {
+            for (X509AuxCertificate x509 : chain) {
+                ary.add(cX509Cert.callMethod(getRuntime().getCurrentContext(), "new", RubyString.newString(getRuntime(), x509.getEncoded())));
+            }
+        } catch (CertificateEncodingException cee) {
+            throw newStoreError(getRuntime(), cee.getMessage());
         }
         return getRuntime().newArray(ary);
-   }
+    }
 
     @JRubyMethod
     public IRubyObject error() {
@@ -173,10 +175,14 @@ public class X509StoreCtx extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject current_cert() throws CertificateEncodingException {
+    public IRubyObject current_cert() {
         Ruby rt = getRuntime();
         X509AuxCertificate x509 = ctx.getCurrentCertificate();
-        return cX509Cert.callMethod(rt.getCurrentContext(), "new", RubyString.newString(rt, x509.getEncoded()));
+        try {
+            return cX509Cert.callMethod(rt.getCurrentContext(), "new", RubyString.newString(rt, x509.getEncoded()));
+        } catch (CertificateEncodingException cee) {
+            throw newStoreError(getRuntime(), cee.getMessage());
+        }
     }
 
     @JRubyMethod
@@ -213,5 +219,9 @@ public class X509StoreCtx extends RubyObject {
     public IRubyObject set_time(IRubyObject arg) {
         ctx.setTime(0,((RubyTime)arg).getJavaDate());
         return arg;
+    }
+
+    private static RaiseException newStoreError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("X509")).getClass("StoreError"), message, true);
     }
 }// X509StoreCtx
