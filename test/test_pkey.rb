@@ -45,6 +45,25 @@ class TestPKey < Test::Unit::TestCase
     OpenSSL::PKey::DSA.generate(512)
   end
 
+  def test_malformed_rsa_handling
+    pem = <<__EOP__
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtiU1/UMzIQ1On9OlZGoV
+S0yySFYWoXLH12nmP69fg9jwdRbQlb0rxLn7zATbwfqcvGpCcW+8SmdwW74elNrc
+wRtbKjJKfbJCsVfDssbbj6BF+Bcq3ihi8+CGNXFdJOYhZZ+5Adg2Qc9Qp3Ubw9wu
+/3Ai87+1aQxoZPMFwdX2BRiZvxch9dwHVyL8EuFGUOYId/8JQepHyZMbTqp/8wlA
+UAbMcPW+IKp3N0WMgred3CjXKHAqqM0Ira9RLSXdlO2uFV4OrM0ak8rnTN5w1DsI
+McjvVvOck0aIxfHEEmeadt3YMn4PCW33/j8geulZLvt0ci60/OWMSCcIqByITlvY
+DwIDAQAB
+-----END PUBLIC KEY-----
+__EOP__
+    pkey = OpenSSL::PKey::RSA.new(pem)
+    # jruby-openssl/0.6 raises NativeException
+    assert_raise(OpenSSL::PKey::RSAError, 'JRUBY-4492') do
+      pkey.public_decrypt("rah")
+    end
+  end
+
   # http://github.com/jruby/jruby-openssl/issues#issue/1
   def test_load_pkey_rsa
     pem = <<__EOP__

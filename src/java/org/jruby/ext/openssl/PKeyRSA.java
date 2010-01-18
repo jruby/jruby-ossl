@@ -27,9 +27,11 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -310,14 +312,12 @@ public class PKeyRSA extends PKey {
     }
 
     @JRubyMethod
-    public IRubyObject to_der() throws Exception {
-        if(pubKey != null && privKey == null) {
-            ASN1EncodableVector v1 = new ASN1EncodableVector();
+    public IRubyObject to_der() {
+        ASN1EncodableVector v1 = new ASN1EncodableVector();
+        if (pubKey != null && privKey == null) {
             v1.add(new DERInteger(pubKey.getModulus()));
             v1.add(new DERInteger(pubKey.getPublicExponent()));
-            return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
         } else {
-            ASN1EncodableVector v1 = new ASN1EncodableVector();
             v1.add(new DERInteger(0));
             v1.add(new DERInteger(privKey.getModulus()));
             v1.add(new DERInteger(privKey.getPublicExponent()));
@@ -327,7 +327,11 @@ public class PKeyRSA extends PKey {
             v1.add(new DERInteger(privKey.getPrimeExponentP()));
             v1.add(new DERInteger(privKey.getPrimeExponentQ()));
             v1.add(new DERInteger(privKey.getCrtCoefficient()));
+        }
+        try {
             return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
+        } catch (IOException ioe) {
+            throw newRSAError(getRuntime(), ioe.getMessage());
         }
     }
 
@@ -340,7 +344,7 @@ public class PKeyRSA extends PKey {
     }
 
     @JRubyMethod
-    public IRubyObject params() throws Exception {
+    public IRubyObject params() {
         ThreadContext ctx = getRuntime().getCurrentContext();
         RubyHash hash = RubyHash.newHash(getRuntime());
         if(privKey != null) {
@@ -367,7 +371,7 @@ public class PKeyRSA extends PKey {
     }
 
     @JRubyMethod
-    public IRubyObject to_text() throws Exception {
+    public IRubyObject to_text() {
         StringBuilder result = new StringBuilder();
         if (privKey != null) {
             int len = privKey.getModulus().bitLength();
@@ -396,25 +400,29 @@ public class PKeyRSA extends PKey {
         return getRuntime().newString(result.toString());
     }
 
-    @JRubyMethod(name={"export", "to_pem", "to_s"}, rest=true)
-    public IRubyObject export(IRubyObject[] args) throws Exception {
+    @JRubyMethod(name = {"export", "to_pem", "to_s"}, rest = true)
+    public IRubyObject export(IRubyObject[] args) {
         StringWriter w = new StringWriter();
-        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 0, 2);
         char[] passwd = null;
         String algo = null;
-        if(args.length > 0 && !args[0].isNil()) {
-            algo = ((org.jruby.ext.openssl.Cipher)args[0]).getAlgorithm();
-            if(args.length > 1 && !args[1].isNil()) {
+        if (args.length > 0 && !args[0].isNil()) {
+            algo = ((org.jruby.ext.openssl.Cipher) args[0]).getAlgorithm();
+            if (args.length > 1 && !args[1].isNil()) {
                 passwd = args[1].toString().toCharArray();
             }
         }
-        if(privKey != null) {
-            PEMInputOutput.writeRSAPrivateKey(w,privKey,algo,passwd);
-        } else {
-            PEMInputOutput.writeRSAPublicKey(w,pubKey);
+        try {
+            if (privKey != null) {
+                PEMInputOutput.writeRSAPrivateKey(w, privKey, algo, passwd);
+            } else {
+                PEMInputOutput.writeRSAPublicKey(w, pubKey);
+            }
+            w.close();
+            return getRuntime().newString(w.toString());
+        } catch (IOException ioe) {
+            throw newRSAError(getRuntime(), ioe.getMessage());
         }
-        w.close();
-        return getRuntime().newString(w.toString());
     }
 
     private String getPadding(int padding) {
@@ -433,72 +441,82 @@ public class PKeyRSA extends PKey {
         return p;
     }        
 
-    @JRubyMethod(rest=true)
-    public IRubyObject private_encrypt(IRubyObject[] args) throws Exception {
+    @JRubyMethod(rest = true)
+    public IRubyObject private_encrypt(IRubyObject[] args) {
         int padding = 1;
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
+        if (org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 1, 2) == 2 && !args[1].isNil()) {
             padding = RubyNumeric.fix2int(args[1]);
         }
         String p = getPadding(padding);
-
         RubyString buffer = args[0].convertToString();
-        if(privKey == null) {
+        if (privKey == null) {
             throw newRSAError(getRuntime(), "private key needed.");
         }
-
-        Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
-        engine.init(Cipher.ENCRYPT_MODE,privKey);
-        byte[] outp = engine.doFinal(buffer.getBytes());
-        return RubyString.newString(getRuntime(), outp);
+        try {
+            Cipher engine = Cipher.getInstance("RSA" + p, OpenSSLReal.PROVIDER);
+            engine.init(Cipher.ENCRYPT_MODE, privKey);
+            byte[] outp = engine.doFinal(buffer.getBytes());
+            return RubyString.newString(getRuntime(), outp);
+        } catch (GeneralSecurityException gse) {
+            throw newRSAError(getRuntime(), gse.getMessage());
+        }
     }
 
-    @JRubyMethod(rest=true)
-    public IRubyObject private_decrypt(IRubyObject[] args) throws Exception {
+    @JRubyMethod(rest = true)
+    public IRubyObject private_decrypt(IRubyObject[] args) {
         int padding = 1;
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
+        if (org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 1, 2) == 2 && !args[1].isNil()) {
             padding = RubyNumeric.fix2int(args[1]);
         }
         String p = getPadding(padding);
-
         RubyString buffer = args[0].convertToString();
-        if(privKey == null) {
+        if (privKey == null) {
             throw newRSAError(getRuntime(), "private key needed.");
         }
-
-        Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
-        engine.init(Cipher.DECRYPT_MODE,privKey);
-        byte[] outp = engine.doFinal(buffer.getBytes());
-        return RubyString.newString(getRuntime(), outp);
+        try {
+            Cipher engine = Cipher.getInstance("RSA" + p, OpenSSLReal.PROVIDER);
+            engine.init(Cipher.DECRYPT_MODE, privKey);
+            byte[] outp = engine.doFinal(buffer.getBytes());
+            return RubyString.newString(getRuntime(), outp);
+        } catch (GeneralSecurityException gse) {
+            throw newRSAError(getRuntime(), gse.getMessage());
+        }
     }
 
-    @JRubyMethod(rest=true)
-    public IRubyObject public_encrypt(IRubyObject[] args) throws Exception {
+    @JRubyMethod(rest = true)
+    public IRubyObject public_encrypt(IRubyObject[] args) {
         int padding = 1;
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
+        if (org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 1, 2) == 2 && !args[1].isNil()) {
             padding = RubyNumeric.fix2int(args[1]);
         }
         String p = getPadding(padding);
-
         RubyString buffer = args[0].convertToString();
-        Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
-        engine.init(Cipher.ENCRYPT_MODE,pubKey);
-        byte[] outp = engine.doFinal(buffer.getBytes());
-        return RubyString.newString(getRuntime(), outp);
+        try {
+            Cipher engine = Cipher.getInstance("RSA" + p, OpenSSLReal.PROVIDER);
+            engine.init(Cipher.ENCRYPT_MODE, pubKey);
+            byte[] outp = engine.doFinal(buffer.getBytes());
+            return RubyString.newString(getRuntime(), outp);
+        } catch (GeneralSecurityException gse) {
+            throw newRSAError(getRuntime(), gse.getMessage());
+        }
     }
 
-    @JRubyMethod(rest=true)
-    public IRubyObject public_decrypt(IRubyObject[] args) throws Exception {
+    @JRubyMethod(rest = true)
+    public IRubyObject public_decrypt(IRubyObject[] args) {
         int padding = 1;
-        if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,2) == 2 && !args[1].isNil()) {
+        if (org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 1, 2) == 2 && !args[1].isNil()) {
             padding = RubyNumeric.fix2int(args[1]);
         }
         String p = getPadding(padding);
-
         RubyString buffer = args[0].convertToString();
-        Cipher engine = Cipher.getInstance("RSA"+p,OpenSSLReal.PROVIDER);
-        engine.init(Cipher.DECRYPT_MODE,pubKey);
-        byte[] outp = engine.doFinal(buffer.getBytes());
-        return RubyString.newString(getRuntime(), outp);
+        try {
+            Cipher engine = Cipher.getInstance("RSA" + p, OpenSSLReal.PROVIDER);
+            engine.init(Cipher.DECRYPT_MODE, pubKey);
+            byte[] outp = engine.doFinal(buffer.getBytes());
+            return RubyString.newString(getRuntime(), outp);
+        } catch (GeneralSecurityException gse) {
+            throw newRSAError(getRuntime(), gse.getMessage());
+        }
     }
 
     @JRubyMethod(name="d=")
