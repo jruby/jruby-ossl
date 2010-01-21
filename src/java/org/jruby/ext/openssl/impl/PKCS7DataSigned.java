@@ -125,7 +125,7 @@ public class PKCS7DataSigned extends PKCS7Data {
         return this.sign.toString();
     }
 
-    public static PKCS7DataSigned fromASN1(DEREncodable content) {
+    public static PKCS7DataSigned fromASN1(DEREncodable content) throws PKCS7Exception {
         return new PKCS7DataSigned(Signed.fromASN1(content));
     }
 

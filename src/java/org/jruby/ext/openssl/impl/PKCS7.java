@@ -66,7 +66,6 @@ import org.bouncycastle.asn1.pkcs.IssuerAndSerialNumber;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.X509Name;
 import org.jruby.ext.openssl.OpenSSLReal;
-import org.jruby.ext.openssl.SimpleSecretKey;
 import org.jruby.ext.openssl.x509store.Name;
 import org.jruby.ext.openssl.x509store.Store;
 import org.jruby.ext.openssl.x509store.StoreContext;
@@ -89,19 +88,19 @@ public class PKCS7 {
 
     private PKCS7Data data;
 
-    public Object ctrl(int cmd, Object v, Object ignored) {
+    public Object ctrl(int cmd, Object v, Object ignored) throws PKCS7Exception {
         return this.data.ctrl(cmd, v, ignored);
     }
 
-    public void setDetached(int v) {
+    public void setDetached(int v) throws PKCS7Exception {
         ctrl(OP_SET_DETACHED_SIGNATURE, Integer.valueOf(v), null);
     }
 
-    public int getDetached() {
+    public int getDetached() throws PKCS7Exception {
         return ((Integer)ctrl(OP_GET_DETACHED_SIGNATURE, null, null)).intValue();
     }
 
-    public boolean isDetached() {
+    public boolean isDetached() throws PKCS7Exception {
         return isSigned() && getDetached() != 0;
     }
 
@@ -109,7 +108,7 @@ public class PKCS7 {
         System.err.println(moniker + " " + object + "{" + object.getClass().getName() + "}");
     }
 
-    private void initiateWith(Integer nid, DEREncodable content) {
+    private void initiateWith(Integer nid, DEREncodable content) throws PKCS7Exception {
         this.data = PKCS7Data.fromASN1(nid, content);
     }
 
@@ -120,7 +119,7 @@ public class PKCS7 {
      *
      * ContentType ::= OBJECT IDENTIFIER
      */
-    public static PKCS7 fromASN1(DEREncodable obj) {
+    public static PKCS7 fromASN1(DEREncodable obj) throws PKCS7Exception {
         int size = ((ASN1Sequence)obj).size();
         if(size == 0) {
             return new PKCS7();
@@ -143,7 +142,7 @@ public class PKCS7 {
     /* c: d2i_PKCS7_bio
      *
      */
-    public static PKCS7 fromASN1(BIO bio) throws IOException {
+    public static PKCS7 fromASN1(BIO bio) throws IOException, PKCS7Exception {
         ASN1InputStream ais = new ASN1InputStream(BIO.asInputStream(bio));
         return fromASN1(ais.readObject());
     }
@@ -167,7 +166,7 @@ public class PKCS7 {
     /* c: PKCS7_add_signature
      *
      */
-    public SignerInfoWithPkey addSignature(X509AuxCertificate x509, PrivateKey pkey, MessageDigest dgst) {
+    public SignerInfoWithPkey addSignature(X509AuxCertificate x509, PrivateKey pkey, MessageDigest dgst) throws PKCS7Exception{
         SignerInfoWithPkey si = new SignerInfoWithPkey();
         si.set(x509, pkey, dgst);
         addSigner(si);
@@ -191,7 +190,7 @@ public class PKCS7 {
     /* c: PKCS7_get0_signers
      *
      */
-    public List<X509AuxCertificate> getSigners(Collection<X509AuxCertificate> certs, List<SignerInfoWithPkey> sinfos, int flags) {
+    public List<X509AuxCertificate> getSigners(Collection<X509AuxCertificate> certs, List<SignerInfoWithPkey> sinfos, int flags) throws PKCS7Exception {
         List<X509AuxCertificate> signers = new ArrayList<X509AuxCertificate>();
 
         if(!isSigned()) {
@@ -232,7 +231,7 @@ public class PKCS7 {
     /* c: PKCS7_signatureVerify
      *
      */
-    public void signatureVerify(BIO bio, SignerInfoWithPkey si, X509AuxCertificate x509) {
+    public void signatureVerify(BIO bio, SignerInfoWithPkey si, X509AuxCertificate x509) throws PKCS7Exception {
         if(!isSigned() && !isSignedAndEnveloped()) {
             throw new PKCS7Exception(F_PKCS7_SIGNATUREVERIFY, R_WRONG_PKCS7_TYPE);
         }
@@ -303,7 +302,7 @@ public class PKCS7 {
     /* c: PKCS7_verify
      *
      */
-    public void verify(Collection<X509AuxCertificate> certs, Store store, BIO indata, BIO out, int flags) {
+    public void verify(Collection<X509AuxCertificate> certs, Store store, BIO indata, BIO out, int flags) throws PKCS7Exception {
         if(!isSigned()) {
             throw new PKCS7Exception(F_PKCS7_VERIFY, R_WRONG_CONTENT_TYPE);
         }
@@ -402,7 +401,7 @@ public class PKCS7 {
     /* c: PKCS7_sign
      *
      */
-    public static PKCS7 sign(X509AuxCertificate signcert, PrivateKey pkey, Collection<X509AuxCertificate> certs, BIO data, int flags) {
+    public static PKCS7 sign(X509AuxCertificate signcert, PrivateKey pkey, Collection<X509AuxCertificate> certs, BIO data, int flags) throws PKCS7Exception {
         PKCS7 p7 = new PKCS7();
         p7.setType(ASN1Registry.NID_pkcs7_signed);
         p7.contentNew(ASN1Registry.NID_pkcs7_data);
@@ -453,7 +452,7 @@ public class PKCS7 {
     /* c: PKCS7_encrypt
      *
      */
-    public static PKCS7 encrypt(Collection<X509AuxCertificate> certs, byte[] in, CipherSpec cipher, int flags) {
+    public static PKCS7 encrypt(Collection<X509AuxCertificate> certs, byte[] in, CipherSpec cipher, int flags) throws PKCS7Exception {
         PKCS7 p7 = new PKCS7();
 
         p7.setType(ASN1Registry.NID_pkcs7_enveloped);
@@ -480,7 +479,7 @@ public class PKCS7 {
     /* c: PKCS7_decrypt
      *
      */
-    public void decrypt(PrivateKey pkey, X509AuxCertificate cert, BIO data, int flags) {
+    public void decrypt(PrivateKey pkey, X509AuxCertificate cert, BIO data, int flags) throws PKCS7Exception {
         if(!isEnveloped()) {
             throw new PKCS7Exception(F_PKCS7_DECRYPT, R_WRONG_CONTENT_TYPE);
         }
@@ -505,7 +504,7 @@ public class PKCS7 {
     /** c: PKCS7_set_type
      *
      */
-    public void setType(int type) {
+    public void setType(int type) throws PKCS7Exception {
         switch(type) {
         case ASN1Registry.NID_pkcs7_signed:
             this.data = new PKCS7DataSigned();
@@ -533,14 +532,14 @@ public class PKCS7 {
     /** c: PKCS7_set_cipher
      *
      */
-    public void setCipher(CipherSpec cipher) {
+    public void setCipher(CipherSpec cipher) throws PKCS7Exception {
         this.data.setCipher(cipher);
     }
 
     /** c: PKCS7_add_recipient
      *
      */
-    public RecipInfo addRecipient(X509AuxCertificate recip) {
+    public RecipInfo addRecipient(X509AuxCertificate recip) throws PKCS7Exception {
         RecipInfo ri = new RecipInfo();
         ri.set(recip);
         addRecipientInfo(ri);
@@ -550,7 +549,7 @@ public class PKCS7 {
     /** c: PKCS7_content_new
      *
      */
-    public void contentNew(int nid) {
+    public void contentNew(int nid) throws PKCS7Exception {
         PKCS7 ret = new PKCS7();
         ret.setType(nid);
         this.setContent(ret);
@@ -559,35 +558,35 @@ public class PKCS7 {
     /** c: PKCS7_add_signer
      *
      */
-    public void addSigner(SignerInfoWithPkey psi) {
+    public void addSigner(SignerInfoWithPkey psi) throws PKCS7Exception {
         this.data.addSigner(psi);
     }
 
     /** c: PKCS7_add_certificate
      *
      */
-    public void addCertificate(X509AuxCertificate cert) {
+    public void addCertificate(X509AuxCertificate cert) throws PKCS7Exception {
         this.data.addCertificate(cert);
     }
 
     /** c: PKCS7_add_crl
      *
      */
-    public void addCRL(X509CRL crl) {
+    public void addCRL(X509CRL crl) throws PKCS7Exception {
         this.data.addCRL(crl);
     }
 
     /** c: PKCS7_add_recipient_info
      *
      */
-    public void addRecipientInfo(RecipInfo ri) {
+    public void addRecipientInfo(RecipInfo ri) throws PKCS7Exception {
         this.data.addRecipientInfo(ri);
     }
 
     /** c: PKCS7_set_content
      *
      */
-    public void setContent(PKCS7 p7) {
+    public void setContent(PKCS7 p7) throws PKCS7Exception {
         this.data.setContent(p7);
     }
     
@@ -607,7 +606,7 @@ public class PKCS7 {
     /** c: PEM_read_bio_PKCS7
      *
      */
-    public static PKCS7 readPEM(BIO input) {
+    public static PKCS7 readPEM(BIO input) throws PKCS7Exception {
         try {
             byte[] buffer = new byte[SMIME.MAX_SMLEN];
             int read = -1;
@@ -631,7 +630,7 @@ public class PKCS7 {
     /** c: stati PKCS7_bio_add_digest
      *
      */
-    public BIO bioAddDigest(BIO pbio, AlgorithmIdentifier alg) {
+    public BIO bioAddDigest(BIO pbio, AlgorithmIdentifier alg) throws PKCS7Exception {
         try {
             MessageDigest md = EVP.getDigest(alg.getObjectId());
             BIO btmp = BIO.mdFilter(md);
@@ -649,7 +648,7 @@ public class PKCS7 {
     /** c: PKCS7_dataDecode
      *
      */
-    public BIO dataDecode(PrivateKey pkey, BIO inBio, X509AuxCertificate pcert) {
+    public BIO dataDecode(PrivateKey pkey, BIO inBio, X509AuxCertificate pcert) throws PKCS7Exception {
         BIO out = null;
         BIO btmp = null;
         BIO etmp = null;
@@ -815,7 +814,7 @@ public class PKCS7 {
     /** c: PKCS7_dataInit
      *
      */
-    public BIO dataInit(BIO bio) {
+    public BIO dataInit(BIO bio) throws PKCS7Exception {
         Collection<AlgorithmIdentifier> mdSk = null;
         ASN1OctetString os = null;
         int i = this.data.getType();
@@ -931,7 +930,7 @@ public class PKCS7 {
     /** c: static PKCS7_find_digest
      *
      */
-    public BIO findDigest(MessageDigest[] pmd, BIO bio, int nid) {
+    public BIO findDigest(MessageDigest[] pmd, BIO bio, int nid) throws PKCS7Exception {
         while(true) {
             bio = bio.findType(BIO.TYPE_MD);
             if(bio == null) {
@@ -953,7 +952,7 @@ public class PKCS7 {
     /** c: PKCS7_dataFinal
      *
      */
-    public int dataFinal(BIO bio) { 
+    public int dataFinal(BIO bio) throws PKCS7Exception {
         Collection<SignerInfoWithPkey> siSk = null;
         state = S_HEADER;
         BIO btmp;

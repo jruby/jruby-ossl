@@ -274,7 +274,7 @@ public class Signed {
      *
      * SignerInfos ::= SET OF SignerInfo
      */
-    public static Signed fromASN1(DEREncodable content) {
+    public static Signed fromASN1(DEREncodable content) throws PKCS7Exception{
         ASN1Sequence sequence = (ASN1Sequence)content;
         DERInteger version = (DERInteger)sequence.getObjectAt(0);
         ASN1Set digestAlgos = (ASN1Set)sequence.getObjectAt(1);
@@ -313,7 +313,7 @@ public class Signed {
         return signed;
     }
 
-    private static Collection<X509AuxCertificate> certificatesFromASN1Set(DEREncodable content) {
+    private static Collection<X509AuxCertificate> certificatesFromASN1Set(DEREncodable content) throws PKCS7Exception {
         Collection<X509AuxCertificate> result = new ArrayList<X509AuxCertificate>();
         if (content instanceof DERSequence) {
             try {
@@ -336,7 +336,7 @@ public class Signed {
         return result;
     }
 
-    private static X509AuxCertificate certificateFromASN1(DEREncodable current) {
+    private static X509AuxCertificate certificateFromASN1(DEREncodable current) throws PKCS7Exception {
         X509CertificateStructure struct = X509CertificateStructure.getInstance(current);
         try {
             return new X509AuxCertificate(new X509CertificateObject(struct));

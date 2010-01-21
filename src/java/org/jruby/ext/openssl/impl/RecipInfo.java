@@ -61,7 +61,7 @@ public class RecipInfo {
     /** c: PKCS7_RECIP_INFO_set
      *
      */
-    public void set(X509AuxCertificate cert) { 
+    public void set(X509AuxCertificate cert) throws PKCS7Exception {
         version = 0;
         try {
             X509Name issuer = X509Name.getInstance(new ASN1InputStream(new ByteArrayInputStream(cert.getIssuerX500Principal().getEncoded())).readObject());

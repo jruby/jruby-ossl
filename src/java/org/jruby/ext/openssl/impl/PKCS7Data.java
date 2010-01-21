@@ -40,7 +40,7 @@ import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 public abstract class PKCS7Data {
     public abstract int getType();
 
-    public Object ctrl(int cmd, Object v, Object ignored) {
+    public Object ctrl(int cmd, Object v, Object ignored) throws PKCS7Exception {
         switch(cmd) {
         case PKCS7.OP_SET_DETACHED_SIGNATURE:
             throw new PKCS7Exception(PKCS7.F_PKCS7_CTRL,PKCS7.R_OPERATION_NOT_SUPPORTED_ON_THIS_TYPE);
@@ -113,19 +113,19 @@ public abstract class PKCS7Data {
         return false;
     }
 
-    public void setCipher(CipherSpec cipher) {
+    public void setCipher(CipherSpec cipher) throws PKCS7Exception {
         throw new PKCS7Exception(PKCS7.F_PKCS7_SET_CIPHER,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
-    public void addRecipientInfo(RecipInfo ri) {
+    public void addRecipientInfo(RecipInfo ri) throws PKCS7Exception {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_RECIPIENT_INFO,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
-    public void addSigner(SignerInfoWithPkey psi) {
+    public void addSigner(SignerInfoWithPkey psi) throws PKCS7Exception {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_SIGNER,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
-    public void setContent(PKCS7 p7) {
+    public void setContent(PKCS7 p7) throws PKCS7Exception {
         throw new PKCS7Exception(PKCS7.F_PKCS7_SET_CONTENT,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
@@ -133,15 +133,15 @@ public abstract class PKCS7Data {
         return null;
     }
 
-    public void addCertificate(X509AuxCertificate cert) {
+    public void addCertificate(X509AuxCertificate cert) throws PKCS7Exception {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_CERTIFICATE,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
-    public void addCRL(X509CRL crl) {
+    public void addCRL(X509CRL crl) throws PKCS7Exception {
         throw new PKCS7Exception(PKCS7.F_PKCS7_ADD_CRL,PKCS7.R_WRONG_CONTENT_TYPE);
     }
 
-    public static PKCS7Data fromASN1(Integer nid, DEREncodable content) {
+    public static PKCS7Data fromASN1(Integer nid, DEREncodable content) throws PKCS7Exception {
         switch(nid) {
         case ASN1Registry.NID_pkcs7_data:
             return PKCS7DataData.fromASN1(content);

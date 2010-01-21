@@ -197,7 +197,7 @@ public class BIO {
     /** c: BIO_flush
      *
      */
-    public void flush() throws IOException {
+    public void flush() throws IOException, PKCS7Exception {
     }
 
     private final static byte[] CONTENT_TEXT;

@@ -29,7 +29,6 @@ package org.jruby.ext.openssl.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /** SMIME methods for PKCS7
@@ -153,7 +152,7 @@ public class SMIME {
     /* c: B64_read_PKCS7
      *
      */
-    public PKCS7 readPKCS7Base64(BIO bio) throws IOException {
+    public PKCS7 readPKCS7Base64(BIO bio) throws IOException, PKCS7Exception {
         BIO bio64 = BIO.base64Filter(bio);
         return PKCS7.fromASN1(bio64);
     }
@@ -209,7 +208,7 @@ public class SMIME {
     /* c: SMIME_read_PKCS7
      *
      */
-    public PKCS7 readPKCS7(BIO bio, BIO[] bcont) throws IOException {
+    public PKCS7 readPKCS7(BIO bio, BIO[] bcont) throws IOException, PKCS7Exception {
         if(bcont != null && bcont.length > 0) {
             bcont[0] = null;
         }
