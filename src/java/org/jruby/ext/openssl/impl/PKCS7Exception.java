@@ -31,7 +31,7 @@ package org.jruby.ext.openssl.impl;
  *
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
-public class PKCS7Exception extends RuntimeException {
+public class PKCS7Exception extends Exception {
     private int method;
     private int reason;
     private String errorData;

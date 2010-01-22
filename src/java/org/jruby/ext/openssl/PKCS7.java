@@ -143,6 +143,8 @@ public class PKCS7 extends RubyObject {
                 pkcs7 = new SMIME(Mime.DEFAULT).readPKCS7(in, out);
             } catch (IOException ioe) {
                 throw newPKCS7Error(klass.getRuntime(), ioe.getMessage());
+            } catch (PKCS7Exception pkcse) {
+                throw newPKCS7Exception(klass.getRuntime(), pkcse);
             }
             if (pkcs7 == null) {
                 throw newPKCS7Error(klass.getRuntime(), null);
@@ -189,11 +191,14 @@ public class PKCS7 extends RubyObject {
                 ? null 
                 : x509_ary2sk(certs); 
 
-            org.jruby.ext.openssl.impl.PKCS7 p7 = org.jruby.ext.openssl.impl.PKCS7.sign(x509, pkey, x509s, in, flg);
-            PKCS7 ret = wrap(((RubyModule)(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), p7);
-            ret.setData(data);
-
-            return ret;
+            try {
+                org.jruby.ext.openssl.impl.PKCS7 p7 = org.jruby.ext.openssl.impl.PKCS7.sign(x509, pkey, x509s, in, flg);
+                PKCS7 ret = wrap(((RubyModule)(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), p7);
+                ret.setData(data);
+                return ret;
+            } catch (PKCS7Exception pkcse) {
+                throw newPKCS7Exception(recv.getRuntime(), pkcse);
+            }
         }
 
         /** ossl_pkcs7_s_encrypt
@@ -224,10 +229,14 @@ public class PKCS7 extends RubyObject {
             int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
             byte[] in = data.convertToString().getBytes();
             List<X509AuxCertificate> x509s = x509_ary2sk(certs);
-            org.jruby.ext.openssl.impl.PKCS7 p7 = org.jruby.ext.openssl.impl.PKCS7.encrypt(x509s, in, ciph, flg);
-            PKCS7 ret = wrap(((RubyModule)(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), p7);
-            ret.setData(data);
-            return ret;
+            try {
+                org.jruby.ext.openssl.impl.PKCS7 p7 = org.jruby.ext.openssl.impl.PKCS7.encrypt(x509s, in, ciph, flg);
+                PKCS7 ret = wrap(((RubyModule)(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), p7);
+                ret.setData(data);
+                return ret;
+            } catch (PKCS7Exception pkcse) {
+                throw newPKCS7Exception(recv.getRuntime(), pkcse);
+            }
         }
     }
 
@@ -252,17 +261,18 @@ public class PKCS7 extends RubyObject {
             return this;
         }
         arg = args[0];
-
         arg = OpenSSLImpl.to_der_if_possible(arg);
         BIO input = obj2bio(arg);
-        p7 = org.jruby.ext.openssl.impl.PKCS7.readPEM(input);
-        if (p7 == null) {
-            input.reset();
-            try {
+        try {
+            p7 = org.jruby.ext.openssl.impl.PKCS7.readPEM(input);
+            if (p7 == null) {
+                input.reset();
                 p7 = org.jruby.ext.openssl.impl.PKCS7.fromASN1(input);
-            } catch (IOException ioe) {
-                throw newPKCS7Error(getRuntime(), ioe.getMessage());
             }
+        } catch (IOException ioe) {
+            throw newPKCS7Error(getRuntime(), ioe.getMessage());
+        } catch (PKCS7Exception pkcse) {
+            throw newPKCS7Exception(getRuntime(), pkcse);
         }
         setData(getRuntime().getNil());
         return this;
@@ -329,7 +339,11 @@ public class PKCS7 extends RubyObject {
     public IRubyObject add_signer(IRubyObject obj) {
         SignerInfoWithPkey p7si = ((SignerInfo)obj).getSignerInfo().dup();
 
-        p7.addSigner(p7si);
+        try {
+            p7.addSigner(p7si);
+        } catch (PKCS7Exception pkcse) {
+            throw newPKCS7Exception(getRuntime(), pkcse);
+        }
         // TODO: Handle exception here
 
         if(p7.isSigned()) {
@@ -384,7 +398,11 @@ public class PKCS7 extends RubyObject {
 
     @JRubyMethod
     public IRubyObject add_certificate(IRubyObject obj) {
-        p7.addCertificate(((X509Cert)obj).getAuxCert());
+        try {
+            p7.addCertificate(((X509Cert)obj).getAuxCert());
+        } catch (PKCS7Exception pkcse) {
+            throw newPKCS7Exception(getRuntime(), pkcse);
+        }
         return this;
     }
 
@@ -515,9 +533,17 @@ public class PKCS7 extends RubyObject {
         int flg = dflags.isNil() ? 0 : RubyNumeric.fix2int(dflags);
 
         BIO out = BIO.mem();
-        p7.decrypt(key, x509, out, flg);
+        try {
+            p7.decrypt(key, x509, out, flg);
+        } catch (PKCS7Exception pkcse) {
+            throw newPKCS7Exception(getRuntime(), pkcse);
+        }
 
         return membio2str(getRuntime(), out);
+    }
+
+    public static RaiseException newPKCS7Exception(Ruby ruby, PKCS7Exception pkcse) {
+        return new RaiseException(ruby, (RubyClass)ruby.getClassFromPath("OpenSSL::PKCS7::PKCS7Error"), pkcse.getMessage(), true);
     }
 
     @JRubyMethod(name = {"to_pem", "to_s"})

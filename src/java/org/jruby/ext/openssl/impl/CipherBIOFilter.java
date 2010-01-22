@@ -51,7 +51,8 @@ public class CipherBIOFilter extends BIOFilter {
         this.cipher = cipher;
     }
 
-    public void flush() throws IOException {
+    @Override
+    public void flush() throws IOException, PKCS7Exception {
         try {
             byte[] result = cipher.doFinal();
             if(result == null) {

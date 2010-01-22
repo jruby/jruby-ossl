@@ -172,7 +172,7 @@ public class SignerInfoWithPkey extends ASN1Encodable {
     /* c: PKCS7_SIGNER_INFO_set
      *
      */
-    public void set(X509AuxCertificate x509, PrivateKey pkey, MessageDigest dgst) {
+    public void set(X509AuxCertificate x509, PrivateKey pkey, MessageDigest dgst) throws PKCS7Exception {
         boolean dsa = 
             (pkey instanceof DSAPrivateKey) || 
             (pkey instanceof ECPrivateKey);
