@@ -18,7 +18,7 @@ def java_classpath_arg # myriad of ways to discover JRuby classpath
       FileList["#{ENV['JRUBY_HOME']}/lib/*.jar"].join(File::PATH_SEPARATOR)
   end
   bc_jars = BC_JARS.join(File::PATH_SEPARATOR)
-  jruby_cpath ? "-cp \"#{jruby_cpath}#{File::PATH_SEPARATOR}#{bc_jars}\"" : "-cp \"#{bc_jars}\""
+  jruby_cpath ? "-cp \"#{jruby_cpath.gsub('\\', '/')}#{File::PATH_SEPARATOR}#{bc_jars}\"" : "-cp \"#{bc_jars}\""
 end
 
 desc "Compile the native Java code."
