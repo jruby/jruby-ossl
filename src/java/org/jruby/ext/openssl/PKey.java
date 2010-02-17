@@ -98,8 +98,9 @@ public abstract class PKey extends RubyObject {
         if (!this.callMethod(getRuntime().getCurrentContext(), "private?").isTrue()) {
             throw getRuntime().newArgumentError("Private key is needed.");
         }
+        String digAlg = ((Digest) digest).getShortAlgorithm();
         try {
-            Signature sig = Signature.getInstance(((Digest) digest).getAlgorithm() + "WITH" + getAlgorithm(), OpenSSLReal.PROVIDER);
+            Signature sig = Signature.getInstance(digAlg + "WITH" + getAlgorithm());
             sig.initSign(getPrivateKey());
             byte[] inp = data.convertToString().getBytes();
             sig.update(inp);
@@ -137,14 +138,10 @@ public abstract class PKey extends RubyObject {
         }
         byte[] sigBytes = ((RubyString)sig).getBytes();
         byte[] dataBytes = ((RubyString)data).getBytes();
-        String algorithm = ((Digest)digest).getRealName() + "with" + getAlgorithm();
+        String algorithm = ((Digest)digest).getShortAlgorithm() + "WITH" + getAlgorithm();
         boolean valid;
         try {
-            // note: not specifying "BC" provider here, as that would fail if
-            // BC wasn't plugged in (as it would not be for, say, Net::SSH)
-            Signature signature = OpenSSLReal.PROVIDER == null ? 
-                Signature.getInstance(algorithm) :
-                Signature.getInstance(algorithm, OpenSSLReal.PROVIDER);
+            Signature signature = Signature.getInstance(algorithm);
             signature.initVerify(getPublicKey());
             signature.update(dataBytes);
             valid = signature.verify(sigBytes);

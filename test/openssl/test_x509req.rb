@@ -169,8 +169,7 @@ qL7M4i48FXHn
 -----END CERTIFICATE REQUEST-----
 END
     req = OpenSSL::X509::Request.new(req_s)
-
-    assert_equal(req_s, req.to_pem)
+    assert_equal(req_s.gsub(/[\r\n]/, ''), req.to_pem.gsub(/[\r\n]/, ''))
   end
 end
 

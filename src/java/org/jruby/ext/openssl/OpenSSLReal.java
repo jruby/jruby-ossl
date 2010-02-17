@@ -27,6 +27,12 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateFactory;
+import javax.crypto.SecretKeyFactory;
+import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
@@ -35,39 +41,49 @@ import org.jruby.RubyModule;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class OpenSSLReal {
-    public static java.security.Provider PROVIDER;
+    private static java.security.Provider BC_PROVIDER = null;
 
     static {
         try {
-            PROVIDER = (java.security.Provider) 
-                Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
-        } catch (Exception exception) {
+            BC_PROVIDER = (java.security.Provider) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
+        } catch (Exception ignored) {
             // no bouncy castle available
         }
     }
 
-    public static void doWithBCProvider(final Runnable toRun) {
+    public interface Runnable {
+        public void run() throws GeneralSecurityException;
+    }
+    
+    public interface Callable {
+        public Object call() throws GeneralSecurityException;
+    }
+
+    public static void doWithBCProvider(final Runnable toRun) throws GeneralSecurityException {
         getWithBCProvider(new Callable() {
 
-            public Object call() {
+            public Object call() throws GeneralSecurityException {
                 toRun.run();
                 return null;
             }
         });
     }
 
-    public static Object getWithBCProvider(Callable toRun) {
-        if (PROVIDER != null) {
-            synchronized (java.security.Security.class) {
-                try {
-                    java.security.Security.addProvider(PROVIDER);
-                    return toRun.call();
-                } finally {
-                    java.security.Security.removeProvider("BC");
-                }
+    // This method just adds BouncyCastleProvider if it's allowed.  Removing
+    // "BC" can remove pre-installed or runtime-added BC provider by elsewhere
+    // and it causes unknown runtime error anywhere.  We avoid this. To use
+    // part of jruby-openssl feature (X.509 and PKCS), users must be aware of
+    // dynamic BC provider adding.
+    public static Object getWithBCProvider(Callable toCall) throws GeneralSecurityException {
+        try {
+            if (BC_PROVIDER != null && java.security.Security.getProvider("BC") == null) {
+                java.security.Security.addProvider(BC_PROVIDER);
             }
-        } else {
-            return toRun.call();
+            return toCall.call();
+        } catch (NoSuchProviderException nspe) {
+            throw new GeneralSecurityException("You need to configure JVM/classpath to enable BouncyCastle Security Provider: " + nspe.getMessage(), nspe);
+        } catch (Exception e) {
+            throw new GeneralSecurityException(e.getMessage(), e);
         }
     }
 
@@ -76,16 +92,8 @@ public class OpenSSLReal {
         RubyClass standardError = runtime.getClass("StandardError");
         ossl.defineClassUnder("OpenSSLError", standardError, standardError.getAllocator());
 
-        if (PROVIDER != null) {
-            ASN1.createASN1(runtime, ossl);
-            PKey.createPKey(runtime, ossl);
-            X509.createX509(runtime, ossl);
-            NetscapeSPKI.createNetscapeSPKI(runtime, ossl);
-            PKCS7.createPKCS7(runtime, ossl);
-        } else {
-            runtime.getLoadService().require("openssl/dummy");
-        }
-
+        // those are BC provider free (uses BC class but does not use BC provider)
+        PKey.createPKey(runtime, ossl);
         BN.createBN(runtime, ossl);
         Digest.createDigest(runtime, ossl);
         Cipher.createCipher(runtime, ossl);
@@ -93,9 +101,16 @@ public class OpenSSLReal {
         HMAC.createHMAC(runtime, ossl);
         Config.createConfig(runtime, ossl);
 
+        // these classes depends on BC provider now.
         try {
+            ASN1.createASN1(runtime, ossl);
+            X509.createX509(runtime, ossl);
+            NetscapeSPKI.createNetscapeSPKI(runtime, ossl);
+            PKCS7.createPKCS7(runtime, ossl);
             SSL.createSSL(runtime, ossl);
-        } catch (Error err) {
+        } catch (Error ignore) {
+            // mainly for rescuing NoClassDefFoundError: no bc*.jar
+            runtime.getLoadService().require("openssl/dummy");
             runtime.getLoadService().require("openssl/dummyssl");
         }
 
@@ -103,11 +118,55 @@ public class OpenSSLReal {
         ossl.setConstant("OPENSSL_VERSION", runtime.newString("OpenSSL 0.9.8b 04 May 2006 (JRuby-OpenSSL fake)"));
 
         try {
-            java.security.MessageDigest.getInstance("SHA224", PROVIDER);
+            java.security.MessageDigest.getInstance("SHA224", BC_PROVIDER);
             ossl.setConstant("OPENSSL_VERSION_NUMBER", runtime.newFixnum(9469999));
         } catch (Exception e) {
             ossl.setConstant("OPENSSL_VERSION_NUMBER", runtime.newFixnum(9469952));
         }
+    }
+
+    public static javax.crypto.Cipher getCipherBC(final String algorithm) throws GeneralSecurityException {
+        return (javax.crypto.Cipher) getWithBCProvider(new Callable() {
+
+            public Object call() throws GeneralSecurityException {
+                return javax.crypto.Cipher.getInstance(algorithm, "BC");
+            }
+        });
+    }
+
+    public static javax.crypto.Cipher getCipherBC(final DERObjectIdentifier oid) throws GeneralSecurityException {
+        return getCipherBC(oid.getId());
+    }
+
+    public static SecretKeyFactory getSecretKeyFactoryBC(final String algorithm) throws GeneralSecurityException {
+        return (SecretKeyFactory) getWithBCProvider(new Callable() {
+
+            public Object call() throws GeneralSecurityException {
+                return SecretKeyFactory.getInstance(algorithm, "BC");
+            }
+        });
+    }
+
+    public static MessageDigest getMessageDigestBC(final DERObjectIdentifier oid) throws GeneralSecurityException {
+        return getMessageDigestBC(oid.getId());
+    }
+
+    public static MessageDigest getMessageDigestBC(final String algorithm) throws GeneralSecurityException {
+        return (MessageDigest) getWithBCProvider(new Callable() {
+
+            public Object call() throws GeneralSecurityException {
+                return MessageDigest.getInstance(algorithm, "BC");
+            }
+        });
+    }
+
+    public static CertificateFactory getX509CertificateFactoryBC() throws GeneralSecurityException {
+        return (CertificateFactory) getWithBCProvider(new Callable() {
+
+            public Object call() throws GeneralSecurityException {
+                return CertificateFactory.getInstance("X.509", "BC");
+            }
+        });
     }
 }// OpenSSLReal
 

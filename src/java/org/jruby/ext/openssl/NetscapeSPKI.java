@@ -29,6 +29,7 @@ package org.jruby.ext.openssl;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.PublicKey;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DERIA5String;
@@ -76,43 +77,52 @@ public class NetscapeSPKI extends RubyObject {
 
     private NetscapeCertRequest cert;
 
-    @JRubyMethod(name="initialize", rest=true)
+    @JRubyMethod(name = "initialize", rest = true)
     public IRubyObject _initialize(IRubyObject[] args) {
-        if(args.length > 0) {
+        if (args.length > 0) {
             byte[] b = args[0].convertToString().getBytes();
-            try {
-                b = Base64Coder.decode(b);
-            } catch(Exception e) {
-            }
+            b = tryBase64Decode(b);
             final byte[] b2 = b;
+            String algo = null;
+            byte[] enc = null;
+            try {
+                // NetscapeCertRequest requires "BC" provider.
+                PublicKey pkey = (PublicKey) OpenSSLReal.getWithBCProvider(new OpenSSLReal.Callable() {
 
-            final String[] result1 = new String[1];
-            final byte[][] result2 = new byte[1][];
-
-            OpenSSLReal.doWithBCProvider(new Runnable() {
-                    public void run() {
+                    public Object call() throws GeneralSecurityException {
                         try {
-                            cert = new NetscapeCertRequest(b2); //Uses "BC" as provider
-                            challenge = getRuntime().newString(cert.getChallenge()); //Uses "BC" as provider
-                            result1[0] = cert.getPublicKey().getAlgorithm(); //Uses "BC" as provider
-                            result2[0] = cert.getPublicKey().getEncoded(); //Uses "BC" as provider
-                        } catch(java.io.IOException e) {
+                            cert = new NetscapeCertRequest(b2);
+                            challenge = getRuntime().newString(cert.getChallenge());
+                            return cert.getPublicKey();
+                        } catch (IOException ioe) {
+                            throw new GeneralSecurityException(ioe.getMessage(), ioe);
                         }
                     }
                 });
+                algo = pkey.getAlgorithm();
+                enc = pkey.getEncoded();
+            } catch (GeneralSecurityException gse) {
+                throw newSPKIError(getRuntime(), gse.getMessage());
+            }
 
-            String algo = result1[0];
-            byte[] enc = result2[0];
-
-            if("RSA".equalsIgnoreCase(algo)) {
-                this.public_key = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("RSA").callMethod(getRuntime().getCurrentContext(),"new",RubyString.newString(getRuntime(), enc));
-            } else if("DSA".equalsIgnoreCase(algo)) {
-                this.public_key = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("DSA").callMethod(getRuntime().getCurrentContext(),"new",RubyString.newString(getRuntime(), enc));
+            if ("RSA".equalsIgnoreCase(algo)) {
+                this.public_key = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("RSA").callMethod(getRuntime().getCurrentContext(), "new", RubyString.newString(getRuntime(), enc));
+            } else if ("DSA".equalsIgnoreCase(algo)) {
+                this.public_key = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("DSA").callMethod(getRuntime().getCurrentContext(), "new", RubyString.newString(getRuntime(), enc));
             } else {
                 throw getRuntime().newLoadError("not implemented algo for public key: " + algo);
             }
         }
         return this;
+    }
+
+    // just try to decode for the time when the given bytes are base64 encoded.
+    private byte[] tryBase64Decode(byte[] b) {
+        try {
+            b = Base64Coder.decode(b);
+        } catch (Exception ignored) {
+        }
+        return b;
     }
 
     @JRubyMethod
@@ -174,38 +184,39 @@ public class NetscapeSPKI extends RubyObject {
 
     @JRubyMethod
     public IRubyObject sign(final IRubyObject key, IRubyObject digest) {
-        String keyAlg = ((PKey)key).getAlgorithm();
-        String digAlg = ((Digest)digest).getAlgorithm();
-        DERObjectIdentifier alg = (DERObjectIdentifier)(ASN1.getOIDLookup(getRuntime()).get(keyAlg.toLowerCase() + "-" + digAlg.toLowerCase()));
+        String keyAlg = ((PKey) key).getAlgorithm();
+        String digAlg = ((Digest) digest).getShortAlgorithm();
+        final DERObjectIdentifier alg = (DERObjectIdentifier) (ASN1.getOIDLookup(getRuntime()).get(keyAlg.toLowerCase() + "-" + digAlg.toLowerCase()));
         try {
-            cert = new NetscapeCertRequest(challenge.toString(), new AlgorithmIdentifier(alg), ((PKey) public_key).getPublicKey());
+            // NetscapeCertRequest requires "BC" provider.
+            OpenSSLReal.doWithBCProvider(new OpenSSLReal.Runnable() {
+
+                public void run() throws GeneralSecurityException {
+                    cert = new NetscapeCertRequest(challenge.toString(), new AlgorithmIdentifier(alg), ((PKey) public_key).getPublicKey());
+                    cert.sign(((PKey) key).getPrivateKey());
+                }
+            });
         } catch (GeneralSecurityException gse) {
             throw newSPKIError(getRuntime(), gse.getMessage());
         }
-        OpenSSLReal.doWithBCProvider(new Runnable() {
-                public void run() {
-                    try {
-                        cert.sign(((PKey)key).getPrivateKey());
-                    } catch(java.security.GeneralSecurityException e) {}
-                }
-            });
         return this;
     }
 
     @JRubyMethod
     public IRubyObject verify(final IRubyObject pkey) {
-        cert.setPublicKey(((PKey)pkey).getPublicKey());
+        cert.setPublicKey(((PKey) pkey).getPublicKey());
+        try {
+            // NetscapeCertRequest requires "BC" provider.
+            Boolean result = (Boolean) OpenSSLReal.getWithBCProvider(new OpenSSLReal.Callable() {
 
-        final boolean[] result = new boolean[1];
-        OpenSSLReal.doWithBCProvider(new Runnable() {
-                public void run() {
-                    try {
-                        result[0] = cert.verify(challenge.toString());
-                    } catch(java.security.GeneralSecurityException e) {}
+                public Boolean call() throws GeneralSecurityException {
+                    return cert.verify(challenge.toString());
                 }
             });
-
-        return result[0] ? getRuntime().getTrue() : getRuntime().getFalse();
+            return result.booleanValue() ? getRuntime().getTrue() : getRuntime().getFalse();
+        } catch (GeneralSecurityException gse) {
+            throw newSPKIError(getRuntime(), gse.getMessage());
+        }
     }
 
     @JRubyMethod

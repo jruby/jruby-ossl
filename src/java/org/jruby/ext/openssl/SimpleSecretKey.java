@@ -35,14 +35,14 @@ import javax.crypto.SecretKey;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class SimpleSecretKey implements Key, SecretKey {
-    private static final long serialVersionUID = -3941646158676294788L;
-    
+    private final String algorithm;
     private final byte[] value;
-    public SimpleSecretKey(byte[] value) {
+    public SimpleSecretKey(String algorithm, byte[] value) {
+        this.algorithm = algorithm;
         this.value = value;
     }
     public String getAlgorithm() {
-        return null;
+        return algorithm;
     }
     public byte[] getEncoded() {
         return value;

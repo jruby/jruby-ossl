@@ -37,9 +37,6 @@ import java.util.HashMap;
 
 import javax.crypto.spec.DHParameterSpec;
 
-import org.bouncycastle.asn1.ASN1EncodableVector;
-import org.bouncycastle.asn1.DERInteger;
-import org.bouncycastle.asn1.DERSequence;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyHash;
@@ -136,6 +133,8 @@ public class PKeyDH extends PKey {
                     DHParameterSpec spec = PEMInputOutput.readDHParameters(new StringReader(arg0.toString()));
                     this.dh_p = spec.getP();
                     this.dh_g = spec.getG();
+                } catch (NoClassDefFoundError ncdfe) {
+                    throw newDHError(runtime, ncdfe.getMessage());
                 } catch (IOException e) {
                     throw runtime.newIOErrorFromException(e);
                 } catch (InvalidParameterSpecException e) {
@@ -286,6 +285,8 @@ public class PKeyDH extends PKey {
             PEMInputOutput.writeDHParameters(w, new DHParameterSpec(p, g));
             w.flush();
             w.close();
+        } catch (NoClassDefFoundError ncdfe) {
+            throw newDHError(getRuntime(), ncdfe.getMessage());
         } catch (IOException e) {
             // shouldn't happen (string/buffer io only)
             throw getRuntime().newIOErrorFromException(e);
@@ -293,27 +294,21 @@ public class PKeyDH extends PKey {
         return getRuntime().newString(w.toString());
     }
     
-    @JRubyMethod(name="to_der")
+    @JRubyMethod(name = "to_der")
     public IRubyObject dh_to_der() {
         BigInteger p, g;
-        synchronized(this) {
+        synchronized (this) {
             p = this.dh_p;
             g = this.dh_g;
         }
-        ASN1EncodableVector v = new ASN1EncodableVector();
-        if (p != null) {
-            v.add(new DERInteger(p));
-        }
-        if (g != null) {
-            v.add(new DERInteger(g));
-        }
-        byte[] encoded;
         try {
-            encoded = new DERSequence(v).getEncoded();
-        } catch (IOException e) {
-            throw getRuntime().newIOErrorFromException(e);
+            byte[] bytes = org.jruby.ext.openssl.impl.PKey.toDerDHKey(p, g);
+            return RubyString.newString(getRuntime(), bytes);
+        } catch (NoClassDefFoundError ncdfe) {
+            throw newDHError(getRuntime(), ncdfe.getMessage());
+        } catch (IOException ioe) {
+            throw newDHError(getRuntime(), ioe.getMessage());
         }
-        return RubyString.newString(getRuntime(), encoded);
     }
     
     @JRubyMethod(name="params")

@@ -125,7 +125,9 @@ public class X509CRL extends RubyObject {
 
         ByteArrayInputStream bis = new ByteArrayInputStream(args[0].convertToString().getBytes());
         try {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
+            // SunJCE throws java.security.cert.CRLException: Invalid encoding of AuthorityKeyIdentifierExtension.
+            // FIXME: use BC for now.
+            CertificateFactory cf = OpenSSLReal.getX509CertificateFactoryBC();
             crl = (java.security.cert.X509CRL) cf.generateCRL(bis);
         } catch (GeneralSecurityException gse) {
             throw newX509CRLError(getRuntime(), gse.getMessage());
@@ -386,7 +388,7 @@ public class X509CRL extends RubyObject {
         //System.err.println("WARNING: unimplemented method called: CRL#sign");
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();
-        String digAlg = ((Digest)digest).getAlgorithm();
+        String digAlg = ((Digest)digest).getShortAlgorithm();
         
         if(("DSA".equalsIgnoreCase(keyAlg) && "MD5".equalsIgnoreCase(digAlg)) || 
            ("RSA".equalsIgnoreCase(keyAlg) && "DSS1".equals(((Digest)digest).name().toString())) ||
@@ -414,15 +416,17 @@ public class X509CRL extends RubyObject {
         } catch (IOException ioe) {
             throw newX509CRLError(getRuntime(), ioe.getMessage());
         }
+        try {
+            // X509V2CRLGenerator(generator) depends BC.
+            OpenSSLReal.doWithBCProvider(new OpenSSLReal.Runnable() {
 
-        OpenSSLReal.doWithBCProvider(new Runnable() {
-                public void run() {
-                    try {
-                        crl = generator.generate(((PKey)key).getPrivateKey(),"BC");
-                    } catch(GeneralSecurityException e) {
-                    }
+                public void run() throws GeneralSecurityException {
+                    crl = generator.generate(((PKey) key).getPrivateKey(), "BC");
                 }
             });
+        } catch (GeneralSecurityException gse) {
+            throw newX509CRLError(getRuntime(), gse.getMessage());
+        }
 
         try {
             crl_v = new ASN1InputStream(new ByteArrayInputStream(crl.getEncoded())).readObject();
@@ -452,23 +456,16 @@ public class X509CRL extends RubyObject {
 
     @JRubyMethod
     public IRubyObject verify(final IRubyObject key) {
-        if(changed) {
+        if (changed) {
+            return getRuntime().getFalse();
+        }
+        try {
+            crl.verify(((PKey) key).getPublicKey());
+            return getRuntime().getTrue();
+        } catch (Exception ignored) {
             return getRuntime().getFalse();
         }
 
-        final boolean[] result = new boolean[1];
-        OpenSSLReal.doWithBCProvider(new Runnable() {
-                public void run() {
-                    try {
-                        crl.verify(((PKey)key).getPublicKey());
-                        result[0] = true;
-                    } catch(java.security.GeneralSecurityException e) {
-                        result[0] = false;
-                    }
-                }
-            });
-            
-        return result[0] ? getRuntime().getTrue() : getRuntime().getFalse();
     }
 
     private static RaiseException newX509CRLError(Ruby runtime, String message) {

@@ -49,10 +49,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
-import org.bouncycastle.asn1.ASN1EncodableVector;
-import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.DERInteger;
-import org.bouncycastle.asn1.DERSequence;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
@@ -137,7 +133,7 @@ public class PKeyDSA extends PKey {
      */
     private static void dsaGenerate(PKeyDSA dsa, int keysize) throws RaiseException {
         try {
-            KeyPairGenerator gen = KeyPairGenerator.getInstance("DSA", OpenSSLReal.PROVIDER);
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("DSA");
             gen.initialize(keysize, new SecureRandom());
             KeyPair pair = gen.generateKeyPair();
             dsa.privKey = (DSAPrivateKey) (pair.getPrivate());
@@ -172,7 +168,7 @@ public class PKeyDSA extends PKey {
                 Object val = null;
                 KeyFactory fact = null;
                 try {
-                    fact = KeyFactory.getInstance("DSA", OpenSSLReal.PROVIDER);
+                    fact = KeyFactory.getInstance("DSA");
                 } catch (NoSuchAlgorithmException e) {
                     throw getRuntime().newLoadError("unsupported key algorithm (DSA)");
                 }
@@ -180,6 +176,8 @@ public class PKeyDSA extends PKey {
                     // PEM_read_bio_DSAPrivateKey
                     try {
                         val = PEMInputOutput.readDSAPrivateKey(new StringReader(input), passwd);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -188,6 +186,8 @@ public class PKeyDSA extends PKey {
                     // PEM_read_bio_DSAPublicKey
                     try {
                         val = PEMInputOutput.readDSAPublicKey(new StringReader(input), passwd);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -196,6 +196,8 @@ public class PKeyDSA extends PKey {
                     // PEM_read_bio_DSA_PUBKEY
                     try {
                         val = PEMInputOutput.readDSAPubKey(new StringReader(input), passwd);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -203,19 +205,9 @@ public class PKeyDSA extends PKey {
                 if (null == val) {
                     // d2i_DSAPrivateKey_bio
                     try {
-                        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
-                        if (seq.size() == 6) {
-                            BigInteger p = ((DERInteger) seq.getObjectAt(1)).getValue();
-                            BigInteger q = ((DERInteger) seq.getObjectAt(2)).getValue();
-                            BigInteger g = ((DERInteger) seq.getObjectAt(3)).getValue();
-                            BigInteger y = ((DERInteger) seq.getObjectAt(4)).getValue();
-                            BigInteger x = ((DERInteger) seq.getObjectAt(5)).getValue();
-                            PrivateKey priv = fact.generatePrivate(new DSAPrivateKeySpec(x, p, q, g));
-                            PublicKey pub = fact.generatePublic(new DSAPublicKeySpec(y, p, q, g));
-                            val = new KeyPair(pub, priv);
-                        } else {
-                            val = null;
-                        }
+                        val = org.jruby.ext.openssl.impl.PKey.readDSAPrivateKey(input);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -223,16 +215,9 @@ public class PKeyDSA extends PKey {
                 if (null == val) {
                     // d2i_DSA_PUBKEY_bio
                     try {
-                        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
-                        if (seq.size() == 4) {
-                            BigInteger y = ((DERInteger) seq.getObjectAt(0)).getValue();
-                            BigInteger p = ((DERInteger) seq.getObjectAt(1)).getValue();
-                            BigInteger q = ((DERInteger) seq.getObjectAt(2)).getValue();
-                            BigInteger g = ((DERInteger) seq.getObjectAt(3)).getValue();
-                            val = fact.generatePublic(new DSAPublicKeySpec(y, p, q, g));
-                        } else {
-                            val = null;
-                        }
+                        val = org.jruby.ext.openssl.impl.PKey.readDSAPublicKey(input);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -283,24 +268,13 @@ public class PKeyDSA extends PKey {
 
     @JRubyMethod
     public IRubyObject to_der() {
-        if (pubKey != null && privKey == null) {
-            return RubyString.newString(getRuntime(), pubKey.getEncoded());
-        } else if (privKey != null && pubKey != null) {
-            DSAParams params = privKey.getParams();
-            ASN1EncodableVector v1 = new ASN1EncodableVector();
-            v1.add(new DERInteger(0));
-            v1.add(new DERInteger(params.getP()));
-            v1.add(new DERInteger(params.getQ()));
-            v1.add(new DERInteger(params.getG()));
-            v1.add(new DERInteger(pubKey.getY()));
-            v1.add(new DERInteger(privKey.getX()));
-            try {
-                return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
-            } catch (IOException ioe) {
-                throw newDSAError(getRuntime(), ioe.getMessage());
-            }
-        } else {
-            return RubyString.newString(getRuntime(), privKey.getEncoded());
+        try {
+            byte[] bytes = org.jruby.ext.openssl.impl.PKey.toDerDSAKey(pubKey, privKey);
+            return RubyString.newString(getRuntime(), bytes);
+        } catch (NoClassDefFoundError e) {
+            throw newDSAError(getRuntime(), e.getMessage());
+        } catch (IOException ioe) {
+            throw newDSAError(getRuntime(), ioe.getMessage());
         }
     }
 
@@ -352,6 +326,8 @@ public class PKeyDSA extends PKey {
             }
             w.close();
             return getRuntime().newString(w.toString());
+        } catch (NoClassDefFoundError ncdfe) {
+            throw newDSAError(getRuntime(), ncdfe.getMessage());
         } catch (IOException ioe) {
             throw newDSAError(getRuntime(), ioe.getMessage());
         }

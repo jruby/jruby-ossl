@@ -29,8 +29,8 @@ package org.jruby.ext.openssl.impl;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.TimeZone;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -676,7 +675,7 @@ public class PKCS7 {
             dataBody = getSignedAndEnveloped().getEncData().getEncData().getOctets();
             encAlg = getSignedAndEnveloped().getEncData().getAlgorithm();
             try {
-                evpCipher = getCipher(encAlg.getObjectId());
+                evpCipher = getCipherBC(encAlg.getObjectId());
             } catch(Exception e) {
                 throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
             }
@@ -687,7 +686,7 @@ public class PKCS7 {
             dataBody = getEnveloped().getEncData().getEncData().getOctets();
             encAlg = getEnveloped().getEncData().getAlgorithm();
             try {
-                evpCipher = getCipher(encAlg.getObjectId());
+                evpCipher = getCipherBC(encAlg.getObjectId());
             } catch(Exception e) {
                 throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
             }
@@ -757,7 +756,7 @@ public class PKCS7 {
                 }
             } else {
                 try {
-                    Cipher cipher = Cipher.getInstance(CipherSpec.getWrappingAlgorithm(pkey.getAlgorithm()), OpenSSLReal.PROVIDER);
+                    Cipher cipher = Cipher.getInstance(CipherSpec.getWrappingAlgorithm(pkey.getAlgorithm()));
                     cipher.init(Cipher.DECRYPT_MODE, pkey);
                     tmp = cipher.doFinal(ri.getEncKey().getOctets());
                 } catch (Exception e) {
@@ -802,11 +801,10 @@ public class PKCS7 {
     // Without Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files,
     // getting Cipher object via OID(1.2.840.113549.3.7 - DES-EDE3-CBC) causes 'Illegal Key Length'
     // exception. To avoid this, we get Cipher object via algo name(DESede/cbc/PKCS5Padding).
-    private static Cipher getCipher(DERObjectIdentifier oid) throws NoSuchAlgorithmException,
-            NoSuchPaddingException {
+    private static Cipher getCipherBC(DERObjectIdentifier oid) throws GeneralSecurityException {
         // check DES-EDE3-CBC
         if (oid.getId().equals("1.2.840.113549.3.7")) {
-            return Cipher.getInstance("DESede/cbc/PKCS5Padding", OpenSSLReal.PROVIDER);
+            return OpenSSLReal.getCipherBC("DESede/cbc/PKCS5Padding");
         }
         return EVP.getCipher(oid);
     }
@@ -825,57 +823,57 @@ public class PKCS7 {
         BIO out = null;
         BIO btmp = null;
         EncContent enc = null;
-        switch(i) {
-        case ASN1Registry.NID_pkcs7_signed:
-            mdSk = getSign().getMdAlgs();
-            os = getSign().getContents().getOctetString();
-            break;
-        case ASN1Registry.NID_pkcs7_signedAndEnveloped:
-            rsk = getSignedAndEnveloped().getRecipientInfo();
-            mdSk = getSignedAndEnveloped().getMdAlgs();
-            enc = getSignedAndEnveloped().getEncData();
-            evpCipher = getSignedAndEnveloped().getEncData().getCipher();
-            if(null == evpCipher) {
-                throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_NOT_INITIALIZED);
-            }
-            break;
-        case ASN1Registry.NID_pkcs7_enveloped:
-            rsk = getEnveloped().getRecipientInfo();
-            enc = getEnveloped().getEncData();
-            evpCipher = getEnveloped().getEncData().getCipher();
-            if(null == evpCipher) {
-                throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_NOT_INITIALIZED);
-            }
-            break;
-        case ASN1Registry.NID_pkcs7_digest:
-            xa = getDigest().getMd();
-            os = getDigest().getContents().getOctetString();
-            break;
-        default:
-            throw new PKCS7Exception(F_PKCS7_DATAINIT, R_UNSUPPORTED_CONTENT_TYPE);
+        switch (i) {
+            case ASN1Registry.NID_pkcs7_signed:
+                mdSk = getSign().getMdAlgs();
+                os = getSign().getContents().getOctetString();
+                break;
+            case ASN1Registry.NID_pkcs7_signedAndEnveloped:
+                rsk = getSignedAndEnveloped().getRecipientInfo();
+                mdSk = getSignedAndEnveloped().getMdAlgs();
+                enc = getSignedAndEnveloped().getEncData();
+                evpCipher = getSignedAndEnveloped().getEncData().getCipher();
+                if (null == evpCipher) {
+                    throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_NOT_INITIALIZED);
+                }
+                break;
+            case ASN1Registry.NID_pkcs7_enveloped:
+                rsk = getEnveloped().getRecipientInfo();
+                enc = getEnveloped().getEncData();
+                evpCipher = getEnveloped().getEncData().getCipher();
+                if (null == evpCipher) {
+                    throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_NOT_INITIALIZED);
+                }
+                break;
+            case ASN1Registry.NID_pkcs7_digest:
+                xa = getDigest().getMd();
+                os = getDigest().getContents().getOctetString();
+                break;
+            default:
+                throw new PKCS7Exception(F_PKCS7_DATAINIT, R_UNSUPPORTED_CONTENT_TYPE);
         }
 
-        if(mdSk != null) {
-            for(AlgorithmIdentifier ai : mdSk) {
-                if((out = bioAddDigest(out, ai)) == null) {
+        if (mdSk != null) {
+            for (AlgorithmIdentifier ai : mdSk) {
+                if ((out = bioAddDigest(out, ai)) == null) {
                     return null;
                 }
             }
         }
 
-        if(xa != null && (out = bioAddDigest(out, xa)) == null) {
+        if (xa != null && (out = bioAddDigest(out, xa)) == null) {
             return null;
         }
 
-        if(evpCipher != null) {
+        if (evpCipher != null) {
             byte[] tmp;
             btmp = BIO.cipherFilter(evpCipher.getCipher());
             String algoBase = evpCipher.getCipher().getAlgorithm();
-            if(algoBase.indexOf('/') != -1) {
+            if (algoBase.indexOf('/') != -1) {
                 algoBase = algoBase.split("/")[0];
             }
             try {
-                KeyGenerator gen = KeyGenerator.getInstance(algoBase, OpenSSLReal.PROVIDER);
+                KeyGenerator gen = KeyGenerator.getInstance(algoBase);
                 gen.init(evpCipher.getKeyLenInBits(), new SecureRandom());
                 SecretKey key = gen.generateKey();
                 evpCipher.getCipher().init(Cipher.ENCRYPT_MODE, key);
@@ -883,27 +881,28 @@ public class PKCS7 {
                 if (null != rsk) {
                     for (RecipInfo ri : rsk) {
                         PublicKey pkey = ri.getCert().getPublicKey();
-                        Cipher cipher = Cipher.getInstance(CipherSpec.getWrappingAlgorithm(pkey.getAlgorithm()), OpenSSLReal.PROVIDER);
+                        Cipher cipher = Cipher.getInstance(CipherSpec.getWrappingAlgorithm(pkey.getAlgorithm()));
                         cipher.init(Cipher.ENCRYPT_MODE, pkey);
                         tmp = cipher.doFinal(((SecretKeySpec) key).getEncoded());
                         ri.setEncKey(new DEROctetString(tmp));
                     }
                 }
-            } catch(Exception e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace(System.err);
+                throw new PKCS7Exception(F_PKCS7_DATAINIT, R_ERROR_SETTING_CIPHER);
             }
 
             DERObjectIdentifier encAlgo = ASN1Registry.sym2oid(evpCipher.getOsslName());
             if (encAlgo == null) {
                 throw new PKCS7Exception(F_PKCS7_DATAINIT, R_CIPHER_HAS_NO_OBJECT_IDENTIFIER);
             }
-            if(evpCipher.getCipher().getIV() != null) {
+            if (evpCipher.getCipher().getIV() != null) {
                 enc.setAlgorithm(new AlgorithmIdentifier(encAlgo, new DEROctetString(evpCipher.getCipher().getIV())));
             } else {
                 enc.setAlgorithm(new AlgorithmIdentifier(encAlgo));
             }
 
-            if(out == null) {
+            if (out == null) {
                 out = btmp;
             } else {
                 out.push(btmp);
@@ -911,13 +910,13 @@ public class PKCS7 {
             btmp = null;
         }
 
-        if(bio == null) {
-            if(isDetached()) {
+        if (bio == null) {
+            if (isDetached()) {
                 bio = BIO.nullSink();
-            } else if(os != null && os.getOctets().length > 0) {
+            } else if (os != null && os.getOctets().length > 0) {
                 bio = BIO.memBuf(os.getOctets());
             }
-            if(bio == null) {
+            if (bio == null) {
                 bio = BIO.mem();
                 bio.setMemEofReturn(0);
             }
@@ -1014,7 +1013,7 @@ public class PKCS7 {
                         si.addSignedAttribute(ASN1Registry.NID_pkcs9_messageDigest, digest);
 
                         sk = si.getAuthenticatedAttributes();
-                        sign = Signature.getInstance(EVP.signatureAlgorithm(ctx_tmp, si.getPkey()), OpenSSLReal.PROVIDER);
+                        sign = Signature.getInstance(EVP.signatureAlgorithm(ctx_tmp, si.getPkey()));
                         sign.initSign(si.getPkey());
 
                         byte[] abuf = sk.getEncoded();

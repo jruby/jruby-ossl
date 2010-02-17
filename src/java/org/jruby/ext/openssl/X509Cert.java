@@ -151,7 +151,7 @@ public class X509Cert extends RubyObject {
         IRubyObject x509Name = x509.getConstant("Name");
 
         try {
-            cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
+            cf = CertificateFactory.getInstance("X.509");
             cert = (X509Certificate)cf.generateCertificate(bis);
         } catch (CertificateException ex) {
             throw newCertificateError(runtime, ex);
@@ -395,7 +395,7 @@ public class X509Cert extends RubyObject {
 
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();
-        String digAlg = ((Digest)digest).getAlgorithm();
+        String digAlg = ((Digest)digest).getShortAlgorithm();
 
         if(("DSA".equalsIgnoreCase(keyAlg) && "MD5".equalsIgnoreCase(digAlg)) ||
            ("RSA".equalsIgnoreCase(keyAlg) && "DSS1".equals(((Digest)digest).name().toString())) ||
@@ -418,19 +418,17 @@ public class X509Cert extends RubyObject {
         if (public_key == null) {
             lazyInitializePublicKey();
         }
+        try {
+            // X509V3CertificateGenerator depends BC.
+            OpenSSLReal.doWithBCProvider(new OpenSSLReal.Runnable() {
 
-        OpenSSLReal.doWithBCProvider(new Runnable() {
-
-            public void run() {
-                try {
+                public void run() throws GeneralSecurityException {
                     cert = generator.generate(((PKey) key).getPrivateKey(), "BC");
-                } catch (GeneralSecurityException gse) {
-                    throw newCertificateError(getRuntime(), gse.getMessage());
-                } catch (IllegalStateException ise) {
-                    throw newCertificateError(getRuntime(), ise.getMessage());
                 }
-            }
-        });
+            });
+        } catch (GeneralSecurityException gse) {
+            throw newCertificateError(getRuntime(), gse.getMessage());
+        }
         if (cert == null) {
             throw newCertificateError(runtime, (String) null);
         }

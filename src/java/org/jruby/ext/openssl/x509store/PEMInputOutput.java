@@ -319,11 +319,11 @@ public class PEMInputOutput {
                     String algorithm = ASN1Registry.o2a(algId.getObjectId());
                     algorithm = (algorithm.split("-"))[0];
                     PKCS12PBEParams pbeParams = new PKCS12PBEParams((ASN1Sequence) algId.getParameters());
-                    SecretKeyFactory fact = SecretKeyFactory.getInstance(algorithm, OpenSSLReal.PROVIDER);
+                    SecretKeyFactory fact = OpenSSLReal.getSecretKeyFactoryBC(algorithm); // need to use BC for PKCS12PBEParams.
                     PBEKeySpec pbeSpec = new PBEKeySpec(password);
                     SecretKey key = fact.generateSecret(pbeSpec);
                     PBEParameterSpec defParams = new PBEParameterSpec(pbeParams.getIV(), pbeParams.getIterations().intValue());
-                    Cipher cipher = Cipher.getInstance(algorithm, OpenSSLReal.PROVIDER);
+                    Cipher cipher = OpenSSLReal.getCipherBC(algorithm); // need to use BC for PBEParameterSpec.
                     cipher.init(Cipher.UNWRAP_MODE, key, defParams);
                     // wrappedKeyAlgorithm is unknown ("")
                     PrivateKey privKey = (PrivateKey) cipher.unwrap(eIn.getEncryptedData(), "", Cipher.PRIVATE_KEY);
@@ -776,17 +776,18 @@ public class PEMInputOutput {
             OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
             pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(f), salt);
             SecretKey secretKey = null;
-            if(algo.equalsIgnoreCase("DESede/CBC/PKCS5Padding")) {
+            if (algo.equalsIgnoreCase("DESede/CBC/PKCS5Padding")) {
                 // generate key
                 int keyLength = 24;
-                secretKey = new SecretKeySpec(((KeyParameter)pGen.generateDerivedParameters(keyLength * 8)).getKey(), algo);
+                KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLength * 8);
+                secretKey = new SecretKeySpec(param.getKey(), "DESede");
             } else {
                 throw new IOException("unknown algorithm in write_DSAPrivateKey: " + algo);
             }
 
             // cipher  
             try {
-                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
+                Cipher c = Cipher.getInstance("DESede/CBC/PKCS5Padding");
                 c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(salt));
                 encData = c.doFinal(encoding);
             } catch (Exception e) {
@@ -844,20 +845,21 @@ public class PEMInputOutput {
             pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(f), salt);
             SecretKey secretKey = null;
 
-            if(algo.startsWith("DES")) {
+            if (algo.startsWith("DES")) {
                 // generate key
                 int keyLength = 24;
-                secretKey = new SecretKeySpec(((KeyParameter)pGen.generateDerivedParameters(keyLength * 8)).getKey(), algo);
                 if (algo.equalsIgnoreCase("DESEDE")) {
                     algo = "DESede/CBC/PKCS5Padding";
                 }
+                KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLength * 8);
+                secretKey = new SecretKeySpec(param.getKey(), algo.split("/")[0]);
             } else {
                 throw new IOException("unknown algorithm `" + algo + "' in write_DSAPrivateKey");
             }
 
             // cipher  
             try {
-                Cipher c = Cipher.getInstance(algo, OpenSSLReal.PROVIDER);
+                Cipher c = Cipher.getInstance(algo);
                 c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(salt));
                 encData = c.doFinal(encoding);
             } catch (Exception e) {
@@ -941,18 +943,15 @@ public class PEMInputOutput {
     /**
      * create the secret key needed for this object, fetching the password
      */
-    private static SecretKey getKey(char[] k1, String  algorithm,int     keyLength, byte[]  salt) throws IOException {
-        char[]      password = k1;
-
+    private static SecretKey getKey(char[] k1, String algorithm, int keyLength, byte[] salt) throws IOException {
+        char[] password = k1;
         if (password == null) {
             throw new IOException("Password is null, but a password is required");
         }
-        
-        OpenSSLPBEParametersGenerator   pGen = new OpenSSLPBEParametersGenerator();
-
+        OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
         pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(password), salt);
-
-        return new javax.crypto.spec.SecretKeySpec(((KeyParameter)pGen.generateDerivedParameters(keyLength * 8)).getKey(), algorithm);
+        KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLength * 8);
+        return new javax.crypto.spec.SecretKeySpec(param.getKey(), algorithm);
     }
 
     private static RSAPublicKey readRSAPublicKey(BufferedReader in, String endMarker) throws IOException {
@@ -966,7 +965,7 @@ public class PEMInputOutput {
                     rsaPubStructure.getPublicExponent());
 
         try {
-            KeyFactory keyFact = KeyFactory.getInstance("RSA",OpenSSLReal.PROVIDER);      
+            KeyFactory keyFact = KeyFactory.getInstance("RSA");
             return (RSAPublicKey) keyFact.generatePublic(keySpec);
         } catch (NoSuchAlgorithmException e) { 
                 // ignore
@@ -980,7 +979,7 @@ public class PEMInputOutput {
     private static PublicKey readPublicKey(BufferedReader in, String alg, String endMarker) throws IOException {
         KeySpec keySpec = new X509EncodedKeySpec(readBytes(in,endMarker));
         try {
-            KeyFactory keyFact = KeyFactory.getInstance(alg,OpenSSLReal.PROVIDER);
+            KeyFactory keyFact = KeyFactory.getInstance(alg);
             PublicKey pubKey = keyFact.generatePublic(keySpec);
             return pubKey;
         } catch (NoSuchAlgorithmException e) { 
@@ -996,7 +995,7 @@ public class PEMInputOutput {
         String[] algs = {"RSA","DSA"};
         for(int i=0;i<algs.length;i++) {
             try {
-                KeyFactory keyFact = KeyFactory.getInstance(algs[i],OpenSSLReal.PROVIDER);
+                KeyFactory keyFact = KeyFactory.getInstance(algs[i]);
                 PublicKey pubKey = keyFact.generatePublic(keySpec);
                 return pubKey;
             } catch (NoSuchAlgorithmException e) { 
@@ -1038,15 +1037,14 @@ public class PEMInputOutput {
                 String  alg = "DESede";
                 byte[]  iv = Hex.decode(tknz.nextToken());
                 Key     sKey = getKey(passwd,alg, 24, iv);
-                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
+                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding");
                 c.init(Cipher.DECRYPT_MODE, sKey, new IvParameterSpec(iv));
                 keyBytes = c.doFinal(Base64.decode(buf.toString()));
             } else if (encoding.equals("DES-CBC")) {
                 String  alg = "DES";
                 byte[]  iv = Hex.decode(tknz.nextToken());
                 Key     sKey = getKey(passwd,alg, 8, iv);
-                Cipher  c = Cipher.getInstance("DES/CBC/PKCS5Padding", OpenSSLReal.PROVIDER);
-
+                Cipher  c = Cipher.getInstance("DES/CBC/PKCS5Padding");
                 c.init(Cipher.DECRYPT_MODE, sKey, new IvParameterSpec(iv));
                 keyBytes = c.doFinal(Base64.decode(buf.toString()));
             } else {
@@ -1084,7 +1082,7 @@ public class PEMInputOutput {
             privSpec = new DSAPrivateKeySpec(x.getValue(), p.getValue(), q.getValue(), g.getValue());
             pubSpec = new DSAPublicKeySpec(y.getValue(), p.getValue(), q.getValue(), g.getValue());
         }
-        KeyFactory fact = KeyFactory.getInstance(type, OpenSSLReal.PROVIDER);
+        KeyFactory fact = KeyFactory.getInstance(type);
         return new KeyPair(fact.generatePublic(pubSpec), fact.generatePrivate(privSpec));
     }
 
@@ -1118,7 +1116,7 @@ public class PEMInputOutput {
         try
         {
             CertificateFactory certFact
-                    = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
+                    = CertificateFactory.getInstance("X.509");
 
             return (X509Certificate)certFact.generateCertificate(bIn);
         }
@@ -1147,7 +1145,7 @@ public class PEMInputOutput {
         ByteArrayInputStream bIn = new ByteArrayInputStream(((DERObject)try1.readObject()).getEncoded());
 
         try {
-            CertificateFactory certFact = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
+            CertificateFactory certFact = CertificateFactory.getInstance("X.509");
             X509Certificate bCert = (X509Certificate)certFact.generateCertificate(bIn);
             DERSequence aux = (DERSequence)try1.readObject();
             X509Aux ax = null;
@@ -1215,7 +1213,7 @@ public class PEMInputOutput {
         try
         {
             CertificateFactory certFact
-                    = CertificateFactory.getInstance("X.509", OpenSSLReal.PROVIDER);
+                    = CertificateFactory.getInstance("X.509");
 
             return (X509CRL)certFact.generateCRL(bIn);
         }

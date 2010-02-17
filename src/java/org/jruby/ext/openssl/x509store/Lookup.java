@@ -147,7 +147,7 @@ public class Lookup {
             }
             ret = count;
         } else if(type == X509Utils.X509_FILETYPE_ASN1) {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
             x = StoreContext.ensureAux((X509Certificate)cf.generateCertificate(in));
             if(x == null) {
                 X509Error.addError(13);
@@ -180,7 +180,7 @@ public class Lookup {
         if(type == X509Utils.X509_FILETYPE_PEM) {
             Reader r = new InputStreamReader(in);
             for(;;) {
-                x = PEMInputOutput.readX509CRL(r,null);;
+                x = PEMInputOutput.readX509CRL(r,null);
                 if(null == x) {
                     break;
                 }
@@ -193,7 +193,7 @@ public class Lookup {
             }
             ret = count;
         } else if(type == X509Utils.X509_FILETYPE_ASN1) {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509",OpenSSLReal.PROVIDER);
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
             x = cf.generateCRL(in);
             if(x == null) {
                 X509Error.addError(13);

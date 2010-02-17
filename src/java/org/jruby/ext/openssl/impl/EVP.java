@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.MessageDigest;
@@ -53,30 +54,29 @@ public class EVP {
     /* c: EVP_get_cipherbyobj
      *
      */
-    public static Cipher getCipher(DERObjectIdentifier oid) throws NoSuchAlgorithmException, 
-                                                                   NoSuchPaddingException {
-        return Cipher.getInstance(oid.getId(), OpenSSLReal.PROVIDER);
+    public static Cipher getCipher(DERObjectIdentifier oid) throws GeneralSecurityException {
+        // TODO: map oid -> realName and use default provider.
+        return OpenSSLReal.getCipherBC(oid);
     }
 
     /* c: EVP_get_cipherbynid
      *
      */
-    public static Cipher getCipher(int nid) throws NoSuchAlgorithmException, 
-                                                                   NoSuchPaddingException {
+    public static Cipher getCipher(int nid) throws GeneralSecurityException {
         return getCipher(ASN1Registry.nid2obj(nid));
     }
 
     /* c: EVP_get_digestbyobj
      *
      */
-    public static MessageDigest getDigest(DERObjectIdentifier oid) throws NoSuchAlgorithmException {
-        return MessageDigest.getInstance(oid.getId(), OpenSSLReal.PROVIDER);
+    public static MessageDigest getDigest(DERObjectIdentifier oid) throws GeneralSecurityException {
+        return OpenSSLReal.getMessageDigestBC(oid);
     }
 
     /* c: EVP_get_digestbynid
      *
      */
-    public static MessageDigest getDigest(int nid) throws NoSuchAlgorithmException {
+    public static MessageDigest getDigest(int nid) throws GeneralSecurityException {
         return getDigest(ASN1Registry.nid2obj(nid));
     }
 
@@ -85,7 +85,7 @@ public class EVP {
      */
     public static MessageDigest sha1() {
         try {
-            return MessageDigest.getInstance("SHA1", OpenSSLReal.PROVIDER);
+            return MessageDigest.getInstance("SHA1");
         } catch(Exception e) {
             return null;
         }
@@ -118,7 +118,7 @@ public class EVP {
                                                                                     NoSuchPaddingException,
                                                                                     IllegalBlockSizeException, 
                                                                                     BadPaddingException {
-        Cipher cipher = Cipher.getInstance(key.getAlgorithm(), OpenSSLReal.PROVIDER);
+        Cipher cipher = Cipher.getInstance(key.getAlgorithm());
         cipher.init(Cipher.DECRYPT_MODE, key);
         return cipher.doFinal(input, offset, len);
     }

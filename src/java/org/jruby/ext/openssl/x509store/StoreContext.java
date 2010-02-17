@@ -1285,38 +1285,28 @@ public class StoreContext {
                     }
                 }
 
-                if(issuer != null) {
-                    if(issuer.getKeyUsage() != null && !issuer.getKeyUsage()[6]) {
+                if (issuer != null) {
+                    if (issuer.getKeyUsage() != null && !issuer.getKeyUsage()[6]) {
                         ctx.error = X509Utils.V_ERR_KEYUSAGE_NO_CRL_SIGN;
-                        ok = ctx.verifyCallback.call(new Integer(0),ctx);
-                        if(ok == 0) {
+                        ok = ctx.verifyCallback.call(new Integer(0), ctx);
+                        if (ok == 0) {
                             return ok;
                         }
                     }
                     final PublicKey ikey = issuer.getPublicKey();
-                    if(ikey == null) {
+                    if (ikey == null) {
                         ctx.error = X509Utils.V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY;
-                        ok = ctx.verifyCallback.call(new Integer(0),ctx);
-                        if(ok == 0) {
+                        ok = ctx.verifyCallback.call(new Integer(0), ctx);
+                        if (ok == 0) {
                             return ok;
                         }
                     } else {
-                        final boolean[] result = new boolean[1];
-                        OpenSSLReal.doWithBCProvider(new Runnable() {
-                                public void run() {
-                                    try {
-                                        crl.verify(ikey);
-                                        result[0] = true;
-                                    } catch(java.security.GeneralSecurityException e) {
-                                        result[0] = false;
-                                    }
-                                }
-                            });
-
-                        if(!result[0]) {
-                            ctx.error= X509Utils.V_ERR_CRL_SIGNATURE_FAILURE;
-                            ok = ctx.verifyCallback.call(new Integer(0),ctx);
-                            if(ok == 0) {
+                        try {
+                            crl.verify(ikey);
+                        } catch (Exception ignored) {
+                            ctx.error = X509Utils.V_ERR_CRL_SIGNATURE_FAILURE;
+                            ok = ctx.verifyCallback.call(new Integer(0), ctx);
+                            if (ok == 0) {
                                 return ok;
                             }
                         }

@@ -27,9 +27,9 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,7 +38,6 @@ import java.util.Set;
 import javax.crypto.spec.IvParameterSpec;
 
 import javax.crypto.spec.RC2ParameterSpec;
-import org.bouncycastle.crypto.params.KeyParameter;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
@@ -58,23 +57,26 @@ import org.jruby.util.ByteList;
  */
 public class Cipher extends RubyObject {
     // set to enable debug output
+
     private static final boolean DEBUG = false;
     private static ObjectAllocator CIPHER_ALLOCATOR = new ObjectAllocator() {
+
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new Cipher(runtime, klass);
         }
     };
-    
+
     public static void createCipher(Ruby runtime, RubyModule mOSSL) {
-        RubyClass cCipher = mOSSL.defineClassUnder("Cipher",runtime.getObject(), CIPHER_ALLOCATOR);
+        RubyClass cCipher = mOSSL.defineClassUnder("Cipher", runtime.getObject(), CIPHER_ALLOCATOR);
         cCipher.defineAnnotatedMethods(Cipher.class);
         cCipher.defineAnnotatedMethods(CipherModule.class);
         RubyClass openSSLError = mOSSL.getClass("OpenSSLError");
-        cCipher.defineClassUnder("CipherError",openSSLError,openSSLError.getAllocator());
+        cCipher.defineClassUnder("CipherError", openSSLError, openSSLError.getAllocator());
     }
 
     @JRubyModule(name = "OpenSSL::Cipher")
     public static class CipherModule {
+
         @JRubyMethod(meta = true)
         public static IRubyObject ciphers(IRubyObject recv) {
             initializeCiphers();
@@ -90,7 +92,6 @@ public class Cipher extends RubyObject {
             initializeCiphers();
             return CIPHERS.indexOf(name.toUpperCase()) != -1;
         }
-
         private static boolean initialized = false;
         private static final List<String> CIPHERS = new ArrayList<String>();
 
@@ -166,7 +167,7 @@ public class Cipher extends RubyObject {
             }
             return cryptoBase + "-" + cryptoVersion + "-" + cryptoMode;
         }
-        
+
         public static String[] osslToJsse(String inName) {
             // assume PKCS5Padding
             return osslToJsse(inName, null);
@@ -214,6 +215,9 @@ public class Cipher extends RubyObject {
             if (!BLOCK_MODES.contains(cryptoMode.toUpperCase())) {
                 cryptoVersion = cryptoMode;
                 cryptoMode = "CBC";
+            } else if (cryptoMode.equalsIgnoreCase("CFB1")) {
+                // uglish SunJCE cryptoMode normalization.
+                cryptoMode = "CFB";
             }
 
             if (realName.equalsIgnoreCase("RC4")) {
@@ -229,24 +233,24 @@ public class Cipher extends RubyObject {
     }
 
     private static boolean tryCipher(final String rubyName) {
-        return ((Boolean) (OpenSSLReal.getWithBCProvider(new Callable() {
-            public Object call() {
-                try {
-                    javax.crypto.Cipher.getInstance(Algorithm.osslToJsse(rubyName, null)[3], OpenSSLReal.PROVIDER);
-                    return Boolean.TRUE;
-                } catch (Exception e) {
-                    return Boolean.FALSE;
-                }
-
+        String cryptoMode = Algorithm.osslToJsse(rubyName, null)[3];
+        try {
+            javax.crypto.Cipher.getInstance(cryptoMode);
+            return true;
+        } catch (NoSuchAlgorithmException nsae) {
+            try {
+                OpenSSLReal.getCipherBC(cryptoMode);
+                return true;
+            } catch (GeneralSecurityException gse) {
+                return false;
             }
-        }))).booleanValue();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
-
-    private RubyClass ciphErr;
     public Cipher(Ruby runtime, RubyClass type) {
-        super(runtime,type);
-        ciphErr = (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("Cipher"))).getConstant("CipherError"));
+        super(runtime, type);
     }
 
     private javax.crypto.Cipher ciph;
@@ -265,7 +269,7 @@ public class Cipher extends RubyObject {
     private byte[] realIV;
     private byte[] orgIV;
     private String padding;
-    
+
     void dumpVars() {
         System.out.println("***** Cipher instance vars ****");
         System.out.println("name = " + name);
@@ -290,7 +294,7 @@ public class Cipher extends RubyObject {
     public IRubyObject initialize(IRubyObject str) {
         name = str.toString();
         if (!CipherModule.isSupportedCipher(name)) {
-            throw new RaiseException(getRuntime(), ciphErr, String.format("unsupported cipher algorithm (%s)", name), true);
+            throw newCipherError(getRuntime(), String.format("unsupported cipher algorithm (%s)", name));
         }
         String[] values = Algorithm.osslToJsse(name, padding);
         cryptoBase = values[0];
@@ -342,38 +346,38 @@ public class Cipher extends RubyObject {
     }
 
     @Override
-    @JRubyMethod(required=1)
+    @JRubyMethod(required = 1)
     public IRubyObject initialize_copy(IRubyObject obj) {
-        if(this == obj) {
+        if (this == obj) {
             return this;
         }
 
         checkFrozen();
 
-        cryptoBase = ((Cipher)obj).cryptoBase;
-        cryptoVersion = ((Cipher)obj).cryptoVersion;
-        cryptoMode = ((Cipher)obj).cryptoMode;
-        padding_type = ((Cipher)obj).padding_type;
-        realName = ((Cipher)obj).realName;
-        name = ((Cipher)obj).name;
-        keyLen = ((Cipher)obj).keyLen;
-        ivLen = ((Cipher)obj).ivLen;
-        encryptMode = ((Cipher)obj).encryptMode;
+        cryptoBase = ((Cipher) obj).cryptoBase;
+        cryptoVersion = ((Cipher) obj).cryptoVersion;
+        cryptoMode = ((Cipher) obj).cryptoMode;
+        padding_type = ((Cipher) obj).padding_type;
+        realName = ((Cipher) obj).realName;
+        name = ((Cipher) obj).name;
+        keyLen = ((Cipher) obj).keyLen;
+        ivLen = ((Cipher) obj).ivLen;
+        encryptMode = ((Cipher) obj).encryptMode;
         ciphInited = false;
-        if(((Cipher)obj).key != null) {
-            key = new byte[((Cipher)obj).key.length];
-            System.arraycopy(((Cipher)obj).key,0,key,0,key.length);
+        if (((Cipher) obj).key != null) {
+            key = new byte[((Cipher) obj).key.length];
+            System.arraycopy(((Cipher) obj).key, 0, key, 0, key.length);
         } else {
             key = null;
         }
-        if(((Cipher)obj).realIV != null) {
-            this.realIV = new byte[((Cipher)obj).realIV.length];
-            System.arraycopy(((Cipher)obj).realIV,0,this.realIV,0,this.realIV.length);
+        if (((Cipher) obj).realIV != null) {
+            this.realIV = new byte[((Cipher) obj).realIV.length];
+            System.arraycopy(((Cipher) obj).realIV, 0, this.realIV, 0, this.realIV.length);
         } else {
             this.realIV = null;
         }
         this.orgIV = this.realIV;
-        padding = ((Cipher)obj).padding;
+        padding = ((Cipher) obj).padding;
 
         ciph = getCipher();
 
@@ -395,26 +399,28 @@ public class Cipher extends RubyObject {
         return getRuntime().newFixnum(ivLen);
     }
 
-    @JRubyMethod(name="key_len=", required=1)
+    @JRubyMethod(name = "key_len=", required = 1)
     public IRubyObject set_key_len(IRubyObject len) {
         this.keyLen = RubyNumeric.fix2int(len);
         return len;
     }
 
-    @JRubyMethod(name="key=", required=1)
+    @JRubyMethod(name = "key=", required = 1)
     public IRubyObject set_key(IRubyObject key) {
         byte[] keyBytes;
         try {
             keyBytes = key.convertToString().getBytes();
-        } catch(Exception e) {
-            if (DEBUG) e.printStackTrace();
-            throw new RaiseException(getRuntime(), ciphErr, null, true);
+        } catch (Exception e) {
+            if (DEBUG) {
+                e.printStackTrace();
+            }
+            throw newCipherError(getRuntime(), e.getMessage());
         }
-        if(keyBytes.length < keyLen) {
-            throw new RaiseException(getRuntime(), ciphErr, "key length to short", true);
+        if (keyBytes.length < keyLen) {
+            throw newCipherError(getRuntime(), "key length to short");
         }
 
-        if(keyBytes.length > keyLen) {
+        if (keyBytes.length > keyLen) {
             byte[] keys = new byte[keyLen];
             System.arraycopy(keyBytes, 0, keys, 0, keyLen);
             keyBytes = keys;
@@ -424,17 +430,19 @@ public class Cipher extends RubyObject {
         return key;
     }
 
-    @JRubyMethod(name="iv=", required=1)
+    @JRubyMethod(name = "iv=", required = 1)
     public IRubyObject set_iv(IRubyObject iv) {
         byte[] ivBytes;
         try {
             ivBytes = iv.convertToString().getBytes();
         } catch (Exception e) {
-            if (DEBUG) e.printStackTrace();
-            throw new RaiseException(getRuntime(), ciphErr, null, true);
+            if (DEBUG) {
+                e.printStackTrace();
+            }
+            throw newCipherError(getRuntime(), e.getMessage());
         }
         if (ivBytes.length < ivLen) {
-            throw new RaiseException(getRuntime(), ciphErr, "iv length to short", true);
+            throw newCipherError(getRuntime(), "iv length to short");
         } else {
             // EVP_CipherInit_ex uses leading IV length of given sequence.
             byte[] iv2 = new byte[ivLen];
@@ -456,12 +464,12 @@ public class Cipher extends RubyObject {
     }
 
     protected void init(IRubyObject[] args, boolean encrypt) {
-        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,2);
-        
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 0, 2);
+
         encryptMode = encrypt;
         ciphInited = false;
 
-        if(args.length > 0) {
+        if (args.length > 0) {
             /*
              * oops. this code mistakes salt for IV.
              * We deprecated the arguments for this method, but we decided
@@ -474,43 +482,35 @@ public class Cipher extends RubyObject {
                 byte[] iv2 = new byte[this.ivLen];
                 System.arraycopy(iv, 0, iv2, 0, this.ivLen);
                 iv = iv2;
-            } catch(Exception e) {}
+            } catch (Exception e) {
+            }
 
-            if(args.length > 1 && !args[1].isNil()) {
+            if (args.length > 1 && !args[1].isNil()) {
                 getRuntime().getWarnings().warning(ID.MISCELLANEOUS, "key derivation by " + getMetaClass().getRealClass().getName() + "#encrypt is deprecated; use " + getMetaClass().getRealClass().getName() + "::pkcs5_keyivgen instead");
                 iv = args[1].convertToString().getBytes();
-                if(iv.length > this.ivLen) {
+                if (iv.length > this.ivLen) {
                     byte[] iv2 = new byte[this.ivLen];
                     System.arraycopy(iv, 0, iv2, 0, this.ivLen);
                     iv = iv2;
                 }
             }
 
-            MessageDigest digest = (MessageDigest)OpenSSLReal.getWithBCProvider(new Callable() {
-                    public Object call() {
-                        try {
-                            return MessageDigest.getInstance("MD5", "BC");
-                        } catch (Exception e) {
-                            throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
-                        }
-                    }
-                });
-
-            OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen,ivLen,digest,iv,pass,2048);
+            MessageDigest digest = Digest.getDigest("MD5", getRuntime());
+            OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen, ivLen, digest, iv, pass, 2048);
             this.key = result.getKey();
             this.realIV = iv;
             this.orgIV = this.realIV;
         }
     }
 
-    @JRubyMethod(optional=2)
+    @JRubyMethod(optional = 2)
     public IRubyObject encrypt(IRubyObject[] args) {
         this.realIV = orgIV;
         init(args, true);
         return this;
     }
 
-    @JRubyMethod(optional=2)
+    @JRubyMethod(optional = 2)
     public IRubyObject decrypt(IRubyObject[] args) {
         this.realIV = orgIV;
         init(args, false);
@@ -525,19 +525,17 @@ public class Cipher extends RubyObject {
     }
 
     javax.crypto.Cipher getCipher() {
-        return (javax.crypto.Cipher) OpenSSLReal.getWithBCProvider(new Callable() {
-            public Object call() {
-                try {
-                    return javax.crypto.Cipher.getInstance(realName, "BC");
-                } catch (NoSuchAlgorithmException e) {
-                    throw getRuntime().newLoadError("unsupported cipher algorithm (" + realName + ")");
-                } catch (NoSuchProviderException e) {
-                    throw getRuntime().newLoadError("unsupported cipher algorithm (" + realName + ")");
-                } catch (javax.crypto.NoSuchPaddingException e) {
-                    throw getRuntime().newLoadError("unsupported cipher padding (" + realName + ")");
-                }
+        try {
+            return javax.crypto.Cipher.getInstance(realName);
+        } catch (NoSuchAlgorithmException e) {
+            try {
+                return OpenSSLReal.getCipherBC(realName);
+            } catch (GeneralSecurityException ignore) {
             }
-        });
+            throw newCipherError(getRuntime(), "unsupported cipher algorithm (" + realName + ")");
+        } catch (javax.crypto.NoSuchPaddingException e) {
+            throw newCipherError(getRuntime(), "unsupported cipher padding (" + realName + ")");
+        }
     }
 
     private boolean hasLen() {
@@ -548,45 +546,34 @@ public class Cipher extends RubyObject {
         return "AES".equalsIgnoreCase(cryptoBase) || "RC2".equalsIgnoreCase(cryptoBase) || "RC4".equalsIgnoreCase(cryptoBase);
     }
 
-    @JRubyMethod(required=1,optional=3)
+    @JRubyMethod(required = 1, optional = 3)
     public IRubyObject pkcs5_keyivgen(IRubyObject[] args) {
-        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,1,4);
+        org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 1, 4);
         byte[] pass = args[0].convertToString().getBytes();
         byte[] salt = null;
         int iter = 2048;
         IRubyObject vdigest = getRuntime().getNil();
-        MessageDigest digest = null;
-        if(args.length>1) {
-            if(!args[1].isNil()) {
+        if (args.length > 1) {
+            if (!args[1].isNil()) {
                 salt = args[1].convertToString().getBytes();
             }
-            if(args.length>2) {
-                if(!args[2].isNil()) {
+            if (args.length > 2) {
+                if (!args[2].isNil()) {
                     iter = RubyNumeric.fix2int(args[2]);
                 }
-                if(args.length>3) {
+                if (args.length > 3) {
                     vdigest = args[3];
                 }
             }
         }
         if (null != salt) {
             if (salt.length != 8) {
-                throw new RaiseException(getRuntime(), ciphErr, "salt must be an 8-octet string", true);
+                throw newCipherError(getRuntime(), "salt must be an 8-octet string");
             }
         }
 
         final String algorithm = vdigest.isNil() ? "MD5" : ((Digest) vdigest).getAlgorithm();
-
-        digest = (MessageDigest) OpenSSLReal.getWithBCProvider(new Callable() {
-            public Object call() {
-                try {
-                    return MessageDigest.getInstance(algorithm, "BC");
-                } catch (Exception e) {
-                    throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
-                }
-            }
-        });
-
+        MessageDigest digest = Digest.getDigest(algorithm, getRuntime());
         OpenSSLImpl.KeyAndIv result = OpenSSLImpl.EVP_BytesToKey(keyLen, ivLen, digest, salt, pass, iter);
         this.key = result.getKey();
         this.realIV = result.getIv();
@@ -613,65 +600,72 @@ public class Cipher extends RubyObject {
                             this.realIV, 0, ivLen);
                 }
                 if ("RC2".equalsIgnoreCase(cryptoBase)) {
-                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new RC2ParameterSpec(this.key.length * 8, this.realIV));
+                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey("RC2", this.key), new RC2ParameterSpec(this.key.length * 8, this.realIV));
                 } else if ("RC4".equalsIgnoreCase(cryptoBase)) {
-                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
+                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey("ARCFOUR", this.key));
                 } else {
-                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key), new IvParameterSpec(this.realIV));
+                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(realName.split("/")[0], this.key), new IvParameterSpec(this.realIV));
                 }
             } else {
-                this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(this.key));
+                this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(realName.split("/")[0], this.key));
             }
         } catch (Exception e) {
             if (DEBUG) {
                 e.printStackTrace();
             }
-            throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
+            throw newCipherError(getRuntime(), e.getMessage());
         }
     }
-
     private byte[] lastIv = null;
 
     @JRubyMethod
     public IRubyObject update(IRubyObject data) {
-        if (DEBUG) System.out.println("*** update ["+data+"]");
+        if (DEBUG) {
+            System.out.println("*** update [" + data + "]");
+        }
 
         byte[] val = data.convertToString().getBytes();
-        if(val.length == 0) {
+        if (val.length == 0) {
             throw getRuntime().newArgumentError("data must not be empty");
         }
 
-        if(!ciphInited) {
-            if (DEBUG) System.out.println("BEFORE INITING");
+        if (!ciphInited) {
+            if (DEBUG) {
+                System.out.println("BEFORE INITING");
+            }
             doInitialize();
-            if (DEBUG) System.out.println("AFTER INITING");
+            if (DEBUG) {
+                System.out.println("AFTER INITING");
+            }
         }
 
         byte[] str = new byte[0];
         try {
             byte[] out = ciph.update(val);
-            if(out != null) {
+            if (out != null) {
                 str = out;
 
-                if(this.realIV != null) {
-                    if(lastIv == null) {
+                if (this.realIV != null) {
+                    if (lastIv == null) {
                         lastIv = new byte[ivLen];
                     }
                     byte[] tmpIv = encryptMode ? out : val;
-                    if(tmpIv.length >= ivLen) {
-                        System.arraycopy(tmpIv, tmpIv.length-ivLen, lastIv, 0, ivLen);
+                    if (tmpIv.length >= ivLen) {
+                        System.arraycopy(tmpIv, tmpIv.length - ivLen, lastIv, 0, ivLen);
                     }
                 }
             }
-        } catch(Exception e) {
-            if (DEBUG) e.printStackTrace();
-            throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
+        } catch (Exception e) {
+            if (DEBUG) {
+                e.printStackTrace();
+            }
+            throw newCipherError(getRuntime(), e.getMessage());
         }
 
-        return getRuntime().newString(new ByteList(str,false));
+        return getRuntime().newString(new ByteList(str, false));
     }
 
-    @JRubyMethod(name="<<")
+    @JRubyMethod(name = "<<")
     public IRubyObject update_deprecated(IRubyObject data) {
         getRuntime().getWarnings().warn(IRubyWarnings.ID.DEPRECATED_METHOD, "" + this.getMetaClass().getRealClass().getName() + "#<< is deprecated; use " + this.getMetaClass().getRealClass().getName() + "#update instead");
         return update(data);
@@ -711,12 +705,12 @@ public class Cipher extends RubyObject {
                 doInitialize();
             }
         } catch (Exception e) {
-            throw new RaiseException(getRuntime(), ciphErr, e.getMessage(), true);
+            throw newCipherError(getRuntime(), e.getMessage());
         }
         return getRuntime().newString(str);
     }
 
-    @JRubyMethod(name="padding=")
+    @JRubyMethod(name = "padding=")
     public IRubyObject set_padding(IRubyObject padding) {
         this.padding = padding.toString();
         initialize(getRuntime().newString(name));
@@ -741,5 +735,9 @@ public class Cipher extends RubyObject {
 
     int getKeyLen() {
         return this.keyLen;
+    }
+
+    private static RaiseException newCipherError(Ruby runtime, String message) {
+        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("Cipher")).getClass("CipherError"), message, true);
     }
 }

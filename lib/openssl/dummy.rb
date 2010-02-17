@@ -8,27 +8,27 @@ module OpenSSL
     class Primitive; end
     class Constructive; end
   end
-  module PKey
-    class PKeyError < OpenSSLError; end
-    class PKey; def initialize(*args); end; end
-    class RSA < PKey; end
-    class DSA < PKey; end
-    class DH < PKey; end
-  end
   module X509
     class Name; end
     class Certificate; end
     class Extension; end
     class CRL; end
     class Revoked; end
-    class Store; end
+    class Store
+      def set_default_paths; end
+    end
     class Request; end
     class Attribute; end
   end
   module Netscape
     class SPKI; end
   end
-  module PKCS7
-    class PKCS7; end
+  class PKCS7
+    # this definition causes TypeError "superclass mismatch for class PKCS7"
+    # MRI also crashes following definition;
+    #   class Foo; class Foo < Foo; end; end
+    #   class Foo; class Foo < Foo; end; end
+    #
+    # class PKCS7 < PKCS7; end
   end
 end

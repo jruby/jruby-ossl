@@ -27,6 +27,7 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -61,28 +62,33 @@ public class Digest extends RubyObject {
         mOSSL.defineClassUnder("DigestError", openSSLError, openSSLError.getAllocator());
     }
 
-    private static MessageDigest getDigest(final String name, final IRubyObject recv) {
-        return (MessageDigest) OpenSSLReal.getWithBCProvider(new Callable() {
-            public Object call() {
-                try {
-                    return MessageDigest.getInstance(transformDigest(name));
-                } catch (NoSuchAlgorithmException e) {
-                    throw recv.getRuntime().newNotImplementedError("Unsupported digest algorithm (" + name + ")");
-                }
+    static MessageDigest getDigest(final String name, final Ruby runtime) {
+        String algorithm = transformDigest(name);
+        try {
+            return MessageDigest.getInstance(algorithm);
+        } catch (NoSuchAlgorithmException e) {
+            try {
+                return OpenSSLReal.getMessageDigestBC(algorithm);
+            } catch (GeneralSecurityException ignore) {
             }
-        });
+            throw runtime.newNotImplementedError("Unsupported digest algorithm (" + name + ")");
+        }
     }
 
-    // name mapping for openssl -> BC
+    // name mapping for openssl -> JCE
     private static String transformDigest(String inp) {
         String[] sp = inp.split("::");
         if (sp.length > 1) { // We only want Digest names from the last part of class name
             inp = sp[sp.length - 1];
         }
+        // MessageDigest algorithm name normalization.
+        // BC accepts "SHA1" but it should be "SHA-1" per spec.
         if ("DSS".equalsIgnoreCase(inp)) {
-            return "SHA";
+            return "SHA";   // why?
         } else if ("DSS1".equalsIgnoreCase(inp)) {
-            return "SHA1";
+            return "SHA-1";
+        } else if (inp.toUpperCase().startsWith("SHA") && inp.length() > 3 && inp.charAt(3) != '-') {
+            inp = "SHA-" + inp.substring(3);
         }
         return inp;
     }
@@ -93,7 +99,6 @@ public class Digest extends RubyObject {
         name = null;
         algo = null;
     }
-
     private MessageDigest algo;
     private String name;
 
@@ -113,13 +118,14 @@ public class Digest extends RubyObject {
             data = args[1];
         }
         name = type.toString();
-        algo = getDigest(name, this);
+        algo = getDigest(name, getRuntime());
         if (!data.isNil()) {
             update(data.convertToString());
         }
         return this;
     }
 
+    @Override
     @JRubyMethod
     public IRubyObject initialize_copy(IRubyObject obj) {
         checkFrozen();
@@ -174,6 +180,10 @@ public class Digest extends RubyObject {
 
     String getAlgorithm() {
         return this.algo.getAlgorithm();
+    }
+
+    String getShortAlgorithm() {
+        return getAlgorithm().replace("-", "");
     }
 }
 

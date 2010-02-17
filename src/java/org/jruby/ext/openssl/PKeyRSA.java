@@ -49,10 +49,6 @@ import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.Cipher;
 
-import org.bouncycastle.asn1.ASN1EncodableVector;
-import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.DERInteger;
-import org.bouncycastle.asn1.DERSequence;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyBignum;
@@ -156,7 +152,7 @@ public class PKeyRSA extends PKey {
      */
     private static void rsaGenerate(PKeyRSA rsa, int keysize, BigInteger exp) throws RaiseException {
         try {
-            KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA", OpenSSLReal.PROVIDER);
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
             gen.initialize(new RSAKeyGenParameterSpec(keysize, exp), new SecureRandom());
             KeyPair pair = gen.generateKeyPair();
             rsa.privKey = (RSAPrivateCrtKey) (pair.getPrivate());
@@ -196,7 +192,7 @@ public class PKeyRSA extends PKey {
                 Object val = null;
                 KeyFactory fact = null;
                 try {
-                    fact = KeyFactory.getInstance("RSA", OpenSSLReal.PROVIDER);
+                    fact = KeyFactory.getInstance("RSA");
                 } catch (Exception e) {
                     throw getRuntime().newRuntimeError("unsupported key algorithm (RSA)");
                 }
@@ -204,6 +200,8 @@ public class PKeyRSA extends PKey {
                     // PEM_read_bio_RSAPrivateKey
                     try {
                         val = PEMInputOutput.readPrivateKey(new StringReader(input), passwd);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -212,6 +210,8 @@ public class PKeyRSA extends PKey {
                     // PEM_read_bio_RSAPublicKey
                     try {
                         val = PEMInputOutput.readRSAPublicKey(new StringReader(input), passwd);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -220,6 +220,8 @@ public class PKeyRSA extends PKey {
                     // PEM_read_bio_RSA_PUBKEY
                     try {
                         val = PEMInputOutput.readRSAPubKey(new StringReader(input), passwd);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -227,20 +229,9 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // d2i_RSAPrivateKey_bio
                     try {
-                        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
-                        if (seq.size() == 9) {
-                            BigInteger mod = ((DERInteger) seq.getObjectAt(1)).getValue();
-                            BigInteger pubexp = ((DERInteger) seq.getObjectAt(2)).getValue();
-                            BigInteger privexp = ((DERInteger) seq.getObjectAt(3)).getValue();
-                            BigInteger primep = ((DERInteger) seq.getObjectAt(4)).getValue();
-                            BigInteger primeq = ((DERInteger) seq.getObjectAt(5)).getValue();
-                            BigInteger primeep = ((DERInteger) seq.getObjectAt(6)).getValue();
-                            BigInteger primeeq = ((DERInteger) seq.getObjectAt(7)).getValue();
-                            BigInteger crtcoeff = ((DERInteger) seq.getObjectAt(8)).getValue();
-                            val = fact.generatePrivate(new RSAPrivateCrtKeySpec(mod, pubexp, privexp, primep, primeq, primeep, primeeq, crtcoeff));
-                        } else {
-                            val = null;
-                        }
+                        val = org.jruby.ext.openssl.impl.PKey.readRSAPrivateKey(input);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -248,14 +239,9 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // d2i_RSAPublicKey_bio
                     try {
-                        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
-                        if (seq.size() == 2) {
-                            BigInteger mod = ((DERInteger) seq.getObjectAt(0)).getValue();
-                            BigInteger pubexp = ((DERInteger) seq.getObjectAt(1)).getValue();
-                            val = fact.generatePublic(new RSAPublicKeySpec(mod, pubexp));
-                        } else {
-                            val = null;
-                        }
+                        val = org.jruby.ext.openssl.impl.PKey.readRSAPublicKey(input);
+                    } catch (NoClassDefFoundError e) {
+                        val = null;
                     } catch (Exception e) {
                         val = null;
                     }
@@ -313,23 +299,11 @@ public class PKeyRSA extends PKey {
 
     @JRubyMethod
     public IRubyObject to_der() {
-        ASN1EncodableVector v1 = new ASN1EncodableVector();
-        if (pubKey != null && privKey == null) {
-            v1.add(new DERInteger(pubKey.getModulus()));
-            v1.add(new DERInteger(pubKey.getPublicExponent()));
-        } else {
-            v1.add(new DERInteger(0));
-            v1.add(new DERInteger(privKey.getModulus()));
-            v1.add(new DERInteger(privKey.getPublicExponent()));
-            v1.add(new DERInteger(privKey.getPrivateExponent()));
-            v1.add(new DERInteger(privKey.getPrimeP()));
-            v1.add(new DERInteger(privKey.getPrimeQ()));
-            v1.add(new DERInteger(privKey.getPrimeExponentP()));
-            v1.add(new DERInteger(privKey.getPrimeExponentQ()));
-            v1.add(new DERInteger(privKey.getCrtCoefficient()));
-        }
         try {
-            return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
+            byte[] bytes = org.jruby.ext.openssl.impl.PKey.toDerRSAKey(pubKey, privKey);
+            return RubyString.newString(getRuntime(), bytes);
+        } catch (NoClassDefFoundError e) {
+            throw newRSAError(getRuntime(), e.getMessage());
         } catch (IOException ioe) {
             throw newRSAError(getRuntime(), ioe.getMessage());
         }
@@ -420,6 +394,8 @@ public class PKeyRSA extends PKey {
             }
             w.close();
             return getRuntime().newString(w.toString());
+        } catch (NoClassDefFoundError ncdfe) {
+            throw newRSAError(getRuntime(), ncdfe.getMessage());
         } catch (IOException ioe) {
             throw newRSAError(getRuntime(), ioe.getMessage());
         }
@@ -429,14 +405,14 @@ public class PKeyRSA extends PKey {
         if(padding < 1 || padding > 4) {
             throw newRSAError(getRuntime(), null);
         }
-
-        String p = "/NONE/PKCS1Padding";
+        // BC accepts "/NONE/*" but SunJCE doesn't. use "/ECB/*"
+        String p = "/ECB/PKCS1Padding";
         if(padding == 3) {
-            p = "/NONE/NoPadding";
+            p = "/ECB/NoPadding";
         } else if(padding == 4) {
-            p = "/NONE/OAEPWithMD5AndMGF1Padding";
+            p = "/ECB/OAEPWithMD5AndMGF1Padding";
         } else if(padding == 2) {
-            p = "/NONE/ISO9796-1Padding";
+            p = "/ECB/ISO9796-1Padding";
         }
         return p;
     }        
@@ -453,7 +429,7 @@ public class PKeyRSA extends PKey {
             throw newRSAError(getRuntime(), "private key needed.");
         }
         try {
-            Cipher engine = Cipher.getInstance("RSA" + p, OpenSSLReal.PROVIDER);
+            Cipher engine = Cipher.getInstance("RSA" + p);
             engine.init(Cipher.ENCRYPT_MODE, privKey);
             byte[] outp = engine.doFinal(buffer.getBytes());
             return RubyString.newString(getRuntime(), outp);
@@ -474,7 +450,7 @@ public class PKeyRSA extends PKey {
             throw newRSAError(getRuntime(), "private key needed.");
         }
         try {
-            Cipher engine = Cipher.getInstance("RSA" + p, OpenSSLReal.PROVIDER);
+            Cipher engine = Cipher.getInstance("RSA" + p);
             engine.init(Cipher.DECRYPT_MODE, privKey);
             byte[] outp = engine.doFinal(buffer.getBytes());
             return RubyString.newString(getRuntime(), outp);
@@ -492,7 +468,7 @@ public class PKeyRSA extends PKey {
         String p = getPadding(padding);
         RubyString buffer = args[0].convertToString();
         try {
-            Cipher engine = Cipher.getInstance("RSA" + p, OpenSSLReal.PROVIDER);
+            Cipher engine = Cipher.getInstance("RSA" + p);
             engine.init(Cipher.ENCRYPT_MODE, pubKey);
             byte[] outp = engine.doFinal(buffer.getBytes());
             return RubyString.newString(getRuntime(), outp);
@@ -510,7 +486,7 @@ public class PKeyRSA extends PKey {
         String p = getPadding(padding);
         RubyString buffer = args[0].convertToString();
         try {
-            Cipher engine = Cipher.getInstance("RSA" + p, OpenSSLReal.PROVIDER);
+            Cipher engine = Cipher.getInstance("RSA" + p);
             engine.init(Cipher.DECRYPT_MODE, pubKey);
             byte[] outp = engine.doFinal(buffer.getBytes());
             return RubyString.newString(getRuntime(), outp);
@@ -731,7 +707,7 @@ public class PKeyRSA extends PKey {
         if ((e = rsa_e) != null && (n = rsa_n) != null) {
             KeyFactory fact;
             try {
-                fact = KeyFactory.getInstance("RSA", OpenSSLReal.PROVIDER);
+                fact = KeyFactory.getInstance("RSA");
             } catch(Exception ex) {
                 throw getRuntime().newLoadError("unsupported key algorithm (RSA)");
             }
@@ -752,7 +728,7 @@ public class PKeyRSA extends PKey {
         if (rsa_e != null && rsa_n != null && rsa_p != null && rsa_q != null && rsa_d != null && rsa_dmp1 != null && rsa_dmq1 != null && rsa_iqmp != null) {
             KeyFactory fact;
             try {
-                fact = KeyFactory.getInstance("RSA", OpenSSLReal.PROVIDER);
+                fact = KeyFactory.getInstance("RSA");
             } catch(Exception ex) {
                 throw getRuntime().newLoadError("unsupported key algorithm (RSA)");
             }

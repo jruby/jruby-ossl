@@ -446,7 +446,7 @@ public class X509Extensions {
 
     private static byte[] getSHA1Digest(Ruby runtime, byte[] bytes) {
         try {
-            return MessageDigest.getInstance("SHA-1", OpenSSLReal.PROVIDER).digest(bytes);
+            return MessageDigest.getInstance("SHA-1").digest(bytes);
         } catch (GeneralSecurityException gse) {
             throw newX509ExtError(runtime, gse.getMessage());
         }
