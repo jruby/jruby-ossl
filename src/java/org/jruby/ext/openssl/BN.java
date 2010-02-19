@@ -34,7 +34,6 @@ import java.util.Random;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
-import org.jruby.RubyKernel;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
@@ -42,7 +41,6 @@ import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.Arity;
-import org.jruby.runtime.Block;
 import org.jruby.runtime.ClassIndex;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -109,7 +107,8 @@ public class BN extends RubyObject {
     public IRubyObject doClone() {
         return newBN(getRuntime(), this.value);
     }
-    
+
+    @Override
     public IRubyObject initialize_copy(IRubyObject original) {
         super.initialize_copy(original);
         if (this != original) {

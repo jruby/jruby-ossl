@@ -110,7 +110,7 @@ public class PKCS7 extends RubyObject {
         } else {
             RubyString str = obj.convertToString();
             ByteList bl = str.getByteList();
-            return BIO.memBuf(bl.bytes, bl.begin, bl.realSize);
+            return BIO.memBuf(bl.getUnsafeBytes(), bl.begin(), bl.length());
         }
     }
 
@@ -150,7 +150,7 @@ public class PKCS7 extends RubyObject {
                 throw newPKCS7Error(klass.getRuntime(), null);
             }
             IRubyObject data = out[0] != null ? membio2str(klass.getRuntime(), out[0]) : klass.getRuntime().getNil();
-            PKCS7 ret = wrap(((RubyModule)(((RubyModule)klass.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), pkcs7);
+            PKCS7 ret = wrap(((RubyModule)klass.getRuntime().getModule("OpenSSL")).getClass("PKCS7"), pkcs7);
             ret.setData(data);
             return ret;
         }
@@ -193,7 +193,7 @@ public class PKCS7 extends RubyObject {
 
             try {
                 org.jruby.ext.openssl.impl.PKCS7 p7 = org.jruby.ext.openssl.impl.PKCS7.sign(x509, pkey, x509s, in, flg);
-                PKCS7 ret = wrap(((RubyModule)(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), p7);
+                PKCS7 ret = wrap(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getClass("PKCS7"), p7);
                 ret.setData(data);
                 return ret;
             } catch (PKCS7Exception pkcse) {
@@ -231,7 +231,7 @@ public class PKCS7 extends RubyObject {
             List<X509AuxCertificate> x509s = x509_ary2sk(certs);
             try {
                 org.jruby.ext.openssl.impl.PKCS7 p7 = org.jruby.ext.openssl.impl.PKCS7.encrypt(x509s, in, ciph, flg);
-                PKCS7 ret = wrap(((RubyModule)(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getConstant("PKCS7"))).getClass("PKCS7"), p7);
+                PKCS7 ret = wrap(((RubyModule)recv.getRuntime().getModule("OpenSSL")).getClass("PKCS7"), p7);
                 ret.setData(data);
                 return ret;
             } catch (PKCS7Exception pkcse) {
