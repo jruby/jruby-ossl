@@ -46,7 +46,7 @@ public class OpenSSLReal {
     static {
         try {
             BC_PROVIDER = (java.security.Provider) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").newInstance();
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
             // no bouncy castle available
         }
     }
@@ -107,10 +107,20 @@ public class OpenSSLReal {
             X509.createX509(runtime, ossl);
             NetscapeSPKI.createNetscapeSPKI(runtime, ossl);
             PKCS7.createPKCS7(runtime, ossl);
-            SSL.createSSL(runtime, ossl);
+        } catch (SecurityException ignore) {
+            // some class might be prohibited to use.
+            runtime.getLoadService().require("openssl/dummy");
         } catch (Error ignore) {
             // mainly for rescuing NoClassDefFoundError: no bc*.jar
             runtime.getLoadService().require("openssl/dummy");
+        }
+        try {
+            SSL.createSSL(runtime, ossl);
+        } catch (SecurityException ignore) {
+            // some class might be prohibited to use. ex. SSL* on GAE/J.
+            runtime.getLoadService().require("openssl/dummyssl");
+        } catch (Error ignore) {
+            // mainly for rescuing NoClassDefFoundError: no bc*.jar
             runtime.getLoadService().require("openssl/dummyssl");
         }
 
