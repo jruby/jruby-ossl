@@ -261,6 +261,7 @@ public class Cipher extends RubyObject {
     private String padding_type;
     private String realName;
     private int keyLen = -1;
+    private int generateKeyLen = -1;
     private int ivLen = -1;
     private boolean encryptMode = true;
     //private IRubyObject[] modeParams;
@@ -319,6 +320,7 @@ public class Cipher extends RubyObject {
                 } else {
                     keyLen = 8;
                 }
+                generateKeyLen = keyLen / 8 * 7;;
             } else if ("RC4".equalsIgnoreCase(cryptoBase)) {
                 ivLen = 0;
                 keyLen = 16;
@@ -733,8 +735,8 @@ public class Cipher extends RubyObject {
         return this.cryptoMode;
     }
 
-    int getKeyLen() {
-        return this.keyLen;
+    int getGenerateKeyLen() {
+        return (generateKeyLen == -1) ? keyLen : generateKeyLen;
     }
 
     private static RaiseException newCipherError(Ruby runtime, String message) {

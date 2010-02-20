@@ -877,13 +877,12 @@ public class PKCS7 {
                 gen.init(evpCipher.getKeyLenInBits(), new SecureRandom());
                 SecretKey key = gen.generateKey();
                 evpCipher.getCipher().init(Cipher.ENCRYPT_MODE, key);
-
                 if (null != rsk) {
                     for (RecipInfo ri : rsk) {
                         PublicKey pkey = ri.getCert().getPublicKey();
                         Cipher cipher = Cipher.getInstance(CipherSpec.getWrappingAlgorithm(pkey.getAlgorithm()));
                         cipher.init(Cipher.ENCRYPT_MODE, pkey);
-                        tmp = cipher.doFinal(((SecretKeySpec) key).getEncoded());
+                        tmp = cipher.doFinal(key.getEncoded());
                         ri.setEncKey(new DEROctetString(tmp));
                     }
                 }

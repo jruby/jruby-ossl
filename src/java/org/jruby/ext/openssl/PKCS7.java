@@ -224,7 +224,7 @@ public class PKCS7 extends RubyObject {
                 }
             } else {
                 Cipher c = ((Cipher) cipher);
-                ciph = new CipherSpec(c.getCipher(), c.getName(), c.getKeyLen() * 8);
+                ciph = new CipherSpec(c.getCipher(), c.getName(), c.getGenerateKeyLen() * 8);
             }
             int flg = flags.isNil() ? 0 : RubyNumeric.fix2int(flags);
             byte[] in = data.convertToString().getBytes();
