@@ -159,7 +159,7 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
         if server.alive?
           server.kill
           server.join
-          #flunk("TCPServer was closed and SSLServer is still alive") unless $!
+          flunk("TCPServer was closed and SSLServer is still alive") unless $!
         end
       end
     end
@@ -260,11 +260,15 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
         assert_equal("", buf)
 
         buf = "asdf"
-        assert_equal(buf.object_id, ssl.sysread(str.size, buf).object_id)
+        read = ssl.sysread(str.size, buf)
+        assert(!read.empty?)
+        assert_equal(buf.object_id, read.object_id)
         assert_equal(str, buf)
 
         ssl.syswrite(str)
-        assert_equal(str, ssl.sysread(str.size, nil))
+        read = ssl.sysread(str.size, nil)
+        assert(!read.empty?)
+        assert_equal(str, read)
       }
       ssl.close
     }

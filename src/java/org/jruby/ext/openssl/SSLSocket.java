@@ -356,9 +356,8 @@ public class SSLSocket extends RubyObject {
             } 
         }
         int limit = Math.min(peerAppData.remaining(), dst.remaining());
-        for (int i = 0; i < limit; i++) {
-            dst.put(peerAppData.get());
-        }
+        peerAppData.get(dst.array(), dst.arrayOffset(), limit);
+        dst.position(dst.arrayOffset() + limit);
         return limit;
     }
 
@@ -450,31 +449,27 @@ public class SSLSocket extends RubyObject {
             waitSelect(rsel);
         }
 
-        ByteBuffer dst = ByteBuffer.allocate(len);
         try {
+            ByteBuffer dst = ByteBuffer.allocate(len);
             int rr = -1;
-            if(engine == null) {
-                rr = c.read(dst);
-            } else {
-                rr = read(dst);
+            // ensure >0 bytes read; sysread is blocking read.
+            while (rr <= 0) {
+                if (engine == null) {
+                    rr = c.read(dst);
+                } else {
+                    rr = read(dst);
+                }
+                if (rr == -1) {
+                    throw getRuntime().newEOFError();
+                }
             }
-            byte[] out = null;
-            boolean eof = false;
-            if(rr == -1) {
-                eof = true;
-            } else {
-                byte[] bss = new byte[rr];
-                dst.position(dst.position()-rr);
-                dst.get(bss);
-                out = bss;
-            }
-            if(eof){
-                throw getRuntime().newEOFError();
-            }
-            str.setValue(new ByteList(out));
+            byte[] bss = new byte[rr];
+            dst.position(dst.position() - rr);
+            dst.get(bss);
+            str.setValue(new ByteList(bss));
             return str;
         } catch (IOException ioe) {
-            throw getRuntime().newEOFError();
+            throw getRuntime().newIOErrorFromException(ioe);
         }
     }
 
