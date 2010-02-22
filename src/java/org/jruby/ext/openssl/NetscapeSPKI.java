@@ -91,6 +91,10 @@ public class NetscapeSPKI extends RubyObject {
 
                     public Object call() throws GeneralSecurityException {
                         try {
+                            // NetscapeCertRequest throws java.lang.IllegalArgumentException
+                            // when no BC provider allowed, with a message
+                            // "java.security.NoSuchProviderException: no such provider: BC"
+                            // instead of NoSuchProviderException.
                             cert = new NetscapeCertRequest(b2);
                             challenge = getRuntime().newString(cert.getChallenge());
                             return cert.getPublicKey();

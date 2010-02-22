@@ -81,10 +81,18 @@ public class OpenSSLReal {
             }
             return toCall.call();
         } catch (NoSuchProviderException nspe) {
-            throw new GeneralSecurityException("You need to configure JVM/classpath to enable BouncyCastle Security Provider: " + nspe.getMessage(), nspe);
+            throw new GeneralSecurityException(bcExceptionMessage(nspe), nspe);
         } catch (Exception e) {
             throw new GeneralSecurityException(e.getMessage(), e);
         }
+    }
+
+    public static String bcExceptionMessage(NoSuchProviderException nspe) {
+        return "You need to configure JVM/classpath to enable BouncyCastle Security Provider: " + nspe.getMessage();
+    }
+
+    public static String bcExceptionMessage(NoClassDefFoundError ncdfe) {
+        return "You need to configure JVM/classpath to enable BouncyCastle Security Provider: NoClassDefFoundError: " + ncdfe.getMessage();
     }
 
     public static void createOpenSSL(Ruby runtime) {

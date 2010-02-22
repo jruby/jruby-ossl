@@ -40,10 +40,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.interfaces.DSAKey;
-import java.security.interfaces.DSAParams;
 import java.security.interfaces.DSAPrivateKey;
 import java.security.interfaces.DSAPublicKey;
-import java.security.spec.DSAPrivateKeySpec;
 import java.security.spec.DSAPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -172,6 +170,7 @@ public class PKeyDSA extends PKey {
                 } catch (NoSuchAlgorithmException e) {
                     throw getRuntime().newLoadError("unsupported key algorithm (DSA)");
                 }
+                // TODO: ugly NoClassDefFoundError catching for no BC env. How can we remove this?
                 if (null == val) {
                     // PEM_read_bio_DSAPrivateKey
                     try {
@@ -271,8 +270,8 @@ public class PKeyDSA extends PKey {
         try {
             byte[] bytes = org.jruby.ext.openssl.impl.PKey.toDerDSAKey(pubKey, privKey);
             return RubyString.newString(getRuntime(), bytes);
-        } catch (NoClassDefFoundError e) {
-            throw newDSAError(getRuntime(), e.getMessage());
+        } catch (NoClassDefFoundError ncdfe) {
+            throw newDSAError(getRuntime(), OpenSSLReal.bcExceptionMessage(ncdfe));
         } catch (IOException ioe) {
             throw newDSAError(getRuntime(), ioe.getMessage());
         }
@@ -327,7 +326,7 @@ public class PKeyDSA extends PKey {
             w.close();
             return getRuntime().newString(w.toString());
         } catch (NoClassDefFoundError ncdfe) {
-            throw newDSAError(getRuntime(), ncdfe.getMessage());
+            throw newDSAError(getRuntime(), OpenSSLReal.bcExceptionMessage(ncdfe));
         } catch (IOException ioe) {
             throw newDSAError(getRuntime(), ioe.getMessage());
         }

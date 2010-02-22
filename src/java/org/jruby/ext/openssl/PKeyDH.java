@@ -134,7 +134,7 @@ public class PKeyDH extends PKey {
                     this.dh_p = spec.getP();
                     this.dh_g = spec.getG();
                 } catch (NoClassDefFoundError ncdfe) {
-                    throw newDHError(runtime, ncdfe.getMessage());
+                    throw newDHError(runtime, OpenSSLReal.bcExceptionMessage(ncdfe));
                 } catch (IOException e) {
                     throw runtime.newIOErrorFromException(e);
                 } catch (InvalidParameterSpecException e) {
@@ -286,7 +286,7 @@ public class PKeyDH extends PKey {
             w.flush();
             w.close();
         } catch (NoClassDefFoundError ncdfe) {
-            throw newDHError(getRuntime(), ncdfe.getMessage());
+            throw newDHError(getRuntime(), OpenSSLReal.bcExceptionMessage(ncdfe));
         } catch (IOException e) {
             // shouldn't happen (string/buffer io only)
             throw getRuntime().newIOErrorFromException(e);
@@ -305,7 +305,7 @@ public class PKeyDH extends PKey {
             byte[] bytes = org.jruby.ext.openssl.impl.PKey.toDerDHKey(p, g);
             return RubyString.newString(getRuntime(), bytes);
         } catch (NoClassDefFoundError ncdfe) {
-            throw newDHError(getRuntime(), ncdfe.getMessage());
+            throw newDHError(getRuntime(), OpenSSLReal.bcExceptionMessage(ncdfe));
         } catch (IOException ioe) {
             throw newDHError(getRuntime(), ioe.getMessage());
         }

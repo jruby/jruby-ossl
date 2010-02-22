@@ -196,6 +196,7 @@ public class PKeyRSA extends PKey {
                 } catch (Exception e) {
                     throw getRuntime().newRuntimeError("unsupported key algorithm (RSA)");
                 }
+                // TODO: ugly NoClassDefFoundError catching for no BC env. How can we remove this?
                 if (null == val) {
                     // PEM_read_bio_RSAPrivateKey
                     try {
@@ -302,8 +303,8 @@ public class PKeyRSA extends PKey {
         try {
             byte[] bytes = org.jruby.ext.openssl.impl.PKey.toDerRSAKey(pubKey, privKey);
             return RubyString.newString(getRuntime(), bytes);
-        } catch (NoClassDefFoundError e) {
-            throw newRSAError(getRuntime(), e.getMessage());
+        } catch (NoClassDefFoundError ncdfe) {
+            throw newRSAError(getRuntime(), OpenSSLReal.bcExceptionMessage(ncdfe));
         } catch (IOException ioe) {
             throw newRSAError(getRuntime(), ioe.getMessage());
         }
@@ -395,7 +396,7 @@ public class PKeyRSA extends PKey {
             w.close();
             return getRuntime().newString(w.toString());
         } catch (NoClassDefFoundError ncdfe) {
-            throw newRSAError(getRuntime(), ncdfe.getMessage());
+            throw newRSAError(getRuntime(), OpenSSLReal.bcExceptionMessage(ncdfe));
         } catch (IOException ioe) {
             throw newRSAError(getRuntime(), ioe.getMessage());
         }
