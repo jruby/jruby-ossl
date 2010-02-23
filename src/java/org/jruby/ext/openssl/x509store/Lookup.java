@@ -46,8 +46,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.jruby.ext.openssl.OpenSSLReal;
-
 /**
  * X509_LOOKUP
  *
@@ -59,9 +57,6 @@ public class Lookup {
     public LookupMethod method;
     public Object methodData;
     public Store store;
-
-    public final static int FILE_LOAD = 1;
-    public final static int ADD_DIR = 2;
 
     /**
      * c: X509_LOOKUP_new
@@ -81,14 +76,14 @@ public class Lookup {
      * c: X509_LOOKUP_load_file
      */
     public int loadFile(CertificateFile.Path file) throws Exception {
-        return control(FILE_LOAD,file.name,file.type,null);
+        return control(X509Utils.X509_L_FILE_LOAD,file.name,file.type,null);
     }
 
     /**
      * c: X509_LOOKUP_add_dir
      */
     public int addDir(CertificateHashDir.Dir dir) throws Exception {
-        return control(ADD_DIR,dir.name,dir.type,null);
+        return control(X509Utils.X509_L_ADD_DIR,dir.name,dir.type,null);
     }
 
     /**
@@ -468,7 +463,7 @@ public class Lookup {
                 X509Error.addError(X509Utils.X509_R_INVALID_DIRECTORY);
                 return 0;
             }
- 
+
             String[] dirs = dir.split(System.getProperty("path.separator"));
 
             for(int i=0;i<dirs.length;i++) {
@@ -523,7 +518,7 @@ public class Lookup {
                 int tp = iter.next();
                 int k = 0;
                 for(;;) {
-                    b.append(String.format("%s/%08x.%s%d",new Object[]{cdir,new Long(h),postfix,new Integer(k)}));
+                    b.append(String.format("%s/%08x.%s%d", cdir, h, postfix, k));
                     k++;
                     if(!(new File(b.toString()).exists())) {
                         break;
