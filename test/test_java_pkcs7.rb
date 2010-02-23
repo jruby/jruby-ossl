@@ -790,8 +790,8 @@ k0X5FeZvsWf4srFxoVxlcDdJtHh91ZRpDDJYGQlsUm9CPTnO+e4E
 END
 
     def test_pkcs7_des3_key_generation_for_encrypt
-      # SunJCE requires DES/DES3 keybits = 7/21 for key generation.
-      # BC allows 8/24 keybits and treats it as 7/21.
+      # SunJCE requires DES/DES3 keybits = 21/168 for key generation.
+      # BC allows 24/192 keybits and treats it as 21/168.
       msg = "Hello World"
       password = "password"
       cert = OpenSSL::X509::Certificate.new(CERT_PEM)
