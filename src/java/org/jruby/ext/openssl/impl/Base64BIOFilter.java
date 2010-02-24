@@ -30,7 +30,6 @@ package org.jruby.ext.openssl.impl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import org.jruby.ext.openssl.impl.utils.Base64;
 
 /**
  *
@@ -71,6 +70,7 @@ public class Base64BIOFilter extends BIOFilter {
         this.nextOutput.flush();
     }
 
+    @Override
     public BIO push(BIO bio) {
         BIO ret = super.push(bio);
         this.nextOutput = new Base64.OutputStream(BIO.asOutputStream(this.nextBio));
@@ -78,6 +78,7 @@ public class Base64BIOFilter extends BIOFilter {
         return ret;
     }
 
+    @Override
     public int getType() {
         return TYPE_BASE64;
     }

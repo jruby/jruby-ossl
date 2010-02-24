@@ -47,7 +47,6 @@ import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERSequence;
-import org.jruby.RubyString;
 import org.jruby.util.ByteList;
 
 /**

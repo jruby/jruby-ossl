@@ -45,9 +45,9 @@ import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.impl.Base64;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
-import org.jruby.ext.openssl.util.Base64Coder;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -123,7 +123,7 @@ public class NetscapeSPKI extends RubyObject {
     // just try to decode for the time when the given bytes are base64 encoded.
     private byte[] tryBase64Decode(byte[] b) {
         try {
-            b = Base64Coder.decode(b);
+            b = Base64.decode(b, 0, b.length, Base64.NO_OPTIONS);
         } catch (Exception ignored) {
         }
         return b;
@@ -131,6 +131,25 @@ public class NetscapeSPKI extends RubyObject {
 
     @JRubyMethod
     public IRubyObject to_der() {
+        try {
+            return RubyString.newString(getRuntime(), internalToDer());
+        } catch (IOException ioe) {
+            throw newSPKIError(getRuntime(), ioe.getMessage());
+        }
+    }
+
+    @JRubyMethod(name={"to_pem","to_s"})
+    public IRubyObject to_pem() {
+        try {
+            byte[] source = internalToDer();
+            // no Base64.DO_BREAK_LINES option needed for NSPKI.
+            return getRuntime().newString(Base64.encodeBytes(source, 0, source.length, Base64.NO_OPTIONS));
+        } catch (IOException ioe) {
+            throw newSPKIError(getRuntime(), ioe.getMessage());
+        }
+    }
+
+    private byte[] internalToDer() throws IOException {
         DERSequence b = (DERSequence)cert.toASN1Object();
         DERObjectIdentifier encType = null;
         DERBitString publicKey = new DERBitString(((PKey)public_key).to_der().convertToString().getBytes());
@@ -157,16 +176,7 @@ public class NetscapeSPKI extends RubyObject {
         v1_2.add(new DERNull());
         v1.add(new DERSequence(v1_2));
         v1.add(sig);
-        try {
-            return RubyString.newString(getRuntime(), new DERSequence(v1).getEncoded());
-        } catch (IOException ioe) {
-            throw newSPKIError(getRuntime(), ioe.getMessage());
-        }
-    }
-
-    @JRubyMethod(name={"to_pem","to_s"})
-    public IRubyObject to_pem() {
-        return getRuntime().newString(Base64Coder.encode(to_der().toString()));
+        return new DERSequence(v1).getEncoded();
     }
 
     @JRubyMethod
