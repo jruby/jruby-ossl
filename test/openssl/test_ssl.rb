@@ -93,7 +93,6 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     end
   rescue OpenSSL::SSL::SSLError
   rescue IOError
-#  rescue Errno::EPIPE
   ensure
     ssl.close rescue nil
   end

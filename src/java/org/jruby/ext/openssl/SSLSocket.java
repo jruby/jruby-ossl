@@ -469,7 +469,7 @@ public class SSLSocket extends RubyObject {
             str.setValue(new ByteList(bss));
             return str;
         } catch (IOException ioe) {
-            throw getRuntime().newIOErrorFromException(ioe);
+            throw getRuntime().newIOError(ioe.getMessage());
         }
     }
 
@@ -490,7 +490,7 @@ public class SSLSocket extends RubyObject {
 
             return getRuntime().newFixnum(written);
         } catch (IOException ioe) {
-            throw runtime.newIOErrorFromException(ioe);
+            throw runtime.newIOError(ioe.getMessage());
         }
     }
 
