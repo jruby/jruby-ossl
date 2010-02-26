@@ -62,7 +62,7 @@ begin
     p.summary = "OpenSSL add-on for JRuby"
     p.changes = p.paragraphs_of('History.txt', 0..1).join("\n\n")
     p.description = p.paragraphs_of('README.txt', 3...4).join("\n\n")
-    p.test_globs = ENV["TEST"] || ["test/test_*.rb"]
+    p.test_globs = ENV["TEST"] || ["test/test_*.rb"].sort
   end.spec.dependencies.delete_if { |dep| dep.name == "hoe" }
 rescue LoadError
   puts "You really need Hoe installed to be able to package this gem"
