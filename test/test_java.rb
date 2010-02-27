@@ -50,9 +50,9 @@ if defined?(JRUBY_VERSION)
     X509Name = org.bouncycastle.asn1.x509.X509Name
     
     
-    MimeEnvelopedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_enveloped.message'))
-    MimeSignedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_mime_signed.message'))
-    MultipartSignedString = File::read(File.join(File.dirname(__FILE__), 'pkcs7_multipart_signed.message'))
+    MimeEnvelopedString = File::read(File.join(File.dirname(__FILE__), 'java', 'pkcs7_mime_enveloped.message'))
+    MimeSignedString = File::read(File.join(File.dirname(__FILE__), 'java', 'pkcs7_mime_signed.message'))
+    MultipartSignedString = File::read(File.join(File.dirname(__FILE__), 'java', 'pkcs7_multipart_signed.message'))
 
     X509CertString = <<CERT
 -----BEGIN CERTIFICATE-----
@@ -91,9 +91,8 @@ CRL
     X509CRL = CertificateFactory.getInstance("X.509",BCP.new).generateCRL(ByteArrayInputStream.new(X509CRLString.to_java_bytes))
   end
   
-  require File.join(File.dirname(__FILE__), 'test_java_attribute')
-  require File.join(File.dirname(__FILE__), 'test_java_bio')
-  require File.join(File.dirname(__FILE__), 'test_java_mime')
-  require File.join(File.dirname(__FILE__), 'test_java_pkcs7')
-  require File.join(File.dirname(__FILE__), 'test_java_smime')
+  files = File.join(File.dirname(__FILE__), 'java', 'test_*.rb')
+  Dir.glob(files).sort.each do |tc|
+    require tc
+  end
 end
