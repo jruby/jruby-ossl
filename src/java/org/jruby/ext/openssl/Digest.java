@@ -144,7 +144,7 @@ public class Digest extends RubyObject {
     @JRubyMethod(name={"update","<<"})
     public IRubyObject update(IRubyObject obj) {
         ByteList bytes = obj.convertToString().getByteList();
-        algo.update(bytes.getUnsafeBytes(), bytes.begin(), bytes.length());
+        algo.update(bytes.bytes, bytes.begin, bytes.realSize);
         return this;
     }
 
