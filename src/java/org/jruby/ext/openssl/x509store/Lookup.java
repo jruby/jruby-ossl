@@ -236,7 +236,6 @@ public class Lookup {
         int count = 0;
         Reader reader = null;
         try {
-            System.err.println(file);
             InputStream in = wrapJRubyNormalizedInputStream(file);
             reader = new BufferedReader(new InputStreamReader(in));
             for (;;) {
@@ -244,9 +243,7 @@ public class Lookup {
                 if (null == v) {
                     break;
                 }
-                System.err.println(v.getClass().getName());
                 if (v instanceof X509Certificate) {
-                    System.err.println(((X509Certificate) v).getSubjectDN().toString());
                     store.addCertificate(StoreContext.ensureAux((X509Certificate) v));
                     count++;
                 } else if (v instanceof CRL) {
@@ -262,7 +259,6 @@ public class Lookup {
                 }
             }
         }
-                System.err.println(count);
         return count; 
     }
 
