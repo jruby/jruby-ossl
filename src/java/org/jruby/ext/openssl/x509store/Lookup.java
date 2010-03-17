@@ -28,12 +28,10 @@
 package org.jruby.ext.openssl.x509store;
 
 import java.io.File;
-import java.io.FileReader;
+import java.io.IOException;
 import java.io.Reader;
 import java.io.InputStream;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
 import java.math.BigInteger;
@@ -45,6 +43,12 @@ import java.security.cert.CRL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.jruby.Ruby;
+import org.jruby.util.io.ChannelDescriptor;
+import org.jruby.util.io.ChannelStream;
+import org.jruby.util.io.FileExistsException;
+import org.jruby.util.io.InvalidValueException;
+import org.jruby.util.io.ModeFlags;
 
 /**
  * X509_LOOKUP
@@ -117,113 +121,132 @@ public class Lookup {
     /**
      * c: X509_LOOKUP_load_cert_file
      */
-    public int loadCertificateFile(String file, int type) throws Exception { 
-        if(file == null) {
+    public int loadCertificateFile(String file, int type) throws Exception {
+        if (file == null) {
             return 1;
         }
         int count = 0;
         int ret = 0;
-        InputStream in = new BufferedInputStream(new FileInputStream(file));
-        X509AuxCertificate x = null;
-
-        if(type == X509Utils.X509_FILETYPE_PEM) {
-            Reader r = new InputStreamReader(in);
-            for(;;) {
-                x = PEMInputOutput.readX509Aux(r,null);
-                if(null == x) {
-                    break;
+        Reader reader = null;
+        try {
+            InputStream in = wrapJRubyNormalizedInputStream(file);
+            X509AuxCertificate x = null;
+            if (type == X509Utils.X509_FILETYPE_PEM) {
+                reader = new BufferedReader(new InputStreamReader(in));
+                for (;;) {
+                    x = PEMInputOutput.readX509Aux(reader, null);
+                    if (null == x) {
+                        break;
+                    }
+                    int i = store.addCertificate(x);
+                    if (i == 0) {
+                        return ret;
+                    }
+                    count++;
+                    x = null;
                 }
-                int i = store.addCertificate(x);
-                if(i == 0) {
+                ret = count;
+            } else if (type == X509Utils.X509_FILETYPE_ASN1) {
+                CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                x = StoreContext.ensureAux((X509Certificate) cf.generateCertificate(in));
+                if (x == null) {
+                    X509Error.addError(13);
                     return ret;
                 }
-                count++;
-                x = null;
+                int i = store.addCertificate(x);
+                if (i == 0) {
+                    return ret;
+                }
+                ret = i;
+            } else {
+                X509Error.addError(X509Utils.X509_R_BAD_X509_FILETYPE);
             }
-            ret = count;
-        } else if(type == X509Utils.X509_FILETYPE_ASN1) {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            x = StoreContext.ensureAux((X509Certificate)cf.generateCertificate(in));
-            if(x == null) {
-                X509Error.addError(13);
-                return ret;
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (Exception ignored) {
+                }
             }
-            int i = store.addCertificate(x);
-            if(i == 0) {
-                return ret;
-            }
-            ret = i;
-        } else {
-            X509Error.addError(X509Utils.X509_R_BAD_X509_FILETYPE);
         }
-
         return ret;
-    } 
+    }
 
     /**
      * c: X509_LOOKUP_load_crl_file
      */
-    public int loadCRLFile(String file, int type) throws Exception { 
-        if(file == null) {
+    public int loadCRLFile(String file, int type) throws Exception {
+        if (file == null) {
             return 1;
         }
         int count = 0;
         int ret = 0;
-        InputStream in = new BufferedInputStream(new FileInputStream(file));
-        CRL x = null;
-
-        if(type == X509Utils.X509_FILETYPE_PEM) {
-            Reader r = new InputStreamReader(in);
-            for(;;) {
-                x = PEMInputOutput.readX509CRL(r,null);
-                if(null == x) {
-                    break;
+        Reader reader = null;
+        try {
+            InputStream in = wrapJRubyNormalizedInputStream(file);
+            CRL x = null;
+            if (type == X509Utils.X509_FILETYPE_PEM) {
+                reader = new BufferedReader(new InputStreamReader(in));
+                for (;;) {
+                    x = PEMInputOutput.readX509CRL(reader, null);
+                    if (null == x) {
+                        break;
+                    }
+                    int i = store.addCRL(x);
+                    if (i == 0) {
+                        return ret;
+                    }
+                    count++;
+                    x = null;
                 }
-                int i = store.addCRL(x);
-                if(i == 0) {
+                ret = count;
+            } else if (type == X509Utils.X509_FILETYPE_ASN1) {
+                CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                x = cf.generateCRL(in);
+                if (x == null) {
+                    X509Error.addError(13);
                     return ret;
                 }
-                count++;
-                x = null;
+                int i = store.addCRL(x);
+                if (i == 0) {
+                    return ret;
+                }
+                ret = i;
+            } else {
+                X509Error.addError(X509Utils.X509_R_BAD_X509_FILETYPE);
             }
-            ret = count;
-        } else if(type == X509Utils.X509_FILETYPE_ASN1) {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            x = cf.generateCRL(in);
-            if(x == null) {
-                X509Error.addError(13);
-                return ret;
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (Exception ignored) {
+                }
             }
-            int i = store.addCRL(x);
-            if(i == 0) {
-                return ret;
-            }
-            ret = i;
-        } else {
-            X509Error.addError(X509Utils.X509_R_BAD_X509_FILETYPE);
         }
-
         return ret;
     }
 
     /**
      * c: X509_LOOKUP_load_cert_crl_file
      */
-    public int loadCertificateOrCRLFile(String file, int type) throws Exception { 
-        if(type != X509Utils.X509_FILETYPE_PEM) {
-            return loadCertificateFile(file,type);
+    public int loadCertificateOrCRLFile(String file, int type) throws Exception {
+        if (type != X509Utils.X509_FILETYPE_PEM) {
+            return loadCertificateFile(file, type);
         }
         int count = 0;
-        Reader in = null;
+        Reader reader = null;
         try {
-            in = new FileReader(file);
-            Reader r = new BufferedReader(in);
+            System.err.println(file);
+            InputStream in = wrapJRubyNormalizedInputStream(file);
+            reader = new BufferedReader(new InputStreamReader(in));
             for (;;) {
-                Object v = PEMInputOutput.readPEM(r, null);
+                Object v = PEMInputOutput.readPEM(reader, null);
                 if (null == v) {
                     break;
                 }
+                System.err.println(v.getClass().getName());
                 if (v instanceof X509Certificate) {
+                    System.err.println(((X509Certificate) v).getSubjectDN().toString());
                     store.addCertificate(StoreContext.ensureAux((X509Certificate) v));
                     count++;
                 } else if (v instanceof CRL) {
@@ -232,13 +255,32 @@ public class Lookup {
                 }
             }
         } finally {
-            if (in != null) {
-                try { in.close(); } catch(Exception e) {}
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (Exception ignored) {
+                }
             }
         }
-
+                System.err.println(count);
         return count; 
-    } 
+    }
+
+    private InputStream wrapJRubyNormalizedInputStream(String file) throws IOException {
+        Ruby runtime = Ruby.getGlobalRuntime();
+        try {
+            ChannelDescriptor descriptor = ChannelDescriptor.open(runtime.getCurrentDirectory(), file, new ModeFlags(ModeFlags.RDONLY));
+            return ChannelStream.open(runtime, descriptor).newInputStream();
+        } catch (FileExistsException fee) {
+            // should not happen because ModeFlag does not contain CREAT.
+            fee.printStackTrace(System.err);
+            throw new IllegalStateException(fee.getMessage(), fee);
+        } catch (InvalidValueException ive) {
+            // should not happen because ModeFlasg does not contain APPEND.
+            ive.printStackTrace(System.err);
+            throw new IllegalStateException(ive.getMessage(), ive);
+        }
+    }
 
     /**
      * c: X509_LOOKUP_free
