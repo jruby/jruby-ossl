@@ -549,7 +549,8 @@ public class SSLContext extends RubyObject {
             sslCtx.init(new javax.net.ssl.KeyManager[]{km}, new javax.net.ssl.TrustManager[]{tm}, null);
         }
 
-        StoreContext createStoreContext() {
+        // part of ssl_verify_cert_chain
+        StoreContext createStoreContext(String purpose) {
             if (store == null) {
                 return null;
             }
@@ -559,6 +560,10 @@ public class SSLContext extends RubyObject {
             }
             // for verify_cb
             ctx.setExtraData(1, store.getExtraData(1));
+            if (purpose != null) {
+                ctx.setDefault(purpose);
+            }
+            ctx.param.inherit(store.param);
             return ctx;
         }
     }
@@ -616,7 +621,7 @@ public class SSLContext extends RubyObject {
             if (ctx.extraChainCert != null) {
                 chain.addAll(ctx.extraChainCert);
             } else if (ctx.cert != null) {
-                StoreContext storeCtx = ctx.createStoreContext();
+                StoreContext storeCtx = ctx.createStoreContext(null);
                 X509AuxCertificate x = ctx.cert;
                 while (true) {
                     chain.add(x);
@@ -688,13 +693,12 @@ public class SSLContext extends RubyObject {
             if (chain != null && chain.length > 0) {
                 if ((ctx.verifyMode & SSL.VERIFY_PEER) != 0) {
                     // verify_peer
-                    StoreContext storeCtx = ctx.createStoreContext();
+                    StoreContext storeCtx = ctx.createStoreContext(purpose);
                     if (storeCtx == null) {
                         throw new CertificateException("couldn't initialize store");
                     }
                     storeCtx.setCertificate(chain[0]);
                     storeCtx.setChain(chain);
-                    storeCtx.setDefault(purpose);
                     verifyChain(storeCtx);
                 }
             } else {

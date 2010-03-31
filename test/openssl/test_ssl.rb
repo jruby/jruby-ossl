@@ -606,6 +606,53 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     }
   end
 
+  def test_verify_depth
+    vflag = OpenSSL::SSL::VERIFY_PEER|OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT
+    args = {}
+    # depth == 1 => OK
+    args[:ctx_proc] = proc { |server_ctx|
+      server_ctx.cert = @svr_cert
+      server_ctx.key = @svr_key
+      server_ctx.verify_mode = vflag
+      server_ctx.verify_depth = 1
+    }
+    start_server(PORT, vflag, true, args){|server, port|
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.key = @cli_key
+      ctx.cert = @cli_cert
+      sock = TCPSocket.new("127.0.0.1", port)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      assert_nothing_raised do
+        ssl.connect
+      end
+      ssl.close
+    }
+    # depth == 0 => error
+    error = nil
+    args[:ctx_proc] = proc { |server_ctx|
+      server_ctx.cert = @svr_cert
+      server_ctx.key = @svr_key
+      server_ctx.verify_mode = vflag
+      server_ctx.verify_depth = 0
+      server_ctx.verify_callback = proc { |preverify_ok, store_ctx|
+        error = store_ctx.error
+        preverify_ok
+      }
+    }
+    start_server(PORT, vflag, true, args){|server, port|
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.key = @cli_key
+      ctx.cert = @cli_cert
+      sock = TCPSocket.new("127.0.0.1", port)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock, ctx)
+      assert_raises(OpenSSL::SSL::SSLError) do
+        ssl.connect
+      end
+      ssl.close
+    }
+    assert_equal OpenSSL::X509::V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY, error
+  end
+
   def test_sslctx_set_params
     start_server(PORT, OpenSSL::SSL::VERIFY_NONE, true){|server, port|
       sock = TCPSocket.new("127.0.0.1", port)
