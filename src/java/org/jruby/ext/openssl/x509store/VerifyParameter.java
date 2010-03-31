@@ -286,8 +286,8 @@ public class VerifyParameter {
                             0,		/* flags */
                             0,		/* purpose */
                             0,		/* trust */
-                            9,		/* depth */
-                            null		/* policies */
+                            100,	/* depth */
+                            null	/* policies */
                             ),
         new VerifyParameter(
                             "pkcs7",			/* SSL/TLS client parameters */
