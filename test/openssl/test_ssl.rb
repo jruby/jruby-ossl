@@ -243,6 +243,35 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     }
   end
 
+  def test_sysread_chunks
+    args = {}
+    args[:server_proc] = proc { |ctx, ssl|
+      while line = ssl.gets
+        if line =~ /^STARTTLS$/
+          ssl.accept
+          next
+        end
+        ssl.write("0" * 800)
+        ssl.write("1" * 200)
+        ssl.close
+        break
+      end
+    }
+    start_server(PORT, OpenSSL::SSL::VERIFY_NONE, true, args){|server, port|
+      sock = TCPSocket.new("127.0.0.1", port)
+      ssl = OpenSSL::SSL::SSLSocket.new(sock)
+      ssl.sync_close = true
+      ssl.connect
+      ssl.syswrite("hello\n")
+      assert_equal("0" * 200, ssl.sysread(200))
+      assert_equal("0" * 200, ssl.sysread(200))
+      assert_equal("0" * 200, ssl.sysread(200))
+      assert_equal("0" * 200, ssl.sysread(200))
+      assert_equal("1" * 200, ssl.sysread(200))
+      ssl.close
+    }
+  end
+
   def test_sysread_buffer
     start_server(PORT, OpenSSL::SSL::VERIFY_NONE, true){|server, port|
       sock = TCPSocket.new("127.0.0.1", port)

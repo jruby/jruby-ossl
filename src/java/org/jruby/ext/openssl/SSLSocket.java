@@ -364,15 +364,13 @@ public class SSLSocket extends RubyObject {
     private int readAndUnwrap() throws IOException {
         int bytesRead = c.read(peerNetData);
         if (bytesRead == -1) {
-            try {
-                engine.closeInbound();
-            } catch (SSLException ssle) {
-                // ignore any error on close. possibly an error like this;
-                // Inbound closed before receiving peer's close_notify: possible truncation attack?
-            }
             if ((peerNetData.position() == 0) || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
+                closeInbound();
                 return -1;
             }
+            // inbound channel has been already closed but closeInbound() must
+            // be defered till the last engine.unwrap() call.
+            // peerNetData could not be empty.
         }
         peerAppData.clear();
         peerNetData.flip();
@@ -392,7 +390,10 @@ public class SSLSocket extends RubyObject {
         }
         status = res.getStatus();
         hsStatus = res.getHandshakeStatus();
-        
+        if (bytesRead == -1) {
+            // now it's safe to call closeInbound().
+            closeInbound();
+        }
         if(status == SSLEngineResult.Status.CLOSED) {
             doShutdown();
             return -1;
@@ -405,6 +406,15 @@ public class SSLSocket extends RubyObject {
             doHandshake();
         }
         return peerAppData.remaining();
+    }
+
+    private void closeInbound() {
+        try {
+            engine.closeInbound();
+        } catch (SSLException ssle) {
+            // ignore any error on close. possibly an error like this;
+            // Inbound closed before receiving peer's close_notify: possible truncation attack?
+        }
     }
 
     private void doShutdown() throws IOException {
