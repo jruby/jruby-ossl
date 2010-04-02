@@ -38,8 +38,6 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.util.Iterator;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -557,7 +555,9 @@ public class SSLSocket extends RubyObject {
         } catch (CertificateEncodingException ex) {
             throw X509Cert.newCertificateError(getRuntime(), ex);
         } catch (SSLPeerUnverifiedException ex) {
-            Logger.getLogger(SSLSocket.class.getName()).log(Level.SEVERE, null, ex);
+            if (getRuntime().isVerbose()) {
+                getRuntime().getWarnings().warning(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            }
         }
         return getRuntime().getNil();
     }
@@ -575,7 +575,9 @@ public class SSLSocket extends RubyObject {
         } catch (javax.security.cert.CertificateEncodingException e) {
             throw X509Cert.newCertificateError(getRuntime(), e);
         } catch (SSLPeerUnverifiedException ex) {
-            Logger.getLogger(SSLSocket.class.getName()).log(Level.SEVERE, null, ex);
+            if (getRuntime().isVerbose()) {
+                getRuntime().getWarnings().warning(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            }
         }
         return getRuntime().getNil();
     }
