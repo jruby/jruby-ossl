@@ -319,6 +319,9 @@ public class SSLContext extends RubyObject {
             ciphers = builder.toString();
         } else {
             ciphers = val.convertToString().toString();
+            if (ciphers.equals("DEFAULT")) {
+                ciphers = CipherStrings.SSL_DEFAULT_CIPHER_LIST;
+            }
         }
         RubyArray ary = (RubyArray)ciphers();
         if (ary.size() == 0) {

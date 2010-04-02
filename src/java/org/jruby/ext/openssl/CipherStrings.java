@@ -177,7 +177,8 @@ public class CipherStrings {
     public final static String SSL_TXT_CMPALL = "COMPLEMENTOFALL";
     public final static String SSL_TXT_CMPDEF = "COMPLEMENTOFDEFAULT";
 
-    public final static String SSL_DEFAULT_CIPHER_LIST = "ALL:!ADH:+RC4:@STRENGTH";
+    // "ALL:!aNULL:!eNULL:!SSLv2" is for OpenSSL 1.0.0 GA
+    public final static String SSL_DEFAULT_CIPHER_LIST = "AES:ALL:!aNULL:!eNULL:+RC4:@STRENGTH";
 
     public final static long SSL_MKEY_MASK = 0x000000FFL;
     public final static long SSL_kRSA = 0x00000001L;

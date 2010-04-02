@@ -703,6 +703,10 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
   def test_sslctx_ciphers
     c = OpenSSL::SSL::SSLContext.new
 
+    c.ciphers = 'DEFAULT'
+    default = c.ciphers
+    assert(default.size > 0)
+
     c.ciphers = 'ALL'
     all = c.ciphers
     assert(all.size > 0)
