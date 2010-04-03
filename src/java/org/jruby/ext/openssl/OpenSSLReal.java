@@ -134,13 +134,7 @@ public class OpenSSLReal {
 
         ossl.setConstant("VERSION", runtime.newString("1.0.0"));
         ossl.setConstant("OPENSSL_VERSION", runtime.newString("OpenSSL 0.9.8b 04 May 2006 (JRuby-OpenSSL fake)"));
-
-        try {
-            java.security.MessageDigest.getInstance("SHA224", BC_PROVIDER);
-            ossl.setConstant("OPENSSL_VERSION_NUMBER", runtime.newFixnum(9469999));
-        } catch (Exception e) {
-            ossl.setConstant("OPENSSL_VERSION_NUMBER", runtime.newFixnum(9469952));
-        }
+        ossl.setConstant("OPENSSL_VERSION_NUMBER", runtime.newFixnum(9469999));
     }
 
     public static javax.crypto.Cipher getCipherBC(final String algorithm) throws GeneralSecurityException {
