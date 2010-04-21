@@ -27,11 +27,13 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.InputStream;
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
 import java.math.BigInteger;
@@ -267,6 +269,8 @@ public class Lookup {
         try {
             ChannelDescriptor descriptor = ChannelDescriptor.open(runtime.getCurrentDirectory(), file, new ModeFlags(ModeFlags.RDONLY));
             return ChannelStream.open(runtime, descriptor).newInputStream();
+        } catch (NoSuchMethodError nsme) {
+            return new BufferedInputStream(new FileInputStream(file));
         } catch (FileExistsException fee) {
             // should not happen because ModeFlag does not contain CREAT.
             fee.printStackTrace(System.err);
