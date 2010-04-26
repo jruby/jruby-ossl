@@ -1,3 +1,13 @@
+== 0.7
+
+- Follow MRI 1.8.7 openssl API changes
+- Fixes so that jruby-openssl can run on appengine
+- Many bug fixes: JRUBY-4357, JRUBY-4541, JRUBY-4494, JRUBY-3980,
+  JRUBY-4684, JRUBY-4686, JRUBY-4688, JRUBY-3980
+- Many more compatibility fixes for OpenSSL classes/modules:
+  SSLContext, SSLSocket, Digest, Certificate, PKCS, X509Store,
+- This is the last release that will be compatible with JRuby 1.4.x.
+
 == 0.6
 
 - This is a recommended upgrade to jruby-openssl. A security problem

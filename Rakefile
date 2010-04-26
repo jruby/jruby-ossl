@@ -53,7 +53,8 @@ File.open("Manifest.txt", "w") {|f| MANIFEST.each {|n| f.puts n } }
 require File.dirname(__FILE__) + "/lib/jopenssl/version"
 begin
   require 'hoe'
-  Hoe.spec("jruby-openssl") do |p|
+  Hoe.plugin :gemcutter
+  hoe = Hoe.spec("jruby-openssl") do |p|
     p.version = Jopenssl::Version::VERSION
     p.rubyforge_name = "jruby-extras"
     p.url = "http://jruby-extras.rubyforge.org/jruby-openssl"
@@ -63,7 +64,13 @@ begin
     p.changes = p.paragraphs_of('History.txt', 0..1).join("\n\n")
     p.description = p.paragraphs_of('README.txt', 3...4).join("\n\n")
     p.test_globs = ENV["TEST"] || ["test/test_all.rb"]
-  end.spec.dependencies.delete_if { |dep| dep.name == "hoe" }
+  end
+  hoe.spec.dependencies.delete_if { |dep| dep.name == "hoe" }
+
+  task :gemspec do
+    File.open("#{hoe.name}.gemspec", "w") {|f| f << hoe.spec.to_ruby }
+  end
+  task :package => :gemspec
 rescue LoadError
   puts "You really need Hoe installed to be able to package this gem"
 rescue => e
