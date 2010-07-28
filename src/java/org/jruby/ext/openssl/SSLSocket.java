@@ -362,7 +362,7 @@ public class SSLSocket extends RubyObject {
     private int readAndUnwrap() throws IOException {
         int bytesRead = c.read(peerNetData);
         if (bytesRead == -1) {
-            if ((peerNetData.position() == 0) || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
+            if (!peerNetData.hasRemaining() || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
                 closeInbound();
                 return -1;
             }
@@ -388,7 +388,7 @@ public class SSLSocket extends RubyObject {
         }
         status = res.getStatus();
         hsStatus = res.getHandshakeStatus();
-        if (bytesRead == -1) {
+        if (bytesRead == -1 && !peerNetData.hasRemaining()) {
             // now it's safe to call closeInbound().
             closeInbound();
         }
