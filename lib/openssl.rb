@@ -58,7 +58,13 @@ unless defined?(::Digest::Class)
 end
 # end of compat chunk.
 
+begin
+  require 'bouncy-castle-java'
+rescue LoadError
+  # runs under restricted mode.
+end
 require 'jopenssl'
+
 
 require 'openssl/bn'
 require 'openssl/cipher'

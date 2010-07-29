@@ -1,6 +1,5 @@
-warn "Warning: OpenSSL ASN1/PKey/X509/Netscape/PKCS7 implementation unavailable"
-warn "You need to download or install BouncyCastle jars (bc-prov-*.jar, bc-mail-*.jar)"
-warn "to fix this."
+warn "OpenSSL ASN1/PKey/X509/Netscape/PKCS7 implementation unavailable"
+warn "gem install bouncy-castle-java for full support."
 module OpenSSL
   module ASN1
     class ASN1Error < OpenSSLError; end

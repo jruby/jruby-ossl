@@ -2,7 +2,7 @@ require 'rake'
 require 'rake/testtask'
 
 MANIFEST = FileList["Rakefile", "History.txt", "Manifest.txt", "README.txt", "License.txt", "lib/jopenssl.jar", "lib/**/*", "test/**/*"]
-BC_JARS = FileList["lib/bc*.jar"]
+BC_JARS = FileList["build_lib/bc*.jar"]
 
 task :default => [:java_compile, :test]
 
@@ -64,6 +64,7 @@ begin
     p.changes = p.paragraphs_of('History.txt', 0..1).join("\n\n")
     p.description = p.paragraphs_of('README.txt', 3...4).join("\n\n")
     p.test_globs = ENV["TEST"] || ["test/test_all.rb"]
+    p.extra_deps << 'bouncy-castle-java'
   end
   hoe.spec.dependencies.delete_if { |dep| dep.name == "hoe" }
 
