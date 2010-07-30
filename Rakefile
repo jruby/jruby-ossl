@@ -38,8 +38,7 @@ task :java_compile do
   end
 
   sh "javac @pkg/compile_options @pkg/compile_classpath @pkg/compile_sourcefiles"
-  File.open("pkg/classes/manifest.mf", "w") {|f| f.puts "Class-Path: #{BC_JARS.map{|f| File.basename(f) }.join(' ')}"}
-  sh "jar cfm lib/jopenssl.jar pkg/classes/manifest.mf -C pkg/classes/ ."
+  sh "jar cf lib/jopenssl.jar -C pkg/classes/ ."
 end
 file "lib/jopenssl.jar" => :java_compile
 
