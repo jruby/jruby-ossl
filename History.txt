@@ -1,3 +1,22 @@
+== 0.7.1
+
+- NOTE: Now BouncyCastle jars has moved out to its own gem
+  "bouncy-castle-java" (http://rubygems.org/gems/bouncy-castle-java).
+  You don't need to care about it because "jruby-openssl" gem depends
+  on it from now on.
+
+=== SSL bugfix
+
+- JRUBY-4826 net/https client possibly raises "rbuf_fill': End of file
+  reached (EOFError)" for HTTP chunked read.
+
+=== Misc
+
+- JRUBY-4900: Set proper String to OpenSSL::OPENSSL_VERSION. Make sure
+  it's not an OpenSSL artifact: "OpenSSL 0.9.8b 04 May 2006
+  (JRuby-OpenSSL fake)" -> "jruby-ossl 0.7.1"
+- JRUBY-4975: Moving BouncyCastle jars out to its own gem.
+
 == 0.7
 
 - Follow MRI 1.8.7 openssl API changes
