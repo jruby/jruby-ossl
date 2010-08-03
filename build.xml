@@ -19,23 +19,96 @@
     <pathelement location="${jruby.jar}"/>
   </path>
 
+  <path id="jruby.execute.classpath">
+    <path refid="build.classpath"/>
+    <pathelement path="${target.classes}"/>
+  </path>
+
+  <patternset id="java.src.pattern">
+    <include name="**/*.java"/>
+  </patternset>
+
   <target name="init">
     <mkdir dir="${target}"/>
     <mkdir dir="${target.classes}"/>
+    <condition property="run.jvm.model" value="">
+        <os family="windows"/>
+    </condition>
+    <condition property="run.jvm.model" value="-d64">
+      <or>
+        <os arch="amd64"/>
+        <os arch="x86_64"/>
+        <os arch="sparcv9"/>
+        <os arch="s390x"/>
+      </or>
+    </condition>
+    <condition property="run.jvm.model" value="-d32">
+      <or>
+        <os arch="i386"/>
+        <os arch="x86"/>
+        <os arch="powerpc"/>
+        <os arch="ppc"/>
+        <os arch="sparc"/>
+      </or>
+    </condition>
+    <condition property="run.jvm.model" value="">
+        <not><isset property="run.jvm.model"/></not>
+    </condition>
   </target>
 
   <target name="clean">
     <delete dir="target"/>
+    <delete dir="src_gen"/>
   </target>
 
-  <target depends="init" name="build" description="Compiles Java source files">
+  <target name="compile-jruby">
+    <!-- Generate binding logic ahead of time -->
+    <mkdir dir="${basedir}/src_gen"/>
+    <apt factory="org.jruby.anno.AnnotationBinder" destdir="${target.classes}"
+        debug="true" includeAntRuntime="false" source="${version.source}" target="${version.target}" deprecation="true" encoding="UTF-8">
+      <classpath refid="jruby.execute.classpath"/>
+      <src path="${src.java}"/>
+      <patternset refid="java.src.pattern"/>
+      <compilerarg line="-XDignore.symbol.file=true"/>
+    </apt>
+  </target>
+
+  <target depends="init, compile-jruby" name="build" description="Compiles Java source files">
     <javac debug="true" includeAntRuntime="false" destdir="${target.classes}" source="${version.source}" target="${version.target}">
       <classpath refid="build.classpath"/>
       <src path="${src.java}"/>
     </javac>
   </target>
 
-  <target depends="build" name="jar" description="Build a JAR file with the generated Java class files">
+  <target name="generate-method-classes" depends="build">
+    <available file="src_gen/annotated_classes.txt" property="annotations.changed"/>
+    <antcall target="_gmc_internal_"/>
+  </target>
+
+  <target name="_gmc_internal_" if="annotations.changed">
+    <echo message="Generating invokers..."/>
+    <java classname="org.jruby.anno.InvokerGenerator" fork="true" failonerror="true">
+      <classpath refid="jruby.execute.classpath"/>
+      <jvmarg value="${run.jvm.model}"/>
+      <!-- uncomment this line when building on a JVM with invokedynamic
+      <jvmarg line="-XX:+InvokeDynamic"/>
+      -->
+      <sysproperty key="jruby.bytecode.version" value="${version.source}"/>
+      <arg value="src_gen/annotated_classes.txt"/>
+      <arg value="${target.classes}"/>
+    </java>
+
+    <echo message="Compiling populators..."/>
+    <javac destdir="${target.classes}" debug="true" includeAntRuntime="false" source="${version.source}" target="${version.target}" deprecation="true" encoding="UTF-8">
+      <classpath refid="jruby.execute.classpath"/>
+      <src path="src_gen"/>
+      <patternset refid="java.src.pattern"/>
+    </javac>
+
+    <delete file="src_gen/annotated_classes.txt"/>
+  </target>
+
+  <target depends="generate-method-classes" name="jar" description="Build a JAR file with the generated Java class files">
     <path id="bcpath">
       <fileset dir="${build_lib.dir}" includes="bc*.jar"/>
     </path>
