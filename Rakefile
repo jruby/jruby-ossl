@@ -53,6 +53,7 @@ require File.dirname(__FILE__) + "/lib/jopenssl/version"
 begin
   require 'hoe'
   Hoe.plugin :gemcutter
+  Hoe.add_include_dirs('build_lib')
   hoe = Hoe.spec("jruby-openssl") do |p|
     p.version = Jopenssl::Version::VERSION
     p.rubyforge_name = "jruby-extras"
