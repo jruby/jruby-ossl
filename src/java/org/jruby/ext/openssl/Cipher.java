@@ -56,8 +56,9 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Cipher extends RubyObject {
-    // set to enable debug output
+    private static final long serialVersionUID = 7727377435222646536L;
 
+    // set to enable debug output
     private static final boolean DEBUG = false;
     private static ObjectAllocator CIPHER_ALLOCATOR = new ObjectAllocator() {
 

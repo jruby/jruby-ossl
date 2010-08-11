@@ -76,6 +76,8 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class X509Cert extends RubyObject {
+    private static final long serialVersionUID = 5626619026058595493L;
+
     private static ObjectAllocator X509CERT_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new X509Cert(runtime, klass);

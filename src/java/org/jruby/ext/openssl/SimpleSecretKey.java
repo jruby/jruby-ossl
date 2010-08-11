@@ -33,6 +33,8 @@ import javax.crypto.SecretKey;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class SimpleSecretKey implements SecretKey {
+    private static final long serialVersionUID = 1L;
+
     private final String algorithm;
     private final byte[] value;
     public SimpleSecretKey(String algorithm, byte[] value) {

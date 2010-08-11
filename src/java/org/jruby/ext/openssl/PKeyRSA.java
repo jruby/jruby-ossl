@@ -71,6 +71,8 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class PKeyRSA extends PKey {
+    private static final long serialVersionUID = 3675324750727019454L;
+
     private static ObjectAllocator PKEYRSA_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new PKeyRSA(runtime, klass);

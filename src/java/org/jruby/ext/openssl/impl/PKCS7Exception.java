@@ -32,6 +32,8 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class PKCS7Exception extends Exception {
+    private static final long serialVersionUID = 1L;
+
     private int method;
     private int reason;
     private String errorData;

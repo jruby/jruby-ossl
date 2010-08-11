@@ -72,6 +72,8 @@ import org.jruby.runtime.builtin.IRubyObject;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class X509CRL extends RubyObject {
+    private static final long serialVersionUID = -2463300006179688577L;
+
     private static ObjectAllocator X509CRL_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new X509CRL(runtime, klass);

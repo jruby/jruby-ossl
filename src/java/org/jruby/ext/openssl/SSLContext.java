@@ -68,6 +68,8 @@ import org.jruby.runtime.builtin.IRubyObject;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class SSLContext extends RubyObject {
+    private static final long serialVersionUID = -6203496135962974777L;
+
     private final static String[] ctx_attrs = {
         "cert", "key", "client_ca", "ca_file", "ca_path",
         "timeout", "verify_mode", "verify_depth",

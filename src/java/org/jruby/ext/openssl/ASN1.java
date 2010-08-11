@@ -594,6 +594,8 @@ public class ASN1 {
     }
 
     public static class ASN1Data extends RubyObject {
+        private static final long serialVersionUID = 6117598347932209839L;
+
         public static ObjectAllocator ALLOCATOR = new ObjectAllocator() {
                 public IRubyObject allocate(Ruby runtime, RubyClass klass) {
                     return new ASN1Data(runtime, klass);
@@ -687,6 +689,8 @@ public class ASN1 {
     }
 
     public static class ASN1Primitive extends ASN1Data {
+        private static final long serialVersionUID = 8489625559339190259L;
+
         public static ObjectAllocator ALLOCATOR = new ObjectAllocator() {
                 public IRubyObject allocate(Ruby runtime, RubyClass klass) {
                     return new ASN1Primitive(runtime, klass);
@@ -823,6 +827,8 @@ public class ASN1 {
     }
 
     public static class ASN1Constructive extends ASN1Data {
+        private static final long serialVersionUID = -7166662655104776828L;
+        
         public static ObjectAllocator ALLOCATOR = new ObjectAllocator() {
                 public IRubyObject allocate(Ruby runtime, RubyClass klass) {
                     return new ASN1Constructive(runtime, klass);

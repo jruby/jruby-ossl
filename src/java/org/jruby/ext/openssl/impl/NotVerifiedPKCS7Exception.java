@@ -32,6 +32,8 @@ package org.jruby.ext.openssl.impl;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class NotVerifiedPKCS7Exception extends PKCS7Exception {
+    private static final long serialVersionUID = 1L;
+
     public NotVerifiedPKCS7Exception() {
         super(-1, -1);
     }

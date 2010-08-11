@@ -69,7 +69,9 @@ import org.jruby.util.ByteList;
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class PKCS7 extends RubyObject {    
+public class PKCS7 extends RubyObject {
+    private static final long serialVersionUID = -3925104500966826973L;
+
     private static ObjectAllocator PKCS7_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new PKCS7(runtime, klass);
@@ -568,6 +570,8 @@ public class PKCS7 extends RubyObject {
     }
 
     public static class SignerInfo extends RubyObject {
+        private static final long serialVersionUID = -3799397032272738848L;
+
         private static ObjectAllocator SIGNERINFO_ALLOCATOR = new ObjectAllocator() {
             public IRubyObject allocate(Ruby runtime, RubyClass klass) {
                 return new SignerInfo(runtime, klass);
@@ -626,6 +630,8 @@ public class PKCS7 extends RubyObject {
     }
 
     public static class RecipientInfo extends RubyObject {
+        private static final long serialVersionUID = 6977793206950149902L;
+
         private static ObjectAllocator RECIPIENTINFO_ALLOCATOR = new ObjectAllocator() {
             public IRubyObject allocate(Ruby runtime, RubyClass klass) {
                 return new RecipientInfo(runtime, klass);

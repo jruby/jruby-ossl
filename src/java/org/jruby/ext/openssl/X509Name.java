@@ -66,6 +66,8 @@ import org.jruby.runtime.builtin.IRubyObject;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class X509Name extends RubyObject {
+    private static final long serialVersionUID = -226196051911335103L;
+
     private static ObjectAllocator X509NAME_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new X509Name(runtime, klass);

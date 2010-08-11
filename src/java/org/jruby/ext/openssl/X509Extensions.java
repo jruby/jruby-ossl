@@ -84,6 +84,8 @@ public class X509Extensions {
     }
 
     public static class ExtensionFactory extends RubyObject {
+        private static final long serialVersionUID = 3180447029639456500L;
+
         public static ObjectAllocator ALLOCATOR = new ObjectAllocator() {
                 public IRubyObject allocate(Ruby runtime, RubyClass klass) {
                     return new ExtensionFactory(runtime, klass);
@@ -450,6 +452,8 @@ public class X509Extensions {
     }
 
     public static class Extension extends RubyObject {
+        private static final long serialVersionUID = -1160318458085651926L;
+
         public static ObjectAllocator ALLOCATOR = new ObjectAllocator() {
                 public IRubyObject allocate(Ruby runtime, RubyClass klass) {
                     return new Extension(runtime, klass);

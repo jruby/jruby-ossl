@@ -50,6 +50,8 @@ import org.jruby.runtime.builtin.IRubyObject;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public abstract class PKey extends RubyObject {
+    private static final long serialVersionUID = 6114668087816965720L;
+
     public static void createPKey(Ruby runtime, RubyModule ossl) {
         RubyModule mPKey = ossl.defineModuleUnder("PKey");
         // PKey is abstract

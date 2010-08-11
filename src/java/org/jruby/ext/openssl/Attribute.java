@@ -44,6 +44,8 @@ import org.jruby.runtime.builtin.IRubyObject;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Attribute extends RubyObject {
+    private static final long serialVersionUID = 5569940260019783275L;
+
     private static ObjectAllocator ATTRIBUTE_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new Attribute(runtime, klass);

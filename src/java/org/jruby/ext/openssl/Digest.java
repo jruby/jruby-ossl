@@ -46,6 +46,8 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Digest extends RubyObject {
+    private static final long serialVersionUID = 1L;
+
     private static ObjectAllocator DIGEST_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new Digest(runtime, klass);

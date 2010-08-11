@@ -69,6 +69,8 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class SSLSocket extends RubyObject {
+    private static final long serialVersionUID = -2276327900350542644L;
+
     private static ObjectAllocator SSLSOCKET_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new SSLSocket(runtime, klass);

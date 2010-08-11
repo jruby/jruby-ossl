@@ -46,6 +46,8 @@ import org.jruby.util.ByteList;
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class HMAC extends RubyObject {
+    private static final long serialVersionUID = 7602535792884680307L;
+
     private static ObjectAllocator HMAC_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klass) {
             return new HMAC(runtime, klass);
