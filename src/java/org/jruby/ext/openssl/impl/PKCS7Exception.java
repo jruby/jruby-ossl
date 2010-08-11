@@ -51,7 +51,7 @@ public class PKCS7Exception extends Exception {
         super("PKCS7[Method: " + method + ", Reason: " + reason + "]", cause);
         this.method = method;
         this.reason = reason;
-        this.errorData = errorData;
+        this.errorData = cause.getMessage();
     }
 
     public int getMethod() {

@@ -78,13 +78,9 @@ import org.jruby.ext.openssl.x509store.X509Utils;
  * @author <a href="mailto:ola.bini@gmail.com">Ola Bini</a>
  */
 public class PKCS7 {
-    // Used during processing
-    private int state;
-
 	/* content as defined by the type */
 	/* all encryption/message digests are applied to the 'contents',
 	 * leaving out the 'type' field. */
-
     private PKCS7Data data;
 
     public Object ctrl(int cmd, Object v, Object ignored) throws PKCS7Exception {
@@ -101,10 +97,6 @@ public class PKCS7 {
 
     public boolean isDetached() throws PKCS7Exception {
         return isSigned() && getDetached() != 0;
-    }
-
-    private static void printDER(String moniker, DEREncodable object) {
-        System.err.println(moniker + " " + object + "{" + object.getClass().getName() + "}");
     }
 
     private void initiateWith(Integer nid, DEREncodable content) throws PKCS7Exception {
@@ -596,10 +588,6 @@ public class PKCS7 {
         return this.data.getSignerInfo();
     }
 
-    private final static int EVP_MAX_KEY_LENGTH = 32;
-    private final static int EVP_MAX_IV_LENGTH = 16;
-    private final static int EVP_MAX_BLOCK_LENGTH = 32;
-
     private final static byte[] PEM_STRING_PKCS7_START = "-----BEGIN PKCS7-----".getBytes();
 
     /** c: PEM_read_bio_PKCS7
@@ -656,14 +644,10 @@ public class PKCS7 {
         Collection<AlgorithmIdentifier> mdSk = null;
         Collection<RecipInfo> rsk = null;
         AlgorithmIdentifier encAlg = null;
-        AlgorithmIdentifier xalg = null;
         Cipher evpCipher = null;
         RecipInfo ri = null;
 
         int i = getType();
-        state = S_HEADER;
-
-
         switch(i) {
         case ASN1Registry.NID_pkcs7_signed:
             dataBody = getSign().getContents().getOctetString().getOctets();
@@ -679,7 +663,6 @@ public class PKCS7 {
             } catch(Exception e) {
                 throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
             }
-            xalg = getSignedAndEnveloped().getEncData().getAlgorithm();
             break;
         case ASN1Registry.NID_pkcs7_enveloped: 
             rsk = getEnveloped().getRecipientInfo();
@@ -690,7 +673,6 @@ public class PKCS7 {
             } catch(Exception e) {
                 throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
             }
-            xalg = getEnveloped().getEncData().getAlgorithm();
             break;
         default:
             throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CONTENT_TYPE);
@@ -816,7 +798,6 @@ public class PKCS7 {
         Collection<AlgorithmIdentifier> mdSk = null;
         ASN1OctetString os = null;
         int i = this.data.getType();
-        state = S_HEADER;
         Collection<RecipInfo> rsk = null;
         AlgorithmIdentifier xa = null;
         CipherSpec evpCipher = null;
@@ -952,9 +933,7 @@ public class PKCS7 {
      */
     public int dataFinal(BIO bio) throws PKCS7Exception {
         Collection<SignerInfoWithPkey> siSk = null;
-        state = S_HEADER;
         BIO btmp;
-        int bufLen;
         byte[] buf;
         MessageDigest mdc = null;
         MessageDigest ctx_tmp = null;

@@ -427,7 +427,6 @@ public class Lookup {
      * c: BY_DIR, lookup_dir_st
      */
     private static class LookupDir {
-        StringBuffer buffer;
         List<String> dirs;
         List<Integer> dirsType;
     }
@@ -439,7 +438,6 @@ public class Lookup {
         public int call(Object _lu) {
             Lookup lu = (Lookup)_lu;
             LookupDir a = new LookupDir();
-            a.buffer = new StringBuffer();
             a.dirs = new ArrayList<String>();
             a.dirsType = new ArrayList<Integer>();
             lu.methodData = a;
@@ -456,7 +454,6 @@ public class Lookup {
             LookupDir a = (LookupDir)lu.methodData;
             a.dirs = null;
             a.dirsType = null;
-            a.buffer = null;
             lu.methodData = null;
             return -1;
         }

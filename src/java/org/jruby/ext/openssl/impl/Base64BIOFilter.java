@@ -45,17 +45,6 @@ public class Base64BIOFilter extends BIOFilter {
         return len;
     }
 
-    private static void printBytes(byte[] bs, int offset, int len) {
-        System.err.print("[");
-        String sep = "";
-        for(int i=offset, end=offset+len;i<end;i++) {
-            System.err.print(sep);
-            System.err.print(((int)bs[i]) & 0xFF);
-            sep = ", ";
-        }
-        System.err.print("]");
-    }
-
     @Override
     public int read(byte[] into, int offset, int len) throws IOException {
         int read = this.nextInput.read(into, offset, len);

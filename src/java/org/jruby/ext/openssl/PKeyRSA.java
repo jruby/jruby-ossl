@@ -141,7 +141,6 @@ public class PKeyRSA extends PKey {
             }
         }
         int keysize = RubyNumeric.fix2int(args[0]);
-        RSAKeyGenParameterSpec spec = new RSAKeyGenParameterSpec(keysize, exp);
         PKeyRSA rsa = new PKeyRSA(recv.getRuntime(), (RubyClass) recv);
         rsaGenerate(rsa, keysize, exp);
         return rsa;

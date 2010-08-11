@@ -37,7 +37,6 @@ import java.util.List;
  */
 public interface Mime {
     Mime DEFAULT = new Mime() {
-            private final static int MIME_INVALID = 0;
             private final static int MIME_START = 1;
             private final static int MIME_TYPE = 2;
             private final static int MIME_NAME = 3;

@@ -193,17 +193,9 @@ public abstract class X509Utils {
     private static Object get(Object str) throws Exception {
         return get(((DEROctetString)str).getOctets());
     }
-
-    private static Object get(DEROctetString str) throws Exception {
-        return get(str.getOctets());
-    }
     
     private static Object get(byte[] str) throws Exception {
         return new ASN1InputStream(str).readObject();
-    }
-
-    private static String p(Object obj) throws Exception {
-        return obj.toString() + " [" + obj.getClass().getName() + "]";
     }
 
     /**
