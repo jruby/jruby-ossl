@@ -372,6 +372,6 @@ public class Store implements X509TrustManager {
                 l.add(((Certificate)o).x509);
             }
         }
-        return (X509Certificate[])l.toArray(new X509Certificate[l.size()]);
+        return l.toArray(new X509Certificate[l.size()]);
     }
 }// X509_STORE

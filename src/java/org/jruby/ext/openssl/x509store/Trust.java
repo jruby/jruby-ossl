@@ -96,7 +96,7 @@ public class Trust {
         if(idx < trstandard.length) {
             return trstandard[idx];
         }
-        return (Trust)trtable.get(idx - trstandard.length);
+        return trtable.get(idx - trstandard.length);
     }
 
     /**

@@ -146,7 +146,7 @@ public class StoreContext {
 
         /* Look through all matching certificates for a suitable issuer */
         for(int i = idx; i < ctx.objs.size(); i++) {
-            X509Object pobj = (X509Object)ctx.objs.get(i);
+            X509Object pobj = ctx.objs.get(i);
             if(pobj.type() != X509Utils.X509_LU_X509) {
                 return 0;
             }
@@ -623,7 +623,7 @@ public class StoreContext {
         X509Object tmp = X509Object.retrieveBySubject(c.objs,type,name);
         if(tmp == null) {
             for(int i=currentMethod; i<c.certificateMethods.size(); i++) {
-                Lookup lu = (Lookup)c.certificateMethods.get(i);
+                Lookup lu = c.certificateMethods.get(i);
                 X509Object[] stmp = new X509Object[1];
                 int j = lu.bySubject(type,name,stmp);
                 if(j<0) {
@@ -696,7 +696,7 @@ public class StoreContext {
         }
 
         i = chain.size();
-        x = (X509AuxCertificate)chain.get(i-1);
+        x = chain.get(i-1);
 
         if(checkIssued.call(this,x,x) != 0) {
             if(chain.size() == 1) {
@@ -843,7 +843,7 @@ public class StoreContext {
         must_be_ca = -1;
 
         try {
-            if (System.getenv("OPENSSL_ALLOW_PROXY_CERTS") != null && !"false".equalsIgnoreCase((String) System.getenv("OPENSSL_ALLOW_PROXY_CERTS"))) {
+            if (System.getenv("OPENSSL_ALLOW_PROXY_CERTS") != null && !"false".equalsIgnoreCase(System.getenv("OPENSSL_ALLOW_PROXY_CERTS"))) {
                 allow_proxy_certs = 1;
             }
         } catch (Error e) {

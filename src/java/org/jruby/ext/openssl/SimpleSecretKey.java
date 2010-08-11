@@ -27,14 +27,12 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
-import java.security.Key;
-
 import javax.crypto.SecretKey;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public class SimpleSecretKey implements Key, SecretKey {
+public class SimpleSecretKey implements SecretKey {
     private final String algorithm;
     private final byte[] value;
     public SimpleSecretKey(String algorithm, byte[] value) {

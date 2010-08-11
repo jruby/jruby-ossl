@@ -116,7 +116,7 @@ public class Purpose {
         if(idx < xstandard.length) {
             return xstandard[idx];
         }
-        return (Purpose)xptable.get(idx - xstandard.length);
+        return xptable.get(idx - xstandard.length);
     }
 
     /**

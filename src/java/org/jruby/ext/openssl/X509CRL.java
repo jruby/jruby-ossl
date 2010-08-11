@@ -177,7 +177,7 @@ public class X509CRL extends RubyObject {
                     critical = true;
                 }
                 byte[] value = crl.getExtensionValue(oid);
-                IRubyObject mASN1 = ((RubyModule)(getRuntime().getModule("OpenSSL"))).getConstant("ASN1");
+                IRubyObject mASN1 = (getRuntime().getModule("OpenSSL")).getConstant("ASN1");
                 IRubyObject rValue = null;
                 try {
                     rValue = ASN1.decode(mASN1,ASN1.decode(mASN1,RubyString.newString(getRuntime(), value)).callMethod(tc,"value"));

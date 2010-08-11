@@ -320,7 +320,7 @@ public class Cipher extends RubyObject {
                 } else {
                     keyLen = 8;
                 }
-                generateKeyLen = keyLen / 8 * 7;;
+                generateKeyLen = keyLen / 8 * 7;
             } else if ("RC4".equalsIgnoreCase(cryptoBase)) {
                 ivLen = 0;
                 keyLen = 16;

@@ -31,8 +31,6 @@ package org.jruby.ext.openssl;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
-import java.util.Iterator;
-import java.util.List;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -289,7 +287,6 @@ public class X509Extensions {
                 value = new String(ByteList.plain(new DERSequence(asnv).getDEREncoded()));
             } else if(r_oid.equals(new DERObjectIdentifier("2.5.29.15"))) { //keyUsage
                 byte[] inp = null;
-                inp = null;
                 try {
                     String[] exx = valuex.split(":");
                     if(exx != null) {

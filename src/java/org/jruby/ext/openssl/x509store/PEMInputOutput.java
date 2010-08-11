@@ -760,7 +760,7 @@ public class PEMInputOutput {
         v.add(new DERInteger(p.getQ()));
         v.add(new DERInteger(p.getG()));
                 
-        BigInteger x = ((DSAPrivateKey)obj).getX();
+        BigInteger x = obj.getX();
         BigInteger y = p.getG().modPow(x, p.getP());
                 
         v.add(new DERInteger(y));
@@ -1142,7 +1142,7 @@ public class PEMInputOutput {
         }
 
         ASN1InputStream try1 = new ASN1InputStream(Base64.decode(buf.toString()));
-        ByteArrayInputStream bIn = new ByteArrayInputStream(((DERObject)try1.readObject()).getEncoded());
+        ByteArrayInputStream bIn = new ByteArrayInputStream((try1.readObject()).getEncoded());
 
         try {
             CertificateFactory certFact = CertificateFactory.getInstance("X.509");

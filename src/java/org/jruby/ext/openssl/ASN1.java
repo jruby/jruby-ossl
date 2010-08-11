@@ -743,7 +743,7 @@ public class ASN1 {
                 tag_class = getRuntime().newSymbol("UNIVERSAL");
             }
             if("ObjectId".equals(getMetaClass().getRealClass().getBaseName())) {
-                String v = (String)(getSymLookup(getRuntime()).get(getObjectIdentifier(value.toString())));
+                String v = getSymLookup(getRuntime()).get(getObjectIdentifier(value.toString()));
                 if(v != null) {
                     value = getRuntime().newString(v);
                 }

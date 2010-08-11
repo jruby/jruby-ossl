@@ -29,7 +29,6 @@ package org.jruby.ext.openssl;
 
 import java.security.cert.CertificateEncodingException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.jruby.Ruby;

@@ -200,7 +200,7 @@ public class NetscapeSPKI extends RubyObject {
     public IRubyObject sign(final IRubyObject key, IRubyObject digest) {
         String keyAlg = ((PKey) key).getAlgorithm();
         String digAlg = ((Digest) digest).getShortAlgorithm();
-        final DERObjectIdentifier alg = (DERObjectIdentifier) (ASN1.getOIDLookup(getRuntime()).get(keyAlg.toLowerCase() + "-" + digAlg.toLowerCase()));
+        final DERObjectIdentifier alg = ASN1.getOIDLookup(getRuntime()).get(keyAlg.toLowerCase() + "-" + digAlg.toLowerCase());
         try {
             // NetscapeCertRequest requires "BC" provider.
             OpenSSLReal.doWithBCProvider(new OpenSSLReal.Runnable() {

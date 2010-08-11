@@ -331,7 +331,6 @@ public class BN extends RubyObject {
                 exp = (int)val;
                 break;
             }
-            // drop through for error
         }
         case ClassIndex.BIGNUM:
             // Bignum is inherently too big

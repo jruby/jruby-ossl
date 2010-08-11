@@ -303,7 +303,7 @@ public class PKCS7 {
         }
 
         List<SignerInfoWithPkey> sinfos = new ArrayList<SignerInfoWithPkey>(getSignerInfo());
-        if(sinfos == null || sinfos.size() == 0) {
+        if(sinfos.size() == 0) {
             throw new PKCS7Exception(F_PKCS7_VERIFY, R_NO_SIGNATURES_ON_DATA);
         }
 

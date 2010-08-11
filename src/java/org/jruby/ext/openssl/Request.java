@@ -155,7 +155,7 @@ public class Request extends RubyObject {
                 DERSequence val = (DERSequence)enm2.nextElement();
                 DERObjectIdentifier v0 = (DERObjectIdentifier)val.getObjectAt(0);
                 DERObject v1 = (DERObject)val.getObjectAt(1);
-                IRubyObject a1 = getRuntime().newString(((String)(ASN1.getSymLookup(getRuntime()).get(v0))));
+                IRubyObject a1 = getRuntime().newString(ASN1.getSymLookup(getRuntime()).get(v0));
                 IRubyObject a2 = ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),RubyString.newString(getRuntime(), v1.getDEREncoded()));
                 add_attribute(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Attribute").callMethod(tc,"new",new IRubyObject[]{a1,a2}));
             }

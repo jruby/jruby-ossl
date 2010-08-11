@@ -530,8 +530,6 @@ public class Lookup {
             Name name = (Name)_name;
             X509Object[] ret = (X509Object[])_ret;
 
-            X509Object tmp = null;
-
             int ok = 0;
             StringBuffer b = new StringBuffer();
 
@@ -572,8 +570,8 @@ public class Lookup {
                         }
                     }
                 }
+                X509Object tmp = null;
                 synchronized(X509Utils.CRYPTO_LOCK_X509_STORE) {
-                    tmp = null;
                     for(X509Object o : x1.store.objs) {
                         if(o.type() == type && o.isName(name)) {
                             tmp = o;
