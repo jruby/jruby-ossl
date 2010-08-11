@@ -47,7 +47,6 @@ import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.DERObjectIdentifier;
-import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.DERTaggedObject;
@@ -131,7 +130,7 @@ public class SignerInfoWithPkey extends ASN1Encodable {
             digEncryptionAlgorithm = AlgorithmIdentifier.getInstance(obj);
         }
 
-        encryptedDigest = DEROctetString.getInstance(e.nextElement());
+        encryptedDigest = ASN1OctetString.getInstance(e.nextElement());
 
         if(e.hasMoreElements()) {
             unauthenticatedAttributes = ASN1Set.getInstance((ASN1TaggedObject)e.nextElement(), false);

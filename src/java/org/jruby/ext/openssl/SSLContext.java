@@ -41,8 +41,8 @@ import javax.net.ssl.SSLEngine;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
-import org.jruby.RubyFixnum;
 import org.jruby.RubyModule;
+import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
@@ -226,7 +226,7 @@ public class SSLContext extends RubyObject {
 
         value = getInstanceVariable("@verify_mode");
         if (value != null && !value.isNil()) {
-            internalCtx.verifyMode = RubyFixnum.fix2int(value);
+            internalCtx.verifyMode = RubyNumeric.fix2int(value);
         } else {
             internalCtx.verifyMode = SSL.VERIFY_NONE;
         }
@@ -237,12 +237,12 @@ public class SSLContext extends RubyObject {
 
         value = getInstanceVariable("@timeout");
         if (value != null && !value.isNil()) {
-            internalCtx.timeout = RubyFixnum.fix2int(value);
+            internalCtx.timeout = RubyNumeric.fix2int(value);
         }
         
         value = getInstanceVariable("@verify_depth");
         if (value != null && !value.isNil()) {
-            internalCtx.store.setDepth(RubyFixnum.fix2int(value));
+            internalCtx.store.setDepth(RubyNumeric.fix2int(value));
         }
 
         /* TODO: should be implemented for SSLSession
@@ -492,7 +492,7 @@ public class SSLContext extends RubyObject {
     private long getOptions() {
         IRubyObject value = getInstanceVariable("@options");
         if (value != null && !value.isNil()) {
-            return RubyFixnum.fix2long(value);
+            return RubyNumeric.fix2long(value);
         } else {
             return 0;
         }
