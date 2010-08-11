@@ -63,6 +63,17 @@ public class MimeParam {
     }
 
     @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                + ((paramName == null) ? 0 : paramName.hashCode());
+        result = prime * result
+                + ((paramValue == null) ? 0 : paramValue.hashCode());
+        return result;
+    }
+
+    @Override
     public String toString() {
         return "#<Param " + paramName + "="+paramValue+">";
     }

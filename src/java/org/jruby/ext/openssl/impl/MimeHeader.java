@@ -97,6 +97,16 @@ public class MimeHeader {
     }
 
     @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((name == null) ? 0 : name.hashCode());
+        result = prime * result + ((params == null) ? 0 : params.hashCode());
+        result = prime * result + ((value == null) ? 0 : value.hashCode());
+        return result;
+    }
+
+    @Override
     public String toString() {
         return "#<MimeHeader " + name + ": '"+value+"' params="+params+">";
     }
