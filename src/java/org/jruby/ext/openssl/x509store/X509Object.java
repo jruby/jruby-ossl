@@ -34,7 +34,7 @@ import java.util.List;
  *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
-public abstract class X509Object implements Comparable {
+public abstract class X509Object implements Comparable<X509Object> {
     /**
      * c: X509_OBJECT_idx_by_subject
      */
@@ -82,7 +82,7 @@ public abstract class X509Object implements Comparable {
 
     public abstract int type();
 
-    public int compareTo(Object other) {
-        return type() - ((X509Object)other).type();
+    public int compareTo(X509Object other) {
+        return type() - other.type();
     }
 }// X509_OBJECT

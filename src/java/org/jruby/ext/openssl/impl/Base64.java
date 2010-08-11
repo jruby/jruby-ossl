@@ -1,4 +1,5 @@
 package org.jruby.ext.openssl.impl;
+@SuppressWarnings("rawtypes")
 
 /**
  * <p>Encodes and decodes to and from Base64 notation.</p>

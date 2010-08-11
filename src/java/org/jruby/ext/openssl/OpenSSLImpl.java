@@ -266,20 +266,13 @@ ASN1.addObject(runtime, 186, "AES-256-CFB", "aes-256-cfb","2.16.840.1.101.3.4.1.
         }
     }
 
-    private static Class pemHandlerImpl;
     public static PEMHandler getPEMHandler() {
-        if(null == pemHandlerImpl) {
-            try {
-                Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
-                pemHandlerImpl = Class.forName("org.jruby.ext.openssl.BouncyCastlePEMHandler");
-            } catch(Exception e) {
-                pemHandlerImpl = DefaultPEMHandler.class;
-            }
-        }
         try {
-            return (PEMHandler)pemHandlerImpl.newInstance();
-        } catch(Exception e) {}
-        return null;
+            return new org.jruby.ext.openssl.BouncyCastlePEMHandler();
+        } catch (Exception e) {
+            // fallback to...
+        }
+        return new DefaultPEMHandler();
     }
 
     public static KeyAndIv EVP_BytesToKey(int key_len, int iv_len, MessageDigest md, byte[] salt, byte[] data, int count) {

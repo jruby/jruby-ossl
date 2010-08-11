@@ -47,7 +47,7 @@ public class Certificate extends X509Object {
         return o instanceof Certificate && x509.getSubjectX500Principal().equals(((Certificate)o).x509.getSubjectX500Principal());
     }
 
-    public int compareTo(Object oth) {
+    public int compareTo(X509Object oth) {
         int ret1 = super.compareTo(oth);
         if(ret1 == 0) {
             ret1 = x509.equals(((Certificate)oth).x509) ? 0 : -1;

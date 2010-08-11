@@ -247,7 +247,7 @@ public class SSLSocket extends RubyObject {
         } catch(Exception e) {
             return;
         }
-        Iterator it = sel.selectedKeys().iterator();
+        Iterator<SelectionKey> it = sel.selectedKeys().iterator();
         while(it.hasNext()) {
             it.next();
             it.remove();

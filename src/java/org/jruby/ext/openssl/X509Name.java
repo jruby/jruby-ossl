@@ -157,19 +157,21 @@ public class X509Name extends RubyObject {
             if(template.isNil()) {
                 template = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getClass("Name").getConstant("OBJECT_TYPE_TEMPLATE");
             }
-            for(Iterator iter = ((RubyArray)tmp).getList().iterator();iter.hasNext();) {
-                RubyArray arr = (RubyArray)iter.next();
+            for (IRubyObject obj : ((RubyArray)tmp).toJavaArray()) {
+                RubyArray arr = (RubyArray) obj;
+                IRubyObject[] ele = arr.toJavaArray();
                 IRubyObject[] entry = new IRubyObject[3];
-                List l = arr.getList();
-                entry[0] = (IRubyObject)l.get(0);
-                entry[1] = (IRubyObject)l.get(1);
-                if(l.size()>2) {
-                    entry[2] = (IRubyObject)l.get(2);
+                if (ele.length > 1) {
+                    entry[0] = ele[0];
+                    entry[1] = ele[1];
                 }
-                if(entry[2] == null || entry[2].isNil()) {
+                if (ele.length > 2) {
+                    entry[2] = ele[2];
+                }
+                if (entry[2] == null || entry[2].isNil()) {
                     entry[2] = template.callMethod(getRuntime().getCurrentContext(),"[]",entry[0]);
                 }
-                if(entry[2] == null || entry[2].isNil()) {
+                if (entry[2] == null || entry[2].isNil()) {
                     entry[2] = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getClass("Name").getConstant("DEFAULT_OBJECT_TYPE");
                 }
                 add_entry(entry);
@@ -396,7 +398,7 @@ else
         try {
             Class<? extends ASN1Encodable> clzz = ASN1.classForId(type);
             if (clzz != null) {
-                java.lang.reflect.Constructor ctor = clzz.getConstructor(new Class[]{String.class});
+                java.lang.reflect.Constructor<?> ctor = clzz.getConstructor(new Class[]{String.class});
                 if (null != ctor) {
                     return (DERObject) ctor.newInstance(new Object[]{value});
                 }

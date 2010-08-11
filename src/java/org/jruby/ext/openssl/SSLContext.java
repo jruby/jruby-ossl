@@ -34,6 +34,7 @@ import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -312,8 +313,8 @@ public class SSLContext extends RubyObject {
         } else if (val instanceof RubyArray) {
             StringBuilder builder = new StringBuilder();
             String sep = "";
-            for (Iterator iter = ((RubyArray) val).getList().iterator(); iter.hasNext();) {
-                builder.append(sep).append(iter.next().toString());
+            for (IRubyObject obj : ((RubyArray) val).toJavaArray()) {
+                builder.append(sep).append(obj.toString());
                 sep = ":";
             }
             ciphers = builder.toString();

@@ -172,10 +172,10 @@ public class X509Cert extends RubyObject {
         IRubyObject extFact = ((RubyClass)(x509.getConstant("ExtensionFactory"))).callMethod(tc,"new");
         extFact.callMethod(tc,"subject_certificate=",this);
 
-        Set crit = cert.getCriticalExtensionOIDs();
+        Set<String> crit = cert.getCriticalExtensionOIDs();
         if (crit != null) {
-            for (Iterator iter = crit.iterator(); iter.hasNext();) {
-                String critOid = (String) iter.next();
+            for (Iterator<String> iter = crit.iterator(); iter.hasNext();) {
+                String critOid = iter.next();
                 byte[] value = cert.getExtensionValue(critOid);
                 IRubyObject rValue = ASN1.decode(ossl.getConstant("ASN1"), runtime.newString(new ByteList(value, false))).callMethod(tc, "value");
                 X509Extensions.Extension ext = (X509Extensions.Extension) (((RubyClass) (((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Extension"))).callMethod(tc, "new", new IRubyObject[]{runtime.newString(critOid), rValue, runtime.getTrue()}));
@@ -183,10 +183,10 @@ public class X509Cert extends RubyObject {
             }
         }
 
-        Set ncrit = cert.getNonCriticalExtensionOIDs();
+        Set<String> ncrit = cert.getNonCriticalExtensionOIDs();
         if (ncrit != null) {
-            for (Iterator iter = ncrit.iterator(); iter.hasNext();) {
-                String ncritOid = (String) iter.next();
+            for (Iterator<String> iter = ncrit.iterator(); iter.hasNext();) {
+                String ncritOid = iter.next();
                 byte[] value = cert.getExtensionValue(ncritOid);
                 IRubyObject rValue = ASN1.decode(ossl.getConstant("ASN1"), runtime.newString(new ByteList(value, false))).callMethod(tc, "value");
                 X509Extensions.Extension ext = (X509Extensions.Extension) (((RubyClass) (((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Extension"))).callMethod(tc, "new", new IRubyObject[]{runtime.newString(ncritOid), rValue, runtime.getFalse()}));
@@ -476,7 +476,7 @@ public class X509Cert extends RubyObject {
     @SuppressWarnings("unchecked")
     @JRubyMethod(name="extensions=")
     public IRubyObject set_extensions(IRubyObject arg) {
-        extensions = new ArrayList(((RubyArray)arg).getList());
+        extensions = new ArrayList<IRubyObject>(((RubyArray)arg).getList());
         return arg;
     }
 
@@ -486,7 +486,7 @@ public class X509Cert extends RubyObject {
         DERObjectIdentifier oid = ((X509Extensions.Extension)arg).getRealOid();
         if(oid.equals(new DERObjectIdentifier("2.5.29.17"))) {
             boolean one = true;
-            for(Iterator iter = extensions.iterator();iter.hasNext();) {
+            for(Iterator<IRubyObject> iter = extensions.iterator();iter.hasNext();) {
                 X509Extensions.Extension ag = (X509Extensions.Extension)iter.next();
                 if(ag.getRealOid().equals(new DERObjectIdentifier("2.5.29.17"))) {
                     ASN1EncodableVector v1 = new ASN1EncodableVector();

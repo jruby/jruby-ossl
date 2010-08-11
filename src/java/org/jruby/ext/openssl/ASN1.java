@@ -322,13 +322,13 @@ public class ASN1 {
 
     private static String getShortNameFor(Ruby runtime, String nameOrOid) {
         DERObjectIdentifier oid = getObjectIdentifier(runtime,nameOrOid);
-        Map em = getOIDLookup(runtime);
+        Map<String, DERObjectIdentifier> em = getOIDLookup(runtime);
         String name = null;
-        for(Iterator iter = em.keySet().iterator();iter.hasNext();) {
-            Object key = iter.next();
+        for(Iterator<String> iter = em.keySet().iterator();iter.hasNext();) {
+            String key = iter.next();
             if(oid.equals(em.get(key))) {
-                if(name == null || ((String)key).length() < name.length()) {
-                    name = (String)key;
+                if(name == null || key.length() < name.length()) {
+                    name = key;
                 }
             }
         }
@@ -337,13 +337,13 @@ public class ASN1 {
 
     private static String getLongNameFor(Ruby runtime, String nameOrOid) {
         DERObjectIdentifier oid = getObjectIdentifier(runtime,nameOrOid);
-        Map em = getOIDLookup(runtime);
+        Map<String, DERObjectIdentifier> em = getOIDLookup(runtime);
         String name = null;
-        for(Iterator iter = em.keySet().iterator();iter.hasNext();) {
-            Object key = iter.next();
+        for(Iterator<String> iter = em.keySet().iterator();iter.hasNext();) {
+            String key = iter.next();
             if(oid.equals(em.get(key))) {
-                if(name == null || ((String)key).length() > name.length()) {
-                    name = (String)key;
+                if(name == null || key.length() > name.length()) {
+                    name = key;
                 }
             }
         }
@@ -628,16 +628,15 @@ public class ASN1 {
         }
 
         ASN1Encodable toASN1() {
-            //            System.err.println(getMetaClass().getRealClass().getBaseName()+"#toASN1");
             ThreadContext tc = getRuntime().getCurrentContext();
             int tag = RubyNumeric.fix2int(callMethod(tc,"tag"));
             IRubyObject val = callMethod(tc,"value");
             if(val instanceof RubyArray) {
                 RubyArray arr = (RubyArray)callMethod(tc,"value");
-                if(arr.getList().size() > 1) {
+                if(arr.size() > 1) {
                     ASN1EncodableVector vec = new ASN1EncodableVector();
-                    for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
-                        vec.add(((ASN1Data)iter.next()).toASN1());
+                    for (IRubyObject obj : arr.toJavaArray()) {
+                        vec.add(((ASN1Data)obj).toASN1());
                     }
                     return new DERTaggedObject(tag, new DERSequence(vec));
                 } else {
@@ -678,8 +677,8 @@ public class ASN1 {
             IRubyObject val = callMethod(getRuntime().getCurrentContext(),"value");
             if(val instanceof RubyArray) {
                 RubyArray arr = (RubyArray)val;
-                for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
-                    ((ASN1Data)iter.next()).print(indent+1);
+                for (IRubyObject obj : arr.toJavaArray()) {
+                    ((ASN1Data)obj).print(indent+1);
                 }
             } else {
                 ((ASN1Data)val).print(indent+1);
@@ -890,12 +889,11 @@ public class ASN1 {
             if(id != -1) {
                 ASN1EncodableVector vec = new ASN1EncodableVector();
                 RubyArray arr = (RubyArray)callMethod(getRuntime().getCurrentContext(),"value");
-                for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
-                    IRubyObject v = (IRubyObject)iter.next();
-                    if(v instanceof ASN1Data) {
-                        vec.add(((ASN1Data)v).toASN1());
+                for (IRubyObject obj : arr.toJavaArray()) {
+                    if(obj instanceof ASN1Data) {
+                        vec.add(((ASN1Data)obj).toASN1());
                     } else {
-                        vec.add(((ASN1Data)ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),OpenSSLImpl.to_der_if_possible(v))).toASN1());
+                        vec.add(((ASN1Data)ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),OpenSSLImpl.to_der_if_possible(obj))).toASN1());
                     }
                 }
                 try {
@@ -911,9 +909,9 @@ public class ASN1 {
 
         @JRubyMethod(frame=true)
         public IRubyObject each(Block block) {
-            RubyArray arr = (RubyArray)callMethod(getRuntime().getCurrentContext(),"value");
-            for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
-                block.yield(getRuntime().getCurrentContext(),(IRubyObject)iter.next());
+            RubyArray arr = (RubyArray) callMethod(getRuntime().getCurrentContext(), "value");
+            for (IRubyObject obj : arr.toJavaArray()) {
+                block.yield(getRuntime().getCurrentContext(), obj);
             }
             return getRuntime().getNil();
         }
@@ -922,8 +920,8 @@ public class ASN1 {
             printIndent(indent);
             System.out.println(getMetaClass().getRealClass().getBaseName() + ": ");
             RubyArray arr = (RubyArray)callMethod(getRuntime().getCurrentContext(),"value");
-            for(Iterator iter = arr.getList().iterator();iter.hasNext();) {
-                ((ASN1Data)iter.next()).print(indent+1);
+            for (IRubyObject obj : arr.toJavaArray()) {
+                ((ASN1Data)obj).print(indent+1);
             }
         }
     }

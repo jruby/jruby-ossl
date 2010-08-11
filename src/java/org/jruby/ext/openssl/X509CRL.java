@@ -399,8 +399,8 @@ public class X509CRL extends RubyObject {
         sig_alg = getRuntime().newString(digAlg);
         generator.setSignatureAlgorithm(digAlg + "WITH" + keyAlg);
 
-        for(Iterator iter = ((RubyArray)revoked).getList().iterator();iter.hasNext();) {
-            X509Revoked rev = (X509Revoked)iter.next();
+        for (IRubyObject obj : ((RubyArray)revoked).toJavaArray()) {
+            X509Revoked rev = (X509Revoked)obj; // TODO: can throw CCE
             BigInteger serial = new BigInteger(rev.callMethod(getRuntime().getCurrentContext(),"serial").toString());
             IRubyObject t1 = rev.callMethod(getRuntime().getCurrentContext(),"time").callMethod(getRuntime().getCurrentContext(),"getutc");
             ((RubyTime)t1).setMicroseconds(0);

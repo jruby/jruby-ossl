@@ -261,9 +261,9 @@ public class X509Extensions {
                 value = new String(ByteList.plain(new DERSequence(asnv).getDEREncoded()));
             } else if(r_oid.equals(new DERObjectIdentifier("2.5.29.18"))) { //issuerAltName
                 if(valuex.startsWith("issuer:copy")) {
-                    List exts = ((RubyArray)getInstanceVariable("@issuer_certificate").callMethod(tc,"extensions")).getList();
-                    for(Iterator iter = exts.iterator();iter.hasNext();) {
-                        Extension exta = (Extension)iter.next();
+                    RubyArray exts = (RubyArray)getInstanceVariable("@issuer_certificate").callMethod(tc,"extensions");
+                    for (IRubyObject obj : exts.toJavaArray()) {
+                        Extension exta = (Extension)obj;
                         if(exta.getRealOid().equals(new DERObjectIdentifier("2.5.29.17"))) {
                             value = exta.getRealValue();
                             break;

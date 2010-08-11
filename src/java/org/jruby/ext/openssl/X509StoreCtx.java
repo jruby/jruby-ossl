@@ -106,8 +106,8 @@ public class X509StoreCtx extends RubyObject {
         }
         if(!chain.isNil()) {
             x509s = new ArrayList<X509AuxCertificate>();
-            for(Iterator iter = ((RubyArray)chain).getList().iterator();iter.hasNext();) {
-                x509s.add(((X509Cert)iter.next()).getAuxCert());
+            for (IRubyObject obj : ((RubyArray)chain).toJavaArray()) {
+                x509s.add(((X509Cert)obj).getAuxCert());
             }
         }
         if(ctx.init(x509st,x509,x509s) != 1) {

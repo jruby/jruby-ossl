@@ -49,7 +49,7 @@ public class CRL extends X509Object {
         return o instanceof CRL && ((X509CRL)crl).getIssuerX500Principal().equals(((X509CRL)((CRL)o).crl).getIssuerX500Principal());
     }
 
-    public int compareTo(Object oth) {
+    public int compareTo(X509Object oth) {
         int ret1 = super.compareTo(oth);
         if(ret1 == 0) {
             ret1 = crl.equals(((CRL)oth).crl) ? 0 : -1;

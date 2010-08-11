@@ -37,9 +37,9 @@ import org.bouncycastle.asn1.DERObjectIdentifier;
  */
 public class ASN1Registry {
     @SuppressWarnings("unchecked")
-    private static Map<String, DERObjectIdentifier> SYM_TO_OID = (Map<String, DERObjectIdentifier>)(new HashMap(org.bouncycastle.asn1.x509.X509Name.DefaultLookUp));
+    private static Map<String, DERObjectIdentifier> SYM_TO_OID = new HashMap<String, DERObjectIdentifier>(org.bouncycastle.asn1.x509.X509Name.DefaultLookUp);
     @SuppressWarnings("unchecked")
-    private static Map<DERObjectIdentifier, String> OID_TO_SYM = (Map<DERObjectIdentifier, String>)(new HashMap(org.bouncycastle.asn1.x509.X509Name.DefaultSymbols));
+    private static Map<DERObjectIdentifier, String> OID_TO_SYM = new HashMap<DERObjectIdentifier, String>(org.bouncycastle.asn1.x509.X509Name.DefaultSymbols);
     private static Map<DERObjectIdentifier, Integer> OID_TO_NID = new HashMap<DERObjectIdentifier, Integer>();
     private static Map<Integer, DERObjectIdentifier> NID_TO_OID = new HashMap<Integer, DERObjectIdentifier>();
     private static Map<Integer, String> NID_TO_SN = new HashMap<Integer, String>();
