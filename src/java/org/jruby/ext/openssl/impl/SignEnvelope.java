@@ -31,9 +31,7 @@ import java.security.cert.X509CRL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import org.bouncycastle.asn1.pkcs.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 

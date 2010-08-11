@@ -44,8 +44,6 @@ import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERInteger;
 
-import org.jruby.ext.openssl.OpenSSLReal;
-
 /**
  * c: X509_STORE_CTX
  *
