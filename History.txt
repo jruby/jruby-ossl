@@ -1,3 +1,8 @@
+== 0.7.2
+
+- Fix for JRUBY-5018: SSLSocket holds selectors, keys, preventing
+  quick cleanup of resources when dereferenced
+
 == 0.7.1
 
 - NOTE: Now BouncyCastle jars has moved out to its own gem
