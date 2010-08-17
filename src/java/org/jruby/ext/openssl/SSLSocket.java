@@ -111,10 +111,6 @@ public class SSLSocket extends RubyObject {
     private SSLEngineResult.HandshakeStatus hsStatus;
     private SSLEngineResult.Status status = null;
 
-    private Selector rsel;
-    private Selector wsel;
-    private Selector asel;
-
     int verifyResult;
     
     @JRubyMethod(name = "initialize", rest = true, frame = true)
@@ -151,12 +147,6 @@ public class SSLSocket extends RubyObject {
             peerAppData.limit(0);
             netData.limit(0);
             dummy = ByteBuffer.allocate(0);
-            rsel = Selector.open();
-            wsel = Selector.open();
-            asel = Selector.open();
-            c.register(rsel,SelectionKey.OP_READ);
-            c.register(wsel,SelectionKey.OP_WRITE);
-            c.register(asel,SelectionKey.OP_READ | SelectionKey.OP_WRITE);
         }
     }
 
@@ -243,23 +233,25 @@ public class SSLSocket extends RubyObject {
         return getRuntime().newFixnum(verifyResult);
     }
 
-    private void waitSelect(Selector sel) {
+    private void waitSelect(int operations) throws IOException {
+        Selector sel = Selector.open();
         try {
+            c.register(sel, operations);
             sel.select();
-        } catch(Exception e) {
-            return;
-        }
-        Iterator<SelectionKey> it = sel.selectedKeys().iterator();
-        while(it.hasNext()) {
-            it.next();
-            it.remove();
+            Iterator<SelectionKey> it = sel.selectedKeys().iterator();
+            while(it.hasNext()) {
+                it.next();
+                it.remove();
+            }
+        } finally {
+            try{sel.close();}catch(IOException ioe){}
         }
     }
 
     private void doHandshake() throws IOException {
         while (true) {
             SSLEngineResult res;
-            waitSelect(asel);
+            waitSelect(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             if(hsStatus == SSLEngineResult.HandshakeStatus.FINISHED) {
                 if (initialHandshake) {
                     finishInitialHandshake();
@@ -275,7 +267,7 @@ public class SSLSocket extends RubyObject {
                 // does not mean writable. we explicitly wait for readable channel to avoid
                 // busy loop.
                 if (initialHandshake && status == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
-                    waitSelect(rsel);
+                    waitSelect(SelectionKey.OP_READ);
                 }
             } else if(hsStatus == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
                 if (netData.hasRemaining()) {
@@ -429,10 +421,6 @@ public class SSLSocket extends RubyObject {
         }
         netData.flip();
         flushData();
-
-        rsel.close();
-        wsel.close();
-        asel.close();
     }
 
     @JRubyMethod(rest = true, required = 1, optional = 1)
@@ -454,12 +442,12 @@ public class SSLSocket extends RubyObject {
             throw runtime.newArgumentError("negative string size (or size too big)");
         }
 
-        // So we need to make sure to only block when there is no data left to process
-        if(engine == null || !(peerAppData.hasRemaining() || peerNetData.position() > 0)) {
-            waitSelect(rsel);
-        }
-
         try {
+            // So we need to make sure to only block when there is no data left to process
+            if(engine == null || !(peerAppData.hasRemaining() || peerNetData.position() > 0)) {
+                waitSelect(SelectionKey.OP_READ);
+            }
+
             ByteBuffer dst = ByteBuffer.allocate(len);
             int rr = -1;
             // ensure >0 bytes read; sysread is blocking read.
@@ -486,10 +474,10 @@ public class SSLSocket extends RubyObject {
     @JRubyMethod
     public IRubyObject syswrite(ThreadContext context, IRubyObject arg)  {
         Ruby runtime = context.getRuntime();
-        waitSelect(wsel);
-        byte[] bls = arg.convertToString().getBytes();
-        ByteBuffer b1 = ByteBuffer.wrap(bls);
         try {
+            waitSelect(SelectionKey.OP_WRITE);
+            byte[] bls = arg.convertToString().getBytes();
+            ByteBuffer b1 = ByteBuffer.wrap(bls);
             int written;
             if(engine == null) {
                 written = writeToChannel(c, b1);
