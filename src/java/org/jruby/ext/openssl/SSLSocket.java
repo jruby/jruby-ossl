@@ -515,7 +515,8 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod
     public IRubyObject sysclose()  {
-        close(true);
+        // no need to try shutdown when it's a server
+        close(rubyCtx.isProtocolForClient());
         ThreadContext tc = getRuntime().getCurrentContext();
         if(callMethod(tc,"sync_close").isTrue()) {
             callMethod(tc,"io").callMethod(tc,"close");
