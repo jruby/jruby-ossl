@@ -234,17 +234,18 @@ public class SSLSocket extends RubyObject {
     }
 
     private void waitSelect(int operations) throws IOException {
-        Selector sel = Selector.open();
+        Selector sel = null;
         try {
+            sel = Selector.open();
             c.register(sel, operations);
             sel.select();
-            Iterator<SelectionKey> it = sel.selectedKeys().iterator();
-            while(it.hasNext()) {
-                it.next();
-                it.remove();
-            }
         } finally {
-            try{sel.close();}catch(IOException ioe){}
+            if (sel != null) {
+                try {
+                    sel.close();
+                } catch (IOException ioe) {
+                }
+            }
         }
     }
 
