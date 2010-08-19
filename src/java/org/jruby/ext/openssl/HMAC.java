@@ -73,7 +73,7 @@ public class HMAC extends RubyObject {
     
     @JRubyMethod(name = "digest", meta = true)
     public static IRubyObject s_digest(IRubyObject recv, IRubyObject digest, IRubyObject kay, IRubyObject data) {
-        String algoName = ((Digest) digest).getShortAlgorithm();
+        String algoName = getDigestAlgorithmName(digest);
         try {
             Mac mac = getMac(algoName);
             byte[] key = kay.convertToString().getBytes();
@@ -88,7 +88,7 @@ public class HMAC extends RubyObject {
 
     @JRubyMethod(name = "hexdigest", meta = true)
     public static IRubyObject s_hexdigest(IRubyObject recv, IRubyObject digest, IRubyObject kay, IRubyObject data) {
-        String algoName = ((Digest) digest).getShortAlgorithm();
+        String algoName = getDigestAlgorithmName(digest);
         try {
             Mac mac = getMac(algoName);
             byte[] key = kay.convertToString().getBytes();
@@ -110,7 +110,7 @@ public class HMAC extends RubyObject {
 
     @JRubyMethod
     public IRubyObject initialize(IRubyObject kay, IRubyObject digest) {
-        String algoName = ((Digest) digest).getShortAlgorithm();
+        String algoName = getDigestAlgorithmName(digest);
         try {
             mac = getMac(algoName);
             key = kay.convertToString().getBytes();
@@ -164,5 +164,15 @@ public class HMAC extends RubyObject {
 
     String getAlgorithm() {
         return this.mac.getAlgorithm();
+    }
+
+    private static String getDigestAlgorithmName(IRubyObject digest) {
+        String algoName = null;
+        if (digest instanceof Digest) {
+            algoName = ((Digest) digest).getShortAlgorithm();
+        } else {
+            algoName = digest.asString().toString();
+        }
+        return algoName;
     }
 }// HMAC
