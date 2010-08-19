@@ -64,6 +64,7 @@ import org.jruby.RubyString;
 import org.jruby.RubyTime;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.impl.ASN1Registry;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.ext.openssl.x509store.X509AuxCertificate;
 import org.jruby.runtime.Block;
@@ -398,11 +399,11 @@ public class X509Cert extends RubyObject {
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();
         String digAlg = ((Digest)digest).getShortAlgorithm();
+        String digName = ((Digest)digest).name().toString();
 
         if(("DSA".equalsIgnoreCase(keyAlg) && "MD5".equalsIgnoreCase(digAlg)) ||
-           ("RSA".equalsIgnoreCase(keyAlg) && "DSS1".equals(((Digest)digest).name().toString())) ||
-           ("DSA".equalsIgnoreCase(keyAlg) && "SHA1".equals(((Digest)digest).name().toString()))) {
-            throw newCertificateError(runtime, (String)null);
+           ("RSA".equalsIgnoreCase(keyAlg) && "DSS1".equals(digName))) {
+            throw newCertificateError(runtime, "signature_algorithm not supported");
         }
 
         for(Iterator<IRubyObject> iter = extensions.iterator();iter.hasNext();) {
@@ -415,7 +416,6 @@ public class X509Cert extends RubyObject {
             }
         }
 
-        sig_alg = runtime.newString(digAlg);
         generator.setSignatureAlgorithm(digAlg + "WITH" + keyAlg);
         if (public_key == null) {
             lazyInitializePublicKey();
@@ -434,7 +434,11 @@ public class X509Cert extends RubyObject {
         if (cert == null) {
             throw newCertificateError(runtime, (String) null);
         }
-
+        String name = ASN1Registry.o2a(cert.getSigAlgOID());
+        if (name == null) {
+            name = cert.getSigAlgOID();
+        }
+        sig_alg = runtime.newString(name);
         changed = false;
         return this;
     }

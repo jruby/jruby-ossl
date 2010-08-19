@@ -57,6 +57,10 @@ public class ASN1Registry {
         return OID_TO_NID.get(oid);
     }
 
+    public static String o2a(String oid) {
+        return o2a(new DERObjectIdentifier(oid));        
+    }
+    
     public static String o2a(DERObjectIdentifier obj) {
         Integer nid = obj2nid(obj);
         String one = NID_TO_LN.get(nid);
@@ -237,6 +241,7 @@ public class ASN1Registry {
 
     public final static String OBJ_pkcs12_BagIds = OBJ_pkcs12_Version1 + ".1";
 
+    public final static String OBJ_dsa_with_sha2 = OBJ_nistAlgorithms + ".3";
 
     public final static int    NID_undef = 0;
     public final static String SN_undef = "UNDEF";
@@ -3060,6 +3065,14 @@ public class ASN1Registry {
     public final static String LN_sha224 = "sha224";
     public final static String OBJ_sha224 = OBJ_nist_hashalgs + ".4";
 
+    public final static int NID_dsa_with_SHA224 = 802;
+    public final static String SN_dsa_with_SHA224 = "dsa_with_SHA224";
+    public final static String OBJ_dsa_with_SHA224 = OBJ_dsa_with_sha2 + ".1";
+
+    public final static String SN_dsa_with_SHA256 = "dsa_with_SHA256";
+    public final static int NID_dsa_with_SHA256 = 803;
+    public final static String OBJ_dsa_with_SHA256 = OBJ_dsa_with_sha2 + ".2";
+
     public final static int    NID_X9_62_id_characteristic_two_basis = 680;
     public final static String SN_X9_62_id_characteristic_two_basis = "id-characteristic-two-basis";
     public final static String OBJ_X9_62_id_characteristic_two_basis = OBJ_X9_62_characteristic_two_field + ".3";
@@ -4095,6 +4108,8 @@ public class ASN1Registry {
         addObject(NID_inhibit_any_policy, SN_inhibit_any_policy, LN_inhibit_any_policy, OBJ_inhibit_any_policy); // NID: 748
         addObject(NID_ipsec3, SN_ipsec3, LN_ipsec3, null); // NID: 749
         addObject(NID_ipsec4, SN_ipsec4, LN_ipsec4, null); // NID: 750
+        addObject(NID_dsa_with_SHA224, SN_dsa_with_SHA224, null, OBJ_dsa_with_SHA224); // NID: 802
+        addObject(NID_dsa_with_SHA256, SN_dsa_with_SHA256, null, OBJ_dsa_with_SHA256); // NID: 803
     }
 
 
