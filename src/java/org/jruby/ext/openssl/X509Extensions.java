@@ -190,7 +190,7 @@ public class X509Extensions {
 
             if(valuex.startsWith("critical,")) {
                 critical = getRuntime().getTrue();
-                value = valuex.substring(9).trim();
+                valuex = valuex.substring(9).trim();
             }
 
             if(r_oid.equals(new DERObjectIdentifier("2.5.29.14"))) { //subjectKeyIdentifier

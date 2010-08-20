@@ -30,20 +30,20 @@ package org.jruby.ext.openssl;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
-import org.jruby.anno.JRubyMethod;
-import org.jruby.runtime.builtin.IRubyObject;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
 public class Config {
-    public static void createConfig(Ruby runtime, RubyModule ossl) {
-        RubyClass cConfig = ossl.defineClassUnder("Config", runtime.getObject(), runtime.getObject().getAllocator());
+    // TODO: we cannot detect OS's default config file. ignore?
+    public static final String DEFAULT_CONFIG_FILE = "./openssl.cnf";
+    
+    public static void createConfig(Ruby runtime, RubyModule mOSSL) {
+        RubyClass cConfig = mOSSL.defineClassUnder("Config", runtime.getObject(), runtime.getObject().getAllocator());
         cConfig.defineAnnotatedMethods(Config.class);
-    }
-
-    @JRubyMethod(meta=true, rest=true)
-    public static IRubyObject parse(IRubyObject recv, IRubyObject[] args) {
-        throw recv.getRuntime().newNotImplementedError("should be implemented. TODO: this");
+        RubyClass openSSLError = mOSSL.getClass("OpenSSLError");
+        mOSSL.defineClassUnder("ConfigError", openSSLError, openSSLError.getAllocator());
+        // TODO: we should define this constant with proper path. (see above)
+        //cConfig.setConstant("DEFAULT_CONFIG_FILE", runtime.newString(DEFAULT_CONFIG_FILE));
     }
 }// Config
