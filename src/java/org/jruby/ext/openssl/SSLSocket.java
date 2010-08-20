@@ -36,7 +36,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
-import java.util.Iterator;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -92,11 +91,13 @@ public class SSLSocket extends RubyObject {
 
     public SSLSocket(Ruby runtime, RubyClass type) {
         super(runtime,type);
-        cSSLError = (RubyClass)((RubyModule)getRuntime().getModule("OpenSSL").getConstant("SSL")).getConstant("SSLError");
         verifyResult = X509Utils.V_OK;
     }
+    
+    public static RaiseException newSSLError(Ruby runtime, String message) {
+        return Utils.newError(runtime, "OpenSSL::SSL::SSLError", message, false);
+    }
 
-    private RubyClass cSSLError;
     private org.jruby.ext.openssl.SSLContext rubyCtx;
     private SSLEngine engine;
     private SocketChannel c = null;
@@ -117,7 +118,7 @@ public class SSLSocket extends RubyObject {
     public IRubyObject _initialize(IRubyObject[] args, Block unused) {
         IRubyObject io;
         if (Arity.checkArgumentCount(getRuntime(), args, 1, 2) == 1) {
-            RubyClass sslContext = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("SSL"))).getClass("SSLContext");
+            RubyClass sslContext = Utils.getClassFromPath(getRuntime(), "OpenSSL::SSL::SSLContext");
             rubyCtx = (org.jruby.ext.openssl.SSLContext) api.callMethod(sslContext, "new");
         } else {
             rubyCtx = (org.jruby.ext.openssl.SSLContext) args[1];
@@ -154,7 +155,7 @@ public class SSLSocket extends RubyObject {
     public IRubyObject connect(ThreadContext context) {
         Ruby runtime = context.getRuntime();
         if (!rubyCtx.isProtocolForClient()) {
-            throw new RaiseException(runtime, cSSLError, "called a function you should not call", false);
+            throw newSSLError(runtime, "called a function you should not call");
         }
         try {
             ossl_ssl_setup();
@@ -189,7 +190,7 @@ public class SSLSocket extends RubyObject {
     public IRubyObject accept(ThreadContext context) {
         Ruby runtime = context.getRuntime();
         if (!rubyCtx.isProtocolForServer()) {
-            throw new RaiseException(runtime, cSSLError, "called a function you should not call", false);
+            throw newSSLError(runtime, "called a function you should not call");
         }
         try {
             int vfy = 0;

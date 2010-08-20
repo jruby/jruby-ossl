@@ -67,7 +67,7 @@ public abstract class PKey extends RubyObject {
     }
 
     public static RaiseException newPKeyError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstantAt("PKey")).getClass("PKeyError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::PKey::PKeyError", message);
     }
 
     public PKey(Ruby runtime, RubyClass type) {

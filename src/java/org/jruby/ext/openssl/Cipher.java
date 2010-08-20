@@ -741,6 +741,6 @@ public class Cipher extends RubyObject {
     }
 
     private static RaiseException newCipherError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("Cipher")).getClass("CipherError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::Cipher::CipherError", message);
     }
 }

@@ -93,7 +93,7 @@ public class PKeyRSA extends PKey {
    }
 
     public static RaiseException newRSAError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstantAt("PKey")).getClass("RSAError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::PKey::RSAError", message);
     }
    
     public PKeyRSA(Ruby runtime, RubyClass type) {

@@ -75,8 +75,8 @@ public class X509Store extends RubyObject {
     public X509Store(Ruby runtime, RubyClass type) {
         super(runtime,type);
         store = new Store();
-        cStoreError = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreError"));
-        cStoreContext = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreContext"));
+        cStoreError = Utils.getClassFromPath(runtime, "OpenSSL::X509::StoreError");
+        cStoreContext = Utils.getClassFromPath(runtime, "OpenSSL::X509::StoreContext");
     }
 
     private Store store;
@@ -223,7 +223,7 @@ public class X509Store extends RubyObject {
             }
             if (!proc.isNil()) {
                 Ruby rt = proc.getRuntime();
-                RubyClass cStoreContext = (RubyClass) (((RubyModule) (rt.getModule("OpenSSL").getConstant("X509"))).getConstant("StoreContext"));
+                RubyClass cStoreContext = Utils.getClassFromPath(rt, "OpenSSL::X509::StoreContext");
                 X509StoreCtx rctx = new X509StoreCtx(rt, cStoreContext, ctx);
                 RubyBoolean rok = rt.newBoolean(ok != 0);
                 IRubyObject ret = proc.callMethod(rt.getCurrentContext(), "call", new IRubyObject[]{rok, rctx});

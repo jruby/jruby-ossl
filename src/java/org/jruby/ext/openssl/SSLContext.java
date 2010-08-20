@@ -131,10 +131,12 @@ public class SSLContext extends RubyObject {
 
     public SSLContext(Ruby runtime, RubyClass type) {
         super(runtime,type);
-        cSSLError = (RubyClass)((RubyModule)getRuntime().getModule("OpenSSL").getConstant("SSL")).getConstant("SSLError");
     }
 
-    private RubyClass cSSLError;
+    public static RaiseException newSSLError(Ruby runtime, String message) {
+        return Utils.newError(runtime, "OpenSSL::SSL::SSLError", message, false);
+    }
+
     private String ciphers = CipherStrings.SSL_DEFAULT_CIPHER_LIST;
     private String protocol = "SSL"; // SSLv23 in OpenSSL by default
     private boolean protocolForServer = true;
@@ -222,7 +224,7 @@ public class SSLContext extends RubyObject {
                     getRuntime().getWarnings().warn(ID.MISCELLANEOUS, "can't set verify locations");
                 }
             } catch (Exception e) {
-                throw new RaiseException(getRuntime(), cSSLError, e.getMessage(), false);
+                throw newSSLError(getRuntime(), e.getMessage());
             }
         }
 
@@ -280,7 +282,7 @@ public class SSLContext extends RubyObject {
         try {
             internalCtx.init();
         } catch(GeneralSecurityException gse) {
-            throw new RaiseException(getRuntime(), cSSLError, gse.getMessage(), false);
+            throw newSSLError(getRuntime(), gse.getMessage());
         }
         return getRuntime().getTrue();
     }
@@ -301,7 +303,7 @@ public class SSLContext extends RubyObject {
                 list.add(ele);
             }
         } catch (GeneralSecurityException gse) {
-            throw new RaiseException(getRuntime(), cSSLError, gse.getMessage(), false);
+            throw newSSLError(getRuntime(), gse.getMessage());
         }
         return rt.newArray(list);
     }
@@ -326,7 +328,7 @@ public class SSLContext extends RubyObject {
         }
         RubyArray ary = (RubyArray)ciphers();
         if (ary.size() == 0) {
-            throw new RaiseException(getRuntime(), cSSLError, "no cipher match", false);
+            throw newSSLError(getRuntime(), "no cipher match");
         }
         return val;
     }
@@ -337,7 +339,7 @@ public class SSLContext extends RubyObject {
         String given = str.toString();
         String mapped = SSL_VERSION_OSSL2JSSE.get(given);
         if (mapped == null) {
-            throw new RaiseException(getRuntime(), cSSLError, String.format("unknown SSL method `%s'.", given), false);
+            throw newSSLError(getRuntime(), String.format("unknown SSL method `%s'.", given));
         }
         protocol = mapped;
         protocolForServer = protocolForClient = true;

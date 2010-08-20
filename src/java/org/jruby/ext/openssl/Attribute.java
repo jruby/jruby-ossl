@@ -127,7 +127,7 @@ public class Attribute extends RubyObject {
     @JRubyMethod(name="value=")
     public IRubyObject set_value(IRubyObject val) {
         IRubyObject tmp = OpenSSLImpl.to_der_if_possible(val);
-        this.value = ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),tmp);
+        this.value = ASN1.decode(getRuntime().getClassFromPath("OpenSSL::ASN1"), tmp);
         return val;
     }
 }// Attribute

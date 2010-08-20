@@ -122,7 +122,7 @@ public class X509Name extends RubyObject {
     }
     
     public static X509Name create(Ruby runtime, org.bouncycastle.asn1.x509.X509Name realName) {
-        X509Name name = new X509Name(runtime, ((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getClass("Name"));
+        X509Name name = new X509Name(runtime, Utils.getClassFromPath(runtime, "OpenSSL::X509::Name"));
         name.fromASN1Sequence((ASN1Sequence)realName.getDERObject());
         return name;
     }
@@ -157,7 +157,7 @@ public class X509Name extends RubyObject {
         IRubyObject tmp = (arg instanceof RubyArray) ? arg : getRuntime().getNil();
         if(!tmp.isNil()) {
             if(template.isNil()) {
-                template = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getClass("Name").getConstant("OBJECT_TYPE_TEMPLATE");
+                template = getRuntime().getClassFromPath("OpenSSL::X509::Name").getConstant("OBJECT_TYPE_TEMPLATE");
             }
             for (IRubyObject obj : ((RubyArray)tmp).toJavaArray()) {
                 RubyArray arr = (RubyArray) obj;
@@ -174,7 +174,7 @@ public class X509Name extends RubyObject {
                     entry[2] = template.callMethod(getRuntime().getCurrentContext(),"[]",entry[0]);
                 }
                 if (entry[2] == null || entry[2].isNil()) {
-                    entry[2] = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getClass("Name").getConstant("DEFAULT_OBJECT_TYPE");
+                    entry[2] = getRuntime().getClassFromPath("OpenSSL::X509::Name").getConstant("DEFAULT_OBJECT_TYPE");
                 }
                 add_entry(entry);
             }
@@ -236,7 +236,8 @@ public class X509Name extends RubyObject {
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 2, 3);
         String oid = args[0].toString();
         String value = args[1].toString();
-        IRubyObject type = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("X509"))).getClass("Name").getConstant("OBJECT_TYPE_TEMPLATE").callMethod(getRuntime().getCurrentContext(), "[]", args[0]);
+        IRubyObject type = getRuntime().getClassFromPath("OpenSSL::X509::Name").getConstant("OBJECT_TYPE_TEMPLATE")
+                .callMethod(getRuntime().getCurrentContext(), "[]", args[0]);
         if (args.length > 2 && !args[2].isNil()) {
             type = args[2];
         }
@@ -412,6 +413,6 @@ else
     }
 
     private static RaiseException newX509NameError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("X509")).getClass("NameError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::X509::NameError", message);
     }
 }// X509Name

@@ -89,6 +89,6 @@ public class SSL {
     }
 
     public static RaiseException newSSLError(Ruby runtime, Throwable t) {
-        throw new RaiseException(runtime, (RubyClass)runtime.getClassFromPath("OpenSSL::SSL::SSLError"), t.getMessage(), true);
+        throw Utils.newError(runtime, "OpenSSL::SSL::SSLError", t.getMessage());
     }
 }// SSL

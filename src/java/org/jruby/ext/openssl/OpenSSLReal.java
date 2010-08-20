@@ -133,8 +133,7 @@ public class OpenSSLReal {
         }
 
         runtime.getLoadService().require("jopenssl/version");
-        String jopensslVersion = ((RubyModule) runtime.getModule("Jopenssl")
-                .getConstant("Version")).getConstant("VERSION").toString();
+        String jopensslVersion = runtime.getClassFromPath("Jopenssl::Version").getConstant("VERSION").toString();
         ossl.setConstant("VERSION", runtime.newString("1.0.0"));
         ossl.setConstant("OPENSSL_VERSION",
                 runtime.newString("jruby-ossl " + jopensslVersion));

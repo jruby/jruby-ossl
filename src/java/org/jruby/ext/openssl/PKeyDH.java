@@ -88,7 +88,7 @@ public class PKeyDH extends PKey {
     }
     
     public static RaiseException newDHError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstantAt("PKey")).getClass("DHError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::PKey::DHError", message);
     }
     
     private static SecureRandom _secureRandom;

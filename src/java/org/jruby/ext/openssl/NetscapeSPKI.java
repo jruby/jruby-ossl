@@ -112,9 +112,9 @@ public class NetscapeSPKI extends RubyObject {
             }
 
             if ("RSA".equalsIgnoreCase(algo)) {
-                this.public_key = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("RSA").callMethod(getRuntime().getCurrentContext(), "new", RubyString.newString(getRuntime(), enc));
+                this.public_key = Utils.newRubyInstance(getRuntime(), "OpenSSL::PKey::RSA", RubyString.newString(getRuntime(), enc));
             } else if ("DSA".equalsIgnoreCase(algo)) {
-                this.public_key = ((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("DSA").callMethod(getRuntime().getCurrentContext(), "new", RubyString.newString(getRuntime(), enc));
+                this.public_key = Utils.newRubyInstance(getRuntime(), "OpenSSL::PKey::DSA", RubyString.newString(getRuntime(), enc));
             } else {
                 throw getRuntime().newLoadError("not implemented algo for public key: " + algo);
             }
@@ -247,6 +247,6 @@ public class NetscapeSPKI extends RubyObject {
     }
 
     private static RaiseException newSPKIError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstantAt("Netscape")).getClass("SPKIError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::Netscape::SPKIError", message);
     }
 }// NetscapeSPKI

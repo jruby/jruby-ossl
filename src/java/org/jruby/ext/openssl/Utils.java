@@ -28,7 +28,10 @@
 package org.jruby.ext.openssl;
 
 import org.jruby.Ruby;
+import org.jruby.RubyClass;
 import org.jruby.RubyObject;
+import org.jruby.RubyString;
+import org.jruby.exceptions.RaiseException;
 import org.jruby.runtime.builtin.IRubyObject;
 
 /**
@@ -67,4 +70,29 @@ public class Utils {
             throw rt.newTypeError(String.format("wrong argument (%s)! (Expected kind of %s)", obj.getMetaClass().getName(), path));
         }
     }
+
+    public static RubyClass getClassFromPath(Ruby rt, String path) {
+        return (RubyClass) rt.getClassFromPath(path);
+    }
+    
+    public static RaiseException newError(Ruby rt, String path, String message) {
+        return new RaiseException(rt, getClassFromPath(rt, path), message, true);
+    }
+
+    public static RaiseException newError(Ruby rt, String path, String message, boolean nativeException) {
+        return new RaiseException(rt, getClassFromPath(rt, path), message, nativeException);
+    }
+
+    public static IRubyObject newRubyInstance(Ruby rt, String path) {
+        return rt.getClassFromPath(path).callMethod(rt.getCurrentContext(), "new");
+    }
+
+    public static IRubyObject newRubyInstance(Ruby rt, String path, IRubyObject arg) {
+        return rt.getClassFromPath(path).callMethod(rt.getCurrentContext(), "new", arg);
+    }
+
+    public static IRubyObject newRubyInstance(Ruby rt, String path, IRubyObject[] args) {
+        return rt.getClassFromPath(path).callMethod(rt.getCurrentContext(), "new", args);
+    }
+    
 }// Utils

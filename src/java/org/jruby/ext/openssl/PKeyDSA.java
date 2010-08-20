@@ -82,7 +82,7 @@ public class PKeyDSA extends PKey {
     }
 
     public static RaiseException newDSAError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule)runtime.getModule("OpenSSL").getConstant("PKey")).getClass("DSAError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::PKey::DSAError", message);
     }
     
     public PKeyDSA(Ruby runtime, RubyClass type) {
@@ -331,24 +331,6 @@ public class PKeyDSA extends PKey {
             throw newDSAError(getRuntime(), ioe.getMessage());
         }
     }
-
-    /* 
-    private String getPadding(int padding) {
-        if(padding < 1 || padding > 4) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getConstant("DSAError")), null, true);
-        }
-
-        String p = "/NONE/PKCS1Padding";
-        if(padding == 3) {
-            p = "/NONE/NoPadding";
-        } else if(padding == 4) {
-            p = "/NONE/OAEPWithMD5AndMGF1Padding";
-        } else if(padding == 2) {
-            p = "/NONE/ISO9796-1Padding";
-        }
-        return p;
-    }  
-    */      
 
     @JRubyMethod
     public IRubyObject syssign(IRubyObject arg) {

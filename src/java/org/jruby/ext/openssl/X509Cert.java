@@ -127,14 +127,14 @@ public class X509Cert extends RubyObject {
     }
 
     public static IRubyObject wrap(Ruby runtime, Certificate c) throws CertificateEncodingException {
-        RubyClass cr = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
-        return cr.callMethod(runtime.getCurrentContext(),"new",RubyString.newString(runtime, c.getEncoded()));
+        RubyClass cr = Utils.getClassFromPath(runtime, "OpenSSL::X509::Certificate");
+        return cr.callMethod(runtime.getCurrentContext(), "new", RubyString.newString(runtime, c.getEncoded()));
     }
 
     // this is the javax.security counterpart of the previous wrap method
     public static IRubyObject wrap(Ruby runtime, javax.security.cert.Certificate c) throws javax.security.cert.CertificateEncodingException {
-        RubyClass cr = (RubyClass)(((RubyModule)(runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
-        return cr.callMethod(runtime.getCurrentContext(),"new",RubyString.newString(runtime, c.getEncoded()));
+        RubyClass cr = Utils.getClassFromPath(runtime, "OpenSSL::X509::Certificate");
+        return cr.callMethod(runtime.getCurrentContext(), "new", RubyString.newString(runtime, c.getEncoded()));
     }
 
     @JRubyMethod(name="initialize", optional = 1, frame=true)
@@ -181,7 +181,8 @@ public class X509Cert extends RubyObject {
                 String critOid = iter.next();
                 byte[] value = cert.getExtensionValue(critOid);
                 IRubyObject rValue = ASN1.decode(ossl.getConstant("ASN1"), runtime.newString(new ByteList(value, false))).callMethod(tc, "value");
-                X509Extensions.Extension ext = (X509Extensions.Extension) (((RubyClass) (((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Extension"))).callMethod(tc, "new", new IRubyObject[]{runtime.newString(critOid), rValue, runtime.getTrue()}));
+                X509Extensions.Extension ext = (X509Extensions.Extension) x509.getConstant("Extension").callMethod(tc, "new",
+                        new IRubyObject[] { runtime.newString(critOid), rValue, runtime.getTrue() });
                 add_extension(ext);
             }
         }
@@ -192,7 +193,8 @@ public class X509Cert extends RubyObject {
                 String ncritOid = iter.next();
                 byte[] value = cert.getExtensionValue(ncritOid);
                 IRubyObject rValue = ASN1.decode(ossl.getConstant("ASN1"), runtime.newString(new ByteList(value, false))).callMethod(tc, "value");
-                X509Extensions.Extension ext = (X509Extensions.Extension) (((RubyClass) (((RubyModule) (getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Extension"))).callMethod(tc, "new", new IRubyObject[]{runtime.newString(ncritOid), rValue, runtime.getFalse()}));
+                X509Extensions.Extension ext = (X509Extensions.Extension) x509.getConstant("Extension").callMethod(tc, "new",
+                        new IRubyObject[] { runtime.newString(ncritOid), rValue, runtime.getFalse() });
                 add_extension(ext);
             }
         }
@@ -212,7 +214,7 @@ public class X509Cert extends RubyObject {
     }
 
     public static RaiseException newCertificateError(Ruby runtime, String message) {
-        throw new RaiseException(runtime, (RubyClass)runtime.getClassFromPath("OpenSSL::X509::CertificateError"), message, true);
+        throw Utils.newError(runtime, "OpenSSL::X509::CertificateError", message);
     }
 
     @Override

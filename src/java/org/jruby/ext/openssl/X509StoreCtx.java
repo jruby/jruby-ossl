@@ -75,14 +75,14 @@ public class X509StoreCtx extends RubyObject {
     public X509StoreCtx(Ruby runtime, RubyClass type) {
         super(runtime, type);
         ctx = new StoreContext();
-        cX509Cert = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
+        cX509Cert = Utils.getClassFromPath(runtime, "OpenSSL::X509::Certificate");
     }
 
     // constructor for creating callback parameter object of verify_cb
     X509StoreCtx(Ruby runtime, RubyClass type, StoreContext ctx) {
         super(runtime, type);
         this.ctx = ctx;
-        cX509Cert = (RubyClass) (((RubyModule) (runtime.getModule("OpenSSL").getConstant("X509"))).getConstant("Certificate"));
+        cX509Cert = Utils.getClassFromPath(runtime, "OpenSSL::X509::Certificate");
     }
 
     @JRubyMethod(name="initialize", rest=true, frame=true)
@@ -223,6 +223,6 @@ public class X509StoreCtx extends RubyObject {
     }
 
     private static RaiseException newStoreError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("X509")).getClass("StoreError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::X509::StoreError", message);
     }
 }// X509StoreCtx

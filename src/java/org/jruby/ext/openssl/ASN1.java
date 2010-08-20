@@ -610,7 +610,7 @@ public class ASN1 {
         }
 
         protected void asn1Error(String msg) {
-            throw new RaiseException(getRuntime(), (RubyClass)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("ASN1"))).getConstant("ASN1Error")), msg, true);
+            throw Utils.newError(getRuntime(), "OpenSSL::ASN1::ASN1Error", msg);
         }
 
         @JRubyMethod
@@ -899,12 +899,13 @@ public class ASN1 {
                     if(obj instanceof ASN1Data) {
                         vec.add(((ASN1Data)obj).toASN1());
                     } else {
-                        vec.add(((ASN1Data)ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),OpenSSLImpl.to_der_if_possible(obj))).toASN1());
+                        vec.add(((ASN1Data) ASN1.decode(getRuntime().getClassFromPath("OpenSSL::ASN1"), OpenSSLImpl.to_der_if_possible(obj))).toASN1());
                     }
                 }
                 try {
                     @SuppressWarnings("unchecked")
-                    ASN1Encodable result = (ASN1Encodable)(((Class<? extends ASN1Encodable>)(ASN1_INFO[id][1])).getConstructor(new Class[]{DEREncodableVector.class}).newInstance(new Object[]{vec}));
+                    ASN1Encodable result = ((Class<? extends ASN1Encodable>) (ASN1_INFO[id][1])).getConstructor(new Class[] { DEREncodableVector.class })
+                            .newInstance(new Object[] { vec });
                     return result;
                 } catch (Exception e) {
                     throw RaiseException.createNativeRaiseException(getRuntime(), e);

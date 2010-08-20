@@ -129,16 +129,15 @@ public class Request extends RubyObject {
             throw newX509ReqError(getRuntime(), gse.getMessage());
         }
 
-        ThreadContext tc = getRuntime().getCurrentContext();
         if("RSA".equalsIgnoreCase(algo)) {
-            this.public_key = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("RSA").callMethod(tc,"new",RubyString.newString(getRuntime(), enc));
+            this.public_key = Utils.newRubyInstance(getRuntime(), "OpenSSL::PKey::RSA", RubyString.newString(getRuntime(), enc));
         } else if("DSA".equalsIgnoreCase(algo)) {
-            this.public_key = ((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("PKey"))).getClass("DSA").callMethod(tc,"new",RubyString.newString(getRuntime(), enc));
+            this.public_key = Utils.newRubyInstance(getRuntime(), "OpenSSL::PKey::DSA", RubyString.newString(getRuntime(), enc));
         } else {
             throw getRuntime().newLoadError("not implemented algo for public key: " + algo);
         }
         org.bouncycastle.asn1.x509.X509Name subName = req.getCertificationRequestInfo().getSubject();
-        subject = ((RubyModule)getRuntime().getModule("OpenSSL").getConstant("X509")).getClass("Name").callMethod(tc,"new");
+        subject = Utils.newRubyInstance(getRuntime(), "OpenSSL::X509::Name");
         DERSequence subNameD = (DERSequence)subName.toASN1Object();
         for(int i=0;i<subNameD.size();i++) {
             DERSequence internal = (DERSequence)((DERSet)subNameD.getObjectAt(i)).getObjectAt(0);
@@ -158,8 +157,8 @@ public class Request extends RubyObject {
                 DERObjectIdentifier v0 = (DERObjectIdentifier)val.getObjectAt(0);
                 DERObject v1 = (DERObject)val.getObjectAt(1);
                 IRubyObject a1 = getRuntime().newString(ASN1.getSymLookup(getRuntime()).get(v0));
-                IRubyObject a2 = ASN1.decode(getRuntime().getModule("OpenSSL").getConstant("ASN1"),RubyString.newString(getRuntime(), v1.getDEREncoded()));
-                add_attribute(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Attribute").callMethod(tc,"new",new IRubyObject[]{a1,a2}));
+                IRubyObject a2 = ASN1.decode(getRuntime().getClassFromPath("OpenSSL::ASN1"), RubyString.newString(getRuntime(), v1.getDEREncoded()));
+                add_attribute(Utils.newRubyInstance(getRuntime(), "OpenSSL::X509::Attribute", new IRubyObject[] { a1, a2 }));
             }
         }
         this.valid = true;
@@ -337,6 +336,6 @@ public class Request extends RubyObject {
     }
 
     private static RaiseException newX509ReqError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("X509")).getClass("RequestError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::X509::RequestError", message);
     }
 }// Request

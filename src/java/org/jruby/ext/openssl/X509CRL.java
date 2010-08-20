@@ -162,8 +162,8 @@ public class X509CRL extends RubyObject {
         }
         set_last_update(RubyTime.newTime(getRuntime(),crl.getThisUpdate().getTime()));
         set_next_update(RubyTime.newTime(getRuntime(),crl.getNextUpdate().getTime()));
-        ThreadContext tc = getRuntime().getCurrentContext();
-        set_issuer(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Name").callMethod(tc,"new",RubyString.newString(getRuntime(), crl.getIssuerX500Principal().getEncoded())));
+        RubyString name = RubyString.newString(getRuntime(), crl.getIssuerX500Principal().getEncoded());
+        set_issuer(Utils.newRubyInstance(getRuntime(), "OpenSSL::X509::Name", name));
 
         revoked = getRuntime().newArray();
 
@@ -179,14 +179,15 @@ public class X509CRL extends RubyObject {
                     critical = true;
                 }
                 byte[] value = crl.getExtensionValue(oid);
-                IRubyObject mASN1 = (getRuntime().getModule("OpenSSL")).getConstant("ASN1");
+                IRubyObject mASN1 = getRuntime().getClassFromPath("OpenSSL::ASN1");
                 IRubyObject rValue = null;
                 try {
-                    rValue = ASN1.decode(mASN1,ASN1.decode(mASN1,RubyString.newString(getRuntime(), value)).callMethod(tc,"value"));
+                    rValue = ASN1.decode(mASN1,
+                            ASN1.decode(mASN1, RubyString.newString(getRuntime(), value)).callMethod(getRuntime().getCurrentContext(), "value"));
                 } catch(Exception e) {
                     rValue = RubyString.newString(getRuntime(), value);
                 }
-                X509Extensions.Extension ext1 = (X509Extensions.Extension)(((RubyModule)(getRuntime().getModule("OpenSSL").getConstant("X509"))).getConstant("Extension").callMethod(tc,"new"));
+                X509Extensions.Extension ext1 = (X509Extensions.Extension) Utils.newRubyInstance(getRuntime(), "OpenSSL::X509::Extension");
                 ext1.setRealOid(ext1.getObjectIdentifier(oid));
                 ext1.setRealValue(rValue);
                 ext1.setRealCritical(critical);
@@ -471,6 +472,6 @@ public class X509CRL extends RubyObject {
     }
 
     private static RaiseException newX509CRLError(Ruby runtime, String message) {
-        return new RaiseException(runtime, ((RubyModule) runtime.getModule("OpenSSL").getConstant("X509")).getClass("CRLError"), message, true);
+        return Utils.newError(runtime, "OpenSSL::X509::CRLError", message);
     }
 }// X509CRL
