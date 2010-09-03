@@ -65,7 +65,6 @@ import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
-import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 
 /**
@@ -114,7 +113,6 @@ public class X509CRL extends RubyObject {
 
     @JRubyMethod(name="initialize", rest=true, frame=true)
     public IRubyObject _initialize(IRubyObject[] args, Block block) {
-        //        System.err.println("WARNING: unimplemented method called: CRL#initialize");
         extensions = new ArrayList<IRubyObject>();
         if(org.jruby.runtime.Arity.checkArgumentCount(getRuntime(),args,0,1) == 0) {
             version = getRuntime().getNil();
