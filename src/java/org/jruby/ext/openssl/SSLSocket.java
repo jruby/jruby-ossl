@@ -28,9 +28,9 @@
 package org.jruby.ext.openssl;
 
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -100,7 +100,7 @@ public class SSLSocket extends RubyObject {
 
     private org.jruby.ext.openssl.SSLContext rubyCtx;
     private SSLEngine engine;
-    private SocketChannel c = null;
+    private RubyIO io = null;
 
     private ByteBuffer peerAppData;
     private ByteBuffer peerNetData;
@@ -116,19 +116,18 @@ public class SSLSocket extends RubyObject {
     
     @JRubyMethod(name = "initialize", rest = true, frame = true)
     public IRubyObject _initialize(IRubyObject[] args, Block unused) {
-        IRubyObject io;
         if (Arity.checkArgumentCount(getRuntime(), args, 1, 2) == 1) {
             RubyClass sslContext = Utils.getClassFromPath(getRuntime(), "OpenSSL::SSL::SSLContext");
             rubyCtx = (org.jruby.ext.openssl.SSLContext) api.callMethod(sslContext, "new");
         } else {
             rubyCtx = (org.jruby.ext.openssl.SSLContext) args[1];
         }
-        io = args[0];
+        Utils.checkKind(getRuntime(), args[0], "IO");
+        io = (RubyIO) args[0];
         api.callMethod(this, "io=", io);
         // This is a bit of a hack: SSLSocket should share code with RubyBasicSocket, which always sets sync to true.
         // Instead we set it here for now.
         api.callMethod(io, "sync=", getRuntime().getTrue());
-        c = (SocketChannel) (((RubyIO) io).getChannel());
         api.callMethod(this, "context=", rubyCtx);
         api.callMethod(this, "sync_close=", getRuntime().getFalse());
         rubyCtx.setup();
@@ -137,8 +136,9 @@ public class SSLSocket extends RubyObject {
 
     private void ossl_ssl_setup() throws NoSuchAlgorithmException, KeyManagementException, IOException {
         if(null == engine) {
-            String peerHost = c.socket().getInetAddress().getHostName();
-            int peerPort = c.socket().getPort();
+            Socket socket = getSocketChannel().socket();
+            String peerHost = socket.getInetAddress().getHostName();
+            int peerPort = socket.getPort();
             engine = rubyCtx.createSSLEngine(peerHost, peerPort);
             SSLSession session = engine.getSession();
             peerNetData = ByteBuffer.allocate(session.getPacketBufferSize());
@@ -235,19 +235,8 @@ public class SSLSocket extends RubyObject {
     }
 
     private void waitSelect(int operations) throws IOException {
-        Selector sel = null;
-        try {
-            sel = Selector.open();
-            c.register(sel, operations);
-            sel.select();
-        } finally {
-            if (sel != null) {
-                try {
-                    sel.close();
-                } catch (IOException ioe) {
-                }
-            }
-        }
+        ThreadContext ctx = getRuntime().getCurrentContext();
+        ctx.getThread().select(io, operations);
     }
 
     private void doHandshake() throws IOException {
@@ -298,7 +287,7 @@ public class SSLSocket extends RubyObject {
 
     private boolean flushData() throws IOException {		
         try {
-            writeToChannel(c, netData);
+            writeToChannel(netData);
         } catch (IOException ioe) {
             netData.position(netData.limit());
             throw ioe;
@@ -310,12 +299,12 @@ public class SSLSocket extends RubyObject {
         }
     }
     
-    private int writeToChannel(SocketChannel channel, ByteBuffer buffer) throws IOException {
-      int totalWritten = 0;
-      while (buffer.hasRemaining()) {
-        totalWritten += channel.write(buffer);
-      }
-      return totalWritten;
+    private int writeToChannel(ByteBuffer buffer) throws IOException {
+        int totalWritten = 0;
+        while (buffer.hasRemaining()) {
+            totalWritten += getSocketChannel().write(buffer);
+        }
+        return totalWritten;
     }
 
     private void finishInitialHandshake() {
@@ -356,7 +345,7 @@ public class SSLSocket extends RubyObject {
     }
 
     private int readAndUnwrap() throws IOException {
-        int bytesRead = c.read(peerNetData);
+        int bytesRead = getSocketChannel().read(peerNetData);
         if (bytesRead == -1) {
             if (!peerNetData.hasRemaining() || (status == SSLEngineResult.Status.BUFFER_UNDERFLOW)) {
                 closeInbound();
@@ -455,7 +444,7 @@ public class SSLSocket extends RubyObject {
             // ensure >0 bytes read; sysread is blocking read.
             while (rr <= 0) {
                 if (engine == null) {
-                    rr = c.read(dst);
+                    rr = getSocketChannel().read(dst);
                 } else {
                     rr = read(dst);
                 }
@@ -482,7 +471,7 @@ public class SSLSocket extends RubyObject {
             ByteBuffer b1 = ByteBuffer.wrap(bls);
             int written;
             if(engine == null) {
-                written = writeToChannel(c, b1);
+                written = writeToChannel(b1);
             } else {
                 written = write(b1);
             }
@@ -590,5 +579,9 @@ public class SSLSocket extends RubyObject {
     public IRubyObject pending() {
         System.err.println("WARNING: unimplemented method called: SSLSocket#pending");
         return getRuntime().getNil();
+    }
+    
+    private SocketChannel getSocketChannel() {
+        return (SocketChannel) io.getChannel();
     }
 }// SSLSocket
