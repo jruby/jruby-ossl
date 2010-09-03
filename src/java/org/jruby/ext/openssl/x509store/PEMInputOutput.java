@@ -43,7 +43,6 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.security.cert.X509CRL;
 import java.security.cert.CertificateEncodingException;
-import java.security.cert.CRLException;
 import java.security.interfaces.DSAPublicKey;
 import java.security.interfaces.DSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -58,6 +57,7 @@ import javax.crypto.spec.DHParameterSpec;
 import org.jruby.ext.openssl.OpenSSLReal;
 import org.jruby.ext.openssl.PKCS10CertificationRequestExt;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OutputStream;
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -81,6 +81,7 @@ import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 import org.bouncycastle.cms.CMSSignedData;
 
+import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -581,15 +582,53 @@ public class PEMInputOutput {
         // close enough for internal throw/catch
         throw new InvalidParameterSpecException("invalid " + PEM_STRING_DHPARAMS);
     }
+    
+    private static byte[] getEncoded(java.security.Key key) {
+        if (key != null) {
+            return key.getEncoded();
+        }
+        return new byte[] { '0', 0 };
+    }
+
+    private static byte[] getEncoded(ASN1Encodable obj) throws IOException {
+        if (obj != null) {
+            return obj.getEncoded();
+        }
+        return new byte[] { '0', 0 };
+    }
+
+    private static byte[] getEncoded(CMSSignedData obj) throws IOException {
+        if (obj != null) {
+            return obj.getEncoded();
+        }
+        return new byte[] { '0', 0 };
+    }
+
+    private static byte[] getEncoded(X509Certificate cert) throws IOException {
+        if (cert != null) {
+            try {
+                return cert.getEncoded();
+            } catch (GeneralSecurityException gse) {
+                throw new IOException("problem with encoding object in write_X509");
+            }
+        }
+        return new byte[] { '0', 0 };
+    }
+
+    private static byte[] getEncoded(X509CRL crl) throws IOException {
+        if (crl != null) {
+            try {
+                return crl.getEncoded();
+            } catch (GeneralSecurityException gse) {
+                throw new IOException("problem with encoding object in write_X509_CRL");
+            }
+        }
+        return new byte[] { '0', 0 };
+    }
 
     public static void writeDSAPublicKey(Writer _out, DSAPublicKey obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        byte[] encoding = null;
-        if (obj != null) {
-            encoding = obj.getEncoded();
-        } else {
-            encoding = new byte[]{'0', 0};
-        }
+        byte[] encoding = getEncoded(obj);
         out.write(BEF_G + PEM_STRING_DSA_PUBLIC + AFT);
         out.newLine();
         writeEncoded(out, encoding);
@@ -600,12 +639,7 @@ public class PEMInputOutput {
     /** writes an RSA public key encoded in an PKCS#1 RSA structure. */
     public static void writeRSAPublicKey(Writer _out, RSAPublicKey obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        byte[] encoding = null;
-        if (obj != null) {
-            encoding = obj.getEncoded();
-        } else {
-            encoding = new byte[]{'0', 0};
-        }
+        byte[] encoding = getEncoded(obj);
         out.write(BEF_G + PEM_STRING_RSA_PUBLIC + AFT);
         out.newLine();
         writeEncoded(out, encoding);
@@ -615,7 +649,7 @@ public class PEMInputOutput {
     }
     public static void writePKCS7(Writer _out, ContentInfo obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        byte[] encoding = obj.getEncoded();
+        byte[] encoding = getEncoded(obj);
         out.write(BEF_G + PEM_STRING_PKCS7 + AFT);
         out.newLine();
         writeEncoded(out,encoding);
@@ -625,7 +659,7 @@ public class PEMInputOutput {
     }
     public static void writePKCS7(Writer _out, CMSSignedData obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        byte[] encoding = obj.getEncoded();
+        byte[] encoding = getEncoded(obj);
         out.write(BEF_G + PEM_STRING_PKCS7 + AFT);
         out.newLine();
         writeEncoded(out,encoding);
@@ -644,17 +678,13 @@ public class PEMInputOutput {
     }
     public static void writeX509Certificate(Writer _out, X509Certificate obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        try {
-            byte[] encoding = obj.getEncoded();
-            out.write(BEF_G + PEM_STRING_X509 + AFT);
-            out.newLine();
-            writeEncoded(out,encoding);
-            out.write(BEF_E + PEM_STRING_X509 + AFT);
-            out.newLine();
-            out.flush();
-        } catch(CertificateEncodingException e) {
-            throw new IOException("problem with encoding object in write_X509");
-        }
+        byte[] encoding = getEncoded(obj);
+        out.write(BEF_G + PEM_STRING_X509 + AFT);
+        out.newLine();
+        writeEncoded(out, encoding);
+        out.write(BEF_E + PEM_STRING_X509 + AFT);
+        out.newLine();
+        out.flush();
     }
     public static void writeX509Aux(Writer _out, X509AuxCertificate obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
@@ -712,21 +742,17 @@ public class PEMInputOutput {
     }
     public static void writeX509CRL(Writer _out, X509CRL obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        try {
-            byte[] encoding = obj.getEncoded();
-            out.write(BEF_G + PEM_STRING_X509_CRL + AFT);
-            out.newLine();
-            writeEncoded(out,encoding);
-            out.write(BEF_E + PEM_STRING_X509_CRL + AFT);
-            out.newLine();
-            out.flush();
-        } catch(CRLException e) {
-            throw new IOException("problem with encoding object in write_X509_CRL");
-        }
+        byte[] encoding = getEncoded(obj);
+        out.write(BEF_G + PEM_STRING_X509_CRL + AFT);
+        out.newLine();
+        writeEncoded(out, encoding);
+        out.write(BEF_E + PEM_STRING_X509_CRL + AFT);
+        out.newLine();
+        out.flush();
     }
     public static void writeX509Request(Writer _out, PKCS10CertificationRequestExt obj) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        byte[] encoding = obj.getEncoded();
+        byte[] encoding = getEncoded(obj);
         out.write(BEF_G + PEM_STRING_X509_REQ + AFT);
         out.newLine();
         writeEncoded(out,encoding);
@@ -746,7 +772,7 @@ public class PEMInputOutput {
 
     public static void writeDSAPrivateKey(Writer _out, DSAPrivateKey obj, String algo, char[] f) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        ByteArrayInputStream    bIn = new ByteArrayInputStream(obj.getEncoded());
+        ByteArrayInputStream    bIn = new ByteArrayInputStream(getEncoded(obj));
         ASN1InputStream         aIn = new ASN1InputStream(bIn);
         PrivateKeyInfo          info = new PrivateKeyInfo((ASN1Sequence)aIn.readObject());
         ByteArrayOutputStream   bOut = new ByteArrayOutputStream();
@@ -817,6 +843,7 @@ public class PEMInputOutput {
     }
 
     public static void writeRSAPrivateKey(Writer _out, RSAPrivateCrtKey obj, String algo, char[] f) throws IOException {
+        assert(obj != null);
         BufferedWriter out = makeBuffered(_out);
         RSAPrivateKeyStructure keyStruct = new RSAPrivateKeyStructure(
                 obj.getModulus(),

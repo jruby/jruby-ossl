@@ -61,4 +61,27 @@ END
 
     assert_equal "24:D1:34:18:66:91:2A:63:76:AA:19:CE:17:20:56:56:5E:10:8F:AA", key_id.value
   end
+
+  # JRUBY-5060
+  def test_to_pem_with_empty_object
+    empty_cert = "MCUwGwIAMAMGAQAwADAEHwAfADAAMAgwAwYBAAMBADADBgEAAwEA"
+    empty_req = "MBowEAIAMAAwCDADBgEAAwEAoAAwAwYBAAMBAA=="
+    empty_crl = "MBMwCTADBgEAMAAfADADBgEAAwEA"
+    empty_key = "MAA="
+    #assert_equal(empty_cert, OpenSSL::X509::Certificate.new.to_pem.split("\n")[1])
+    #assert_equal(empty_req, OpenSSL::X509::Request.new.to_pem.split("\n")[1])
+    #assert_equal(empty_crl, OpenSSL::X509::CRL.new.to_pem.split("\n")[1])
+    assert_nothing_raised do
+      OpenSSL::X509::Certificate.new.to_pem
+    end
+    assert_nothing_raised do
+      OpenSSL::X509::Request.new.to_pem
+    end
+    assert_nothing_raised do
+      OpenSSL::X509::CRL.new.to_pem
+    end
+    assert_equal(empty_key, OpenSSL::PKey::RSA.new.to_pem.split("\n")[1])
+    assert_equal(empty_key, OpenSSL::PKey::DSA.new.to_pem.split("\n")[1])
+    assert_equal(empty_key, OpenSSL::PKey::DH.new.to_pem.split("\n")[1])
+  end
 end
