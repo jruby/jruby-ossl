@@ -306,7 +306,7 @@ public class Cipher extends RubyObject {
         padding_type = values[4];
         ciph = getCipher();
 
-        if (hasLen() && null != cryptoVersion) {
+        if (hasLen(cryptoBase) && null != cryptoVersion) {
             try {
                 keyLen = Integer.parseInt(cryptoVersion) / 8;
             } catch (NumberFormatException e) {
@@ -545,10 +545,6 @@ public class Cipher extends RubyObject {
         } catch (javax.crypto.NoSuchPaddingException e) {
             throw newCipherError(getRuntime(), "unsupported cipher padding (" + realName + ")");
         }
-    }
-
-    private boolean hasLen() {
-        return hasLen(this.cryptoBase);
     }
 
     private static boolean hasLen(String cryptoBase) {
