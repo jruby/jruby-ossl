@@ -11,6 +11,10 @@ class TestX509Store < Test::Unit::TestCase
     @store = OpenSSL::X509::Store.new
   end
 
+  def path(file)
+    File.expand_path(file, File.dirname(__FILE__))
+  end
+
   def teardown
   end
 
@@ -38,8 +42,8 @@ class TestX509Store < Test::Unit::TestCase
   end
 
   def test_purpose_ssl_client
-    @store.add_file("test/fixture/purpose/cacert.pem")
-    cert = OpenSSL::X509::Certificate.new(File.read("test/fixture/purpose/sslclient.pem"))
+    @store.add_file(path("fixture/purpose/cacert.pem"))
+    cert = OpenSSL::X509::Certificate.new(File.read(path("fixture/purpose/sslclient.pem")))
     @store.purpose = OpenSSL::X509::PURPOSE_SSL_CLIENT
     assert_equal(true, @store.verify(cert))
     @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
@@ -49,8 +53,8 @@ class TestX509Store < Test::Unit::TestCase
   end
 
   def test_purpose_ssl_server
-    @store.add_file("test/fixture/purpose/cacert.pem")
-    cert = OpenSSL::X509::Certificate.new(File.read("test/fixture/purpose/sslserver.pem"))
+    @store.add_file(path("fixture/purpose/cacert.pem"))
+    cert = OpenSSL::X509::Certificate.new(File.read(path("fixture/purpose/sslserver.pem")))
     @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
     assert_equal(true, @store.verify(cert))
     @store.purpose = OpenSSL::X509::PURPOSE_SSL_CLIENT
@@ -65,12 +69,12 @@ class TestX509Store < Test::Unit::TestCase
     f << "junk junk\n"
     f << "junk junk\n"
     f << "junk junk\n"
-    f << File.read("test/fixture/purpose/cacert.pem")
+    f << File.read(path("fixture/purpose/cacert.pem"))
     f.close
     @store.add_file(f.path)
     f.unlink
 
-    cert = OpenSSL::X509::Certificate.new(File.read("test/fixture/purpose/sslserver.pem"))
+    cert = OpenSSL::X509::Certificate.new(File.read(path("fixture/purpose/sslserver.pem")))
     @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
     assert_equal(true, @store.verify(cert))
     @store.purpose = OpenSSL::X509::PURPOSE_SSL_CLIENT
@@ -83,17 +87,17 @@ class TestX509Store < Test::Unit::TestCase
   # subject. ruby-openssl just ignores the second certificate.
   def test_add_file_JRUBY_4409
     assert_nothing_raised do
-      @store.add_file("test/fixture/ca-bundle.crt")
+      @store.add_file(path("fixture/ca-bundle.crt"))
     end
   end
 
   def test_set_default_paths
     @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
-    cert = OpenSSL::X509::Certificate.new(File.read("test/fixture/purpose/sslserver.pem"))
+    cert = OpenSSL::X509::Certificate.new(File.read(path("fixture/purpose/sslserver.pem")))
     assert_equal(false, @store.verify(cert))
     begin
       backup = ENV['SSL_CERT_DIR']
-      ENV['SSL_CERT_DIR'] = 'test/fixture/purpose/'
+      ENV['SSL_CERT_DIR'] = path('fixture/purpose/')
       @store.set_default_paths
       assert_equal(true, @store.verify(cert))
     ensure

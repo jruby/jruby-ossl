@@ -6,6 +6,10 @@ require "test/unit"
 require 'net/https'
 
 class TestIntegration < Test::Unit::TestCase
+  def path(file)
+    File.expand_path(file, File.dirname(__FILE__))
+  end
+
   # JRUBY-2471
   def _test_drb
     config = {
@@ -25,7 +29,7 @@ class TestIntegration < Test::Unit::TestCase
     uri = URI.parse('https://www.amazon.com')
     http = Net::HTTP.new(uri.host, uri.port)
     http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    http.ca_path = "test/fixture/ca_path/"
+    http.ca_path = path("fixture/ca_path/")
     http.use_ssl = true
     response = http.start do |s|
       assert s.get(uri.request_uri).length > 0
@@ -40,7 +44,7 @@ class TestIntegration < Test::Unit::TestCase
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_PEER
     # right trust anchor for www.amazon.com
-    http.ca_file = 'test/fixture/verisign.pem'
+    http.ca_file = path('fixture/verisign.pem')
     response = http.start do |s|
       assert s.get(uri.request_uri).length > 0
     end
@@ -48,7 +52,7 @@ class TestIntegration < Test::Unit::TestCase
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    http.ca_file = 'test/fixture/verisign_c3.pem'
+    http.ca_file = path('fixture/verisign_c3.pem')
     assert_raise(OpenSSL::SSL::SSLError) do
       # it must cause SSLError for verification failure.
       response = http.start do |s|
@@ -59,7 +63,7 @@ class TestIntegration < Test::Unit::TestCase
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    http.ca_file = 'test/fixture/verisign.pem'
+    http.ca_file = path('fixture/verisign.pem')
     response = http.start do |s|
       assert s.get(uri.request_uri).length > 0
     end
@@ -73,7 +77,7 @@ class TestIntegration < Test::Unit::TestCase
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_PEER
     # right trust anchor for www.amazon.com
-    http.ca_file = 'test/fixture/verisign_c3.pem'
+    http.ca_file = path('fixture/verisign_c3.pem')
     response = http.start do |s|
       assert s.get(uri.request_uri).length > 0
     end
