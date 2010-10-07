@@ -142,6 +142,25 @@ class TestCipher < Test::Unit::TestCase
     assert_equal("RC4", OpenSSL::Cipher::Cipher.new("rc4").name)
   end
 
+  # JRUBY-5126
+  def test_stream_cipher_reset_should_be_ignored
+    c1 = "%E\x96\xDAZ\xEF\xB2$/\x9F\x02"
+    c2 = ">aV\xB0\xE1l\xF3oyL\x9B"
+    #
+    cipher = OpenSSL::Cipher::Cipher.new("RC4")
+    cipher.encrypt
+    cipher.key = "\0\1\2\3" * (128/8/4)
+    str = cipher.update('hello,world')
+    str += cipher.final
+    assert_equal(c1, str)
+    #
+    cipher.reset
+    cipher.iv = "\0" * 16
+    str = cipher.update('hello,world')
+    str += cipher.final
+    assert_equal(c2, str) # was equal to c1 before the fix
+  end
+
   private
   def do_repeated_test(algo, string, enc1, enc2)
     do_repeated_encrypt_test(algo, string, enc1, enc2)

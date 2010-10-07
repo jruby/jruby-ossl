@@ -459,7 +459,9 @@ public class Cipher extends RubyObject {
             this.realIV = iv2;
         }
         this.orgIV = this.realIV;
-        ciphInited = false;
+        if (!isStreamCipher()) {
+            ciphInited = false;
+        }
         return iv;
     }
 
@@ -528,8 +530,10 @@ public class Cipher extends RubyObject {
 
     @JRubyMethod
     public IRubyObject reset() {
-        this.realIV = orgIV;
-        doInitialize();
+        if (!isStreamCipher()) {
+            this.realIV = orgIV;
+            doInitialize();
+        }
         return this;
     }
 
@@ -740,6 +744,10 @@ public class Cipher extends RubyObject {
 
     int getGenerateKeyLen() {
         return (generateKeyLen == -1) ? keyLen : generateKeyLen;
+    }
+    
+    private boolean isStreamCipher() {
+        return ciph.getBlockSize() == 0;
     }
 
     private static RaiseException newCipherError(Ruby runtime, String message) {
