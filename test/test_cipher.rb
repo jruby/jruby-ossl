@@ -137,6 +137,11 @@ class TestCipher < Test::Unit::TestCase
     assert_equal(e2, e1, "JRUBY-4012")
   end
 
+  # JRUBY-5125
+  def test_rc4_cipher_name
+    assert_equal("RC4", OpenSSL::Cipher::Cipher.new("rc4").name)
+  end
+
   private
   def do_repeated_test(algo, string, enc1, enc2)
     do_repeated_encrypt_test(algo, string, enc1, enc2)

@@ -344,6 +344,12 @@ public class Cipher extends RubyObject {
                 ivLen = 8;
             }
         }
+        
+        // given 'rc4' must be 'RC4' here. OpenSSL checks it as a LN of object
+        // ID and set SN. We don't check 'name' is allowed as a LN in ASN.1 for
+        // the possibility of JCE specific algorithm so just do upperCase here
+        // for OpenSSL compatibility.
+        name = name.toUpperCase();
 
         return this;
     }
