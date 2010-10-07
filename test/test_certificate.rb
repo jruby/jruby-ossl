@@ -84,4 +84,13 @@ END
     assert_equal(empty_key, OpenSSL::PKey::DSA.new.to_pem.split("\n")[1])
     assert_equal(empty_key, OpenSSL::PKey::DH.new.to_pem.split("\n")[1])
   end
+
+  # JRUBY-5096
+  def test_verify_failed_by_lazy_public_key_initialization
+    msg = 'hello,world'
+    digester = OpenSSL::Digest::SHA1.new
+    sig = @key.sign(digester, msg)
+    assert(@cert.public_key.verify(digester, sig, msg))
+    assert(@cert.verify(@cert.public_key))
+  end
 end

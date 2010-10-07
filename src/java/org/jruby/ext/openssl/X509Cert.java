@@ -385,6 +385,7 @@ public class X509Cert extends RubyObject {
         RubyModule ossl = getRuntime().getModule("OpenSSL");
         RubyModule pkey = (RubyModule) ossl.getConstant("PKey");
         ThreadContext tc = getRuntime().getCurrentContext();
+        boolean backupChanged = changed;
         if ("RSA".equalsIgnoreCase(public_key_algorithm)) {
             set_public_key(pkey.getConstant("RSA").callMethod(tc, "new", RubyString.newString(getRuntime(), public_key_encoded)));
         } else if ("DSA".equalsIgnoreCase(public_key_algorithm)) {
@@ -392,6 +393,7 @@ public class X509Cert extends RubyObject {
         } else {
             throw newCertificateError(getRuntime(), "The algorithm " + public_key_algorithm + " is unsupported for public keys");
         }
+        changed = backupChanged;
     }
 
     @JRubyMethod
