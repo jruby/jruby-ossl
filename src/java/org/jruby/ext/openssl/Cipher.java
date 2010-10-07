@@ -467,7 +467,7 @@ public class Cipher extends RubyObject {
 
     @JRubyMethod
     public IRubyObject block_size() {
-        if ("RC4".equalsIgnoreCase(cryptoBase)) {
+        if (isStreamCipher()) {
             // getBlockSize() returns 0 for stream cipher in JCE. OpenSSL returns 1 for RC4.
             return getRuntime().newFixnum(1);
         }
