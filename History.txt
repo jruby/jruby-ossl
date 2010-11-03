@@ -1,7 +1,17 @@
 == 0.7.2
 
-- Fix for JRUBY-5018: SSLSocket holds selectors, keys, preventing
-  quick cleanup of resources when dereferenced
+- JRUBY-5126: Ignore Cipher#reset and Cipher#iv= when it's a stream
+  cipher.
+- JRUBY-5125: let Cipher#name for 'rc4' to be 'RC4'.
+- JRUBY-5096: Do not set dirty flag by public_key lazy initialization.
+- JRUBY-5060: Avoid NPE from to_pem for empty Object
+- JRUBY-5059: SSLSocket ignores Timeout
+- JRUBY-4965: implement OpenSSL::Config
+- JRUBY-5023: make Certificate#signature_algorithm return correct algo
+  name.
+- JRUBY-5024: let HMAC.new accept a String as a digest name.
+- JRUBY-5018: SSLSocket holds selectors, keys, preventing quick
+  cleanup of resources when dereferenced
 
 == 0.7.1
 
