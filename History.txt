@@ -1,15 +1,16 @@
 == 0.7.2
 
 - JRUBY-5126: Ignore Cipher#reset and Cipher#iv= when it's a stream
-  cipher.
-- JRUBY-5125: let Cipher#name for 'rc4' to be 'RC4'.
-- JRUBY-5096: Do not set dirty flag by public_key lazy initialization.
-- JRUBY-5060: Avoid NPE from to_pem for empty Object
-- JRUBY-5059: SSLSocket ignores Timeout
-- JRUBY-4965: implement OpenSSL::Config
+  cipher (Net::SSH compatibility)
+- JRUBY-5125: let Cipher#name for 'rc4' to be 'RC4' (Net::SSH
+  compatibility)
+- JRUBY-5096: Fixed inconsistent Certificate verification behavior
+- JRUBY-5060: Avoid NPE from to_pem for empty X509 Objects
+- JRUBY-5059: SSLSocket ignores Timeout (Fixed)
+- JRUBY-4965: implemented OpenSSL::Config
 - JRUBY-5023: make Certificate#signature_algorithm return correct algo
-  name.
-- JRUBY-5024: let HMAC.new accept a String as a digest name.
+  name; "sha1WithRSAEncryption" instead of "SHA1"
+- JRUBY-5024: let HMAC.new accept a String as a digest name
 - JRUBY-5018: SSLSocket holds selectors, keys, preventing quick
   cleanup of resources when dereferenced
 
