@@ -80,9 +80,9 @@ END
     assert_nothing_raised do
       OpenSSL::X509::CRL.new.to_pem
     end
-    assert_equal(empty_key, OpenSSL::PKey::RSA.new.to_pem.split("\n")[1])
-    assert_equal(empty_key, OpenSSL::PKey::DSA.new.to_pem.split("\n")[1])
-    assert_equal(empty_key, OpenSSL::PKey::DH.new.to_pem.split("\n")[1])
+    assert_equal(empty_key, OpenSSL::PKey::RSA.new.to_pem.split("\n")[1].chomp)
+    assert_equal(empty_key, OpenSSL::PKey::DSA.new.to_pem.split("\n")[1].chomp)
+    assert_equal(empty_key, OpenSSL::PKey::DH.new.to_pem.split("\n")[1].chomp)
   end
 
   # JRUBY-5096
