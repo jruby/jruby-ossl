@@ -30,12 +30,15 @@ package org.jruby.ext.openssl;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
+import java.util.Set;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -53,6 +56,7 @@ import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyObjectAdapter;
 import org.jruby.RubyString;
+import org.jruby.RubyThread;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.X509Utils;
@@ -235,8 +239,71 @@ public class SSLSocket extends RubyObject {
     }
 
     private void waitSelect(int operations) throws IOException {
+        if (!(io.getChannel() instanceof SelectableChannel)) {
+            return;
+        }
+        SelectableChannel selectable = (SelectableChannel)io.getChannel();
         ThreadContext ctx = getRuntime().getCurrentContext();
-        ctx.getThread().select(io, operations);
+        RubyThread thread = ctx.getThread();
+        
+        selectable.configureBlocking(false);
+        SelectionKey key = null;
+        Selector currentSelector = null;
+        try {
+            selectable.configureBlocking(false);
+            
+            io.addBlockingThread(thread);
+            currentSelector = getRuntime().getSelectorPool().get();
+
+            key = selectable.register(currentSelector, operations);
+
+            ctx.getThread().beforeBlockingCall();
+            int result = currentSelector.select();
+
+            // check for thread events, in case we've been woken up to die
+            ctx.getThread().pollThreadEvents();
+
+            if (result == 1) {
+                Set<SelectionKey> keySet = currentSelector.selectedKeys();
+
+                if (keySet.iterator().next() == key) {
+                    return;
+                }
+            }
+        } catch (IOException ioe) {
+            throw getRuntime().newRuntimeError("Error with selector: " + ioe);
+        } finally {
+            // Note: I don't like ignoring these exceptions, but it's
+            // unclear how likely they are to happen or what damage we
+            // might do by ignoring them. Note that the pieces are separate
+            // so that we can ensure one failing does not affect the others
+            // running.
+
+            // clean up the key in the selector
+            try {
+                if (key != null) key.cancel();
+                if (currentSelector != null) currentSelector.selectNow();
+            } catch (Exception e) {
+                // ignore
+            }
+
+            // shut down and null out the selector
+            try {
+                if (currentSelector != null) {
+                    getRuntime().getSelectorPool().put(currentSelector);
+                }
+            } catch (Exception e) {
+                // ignore
+            } finally {
+                currentSelector = null;
+            }
+
+            // remove this thread as a blocker against the given IO
+            io.removeBlockingThread(thread);
+
+            // clear thread state from blocking call
+            ctx.getThread().afterBlockingCall();
+        }
     }
 
     private void doHandshake() throws IOException {
