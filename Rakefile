@@ -49,12 +49,12 @@ task :clean => :more_clean
 
 File.open("Manifest.txt", "w") {|f| MANIFEST.each {|n| f.puts n } }
 
-require File.dirname(__FILE__) + "/lib/jopenssl/version"
 begin
   require 'hoe'
   Hoe.plugin :gemcutter
   Hoe.add_include_dirs('build_lib')
   hoe = Hoe.spec("jruby-openssl") do |p|
+    load File.dirname(__FILE__) + "/lib/jopenssl/version.rb"
     p.version = Jopenssl::Version::VERSION
     p.rubyforge_name = "jruby-extras"
     p.url = "http://jruby-extras.rubyforge.org/jruby-openssl"
