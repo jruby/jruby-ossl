@@ -313,10 +313,15 @@ public class SSLSocket extends RubyObject {
 
     public int write(ByteBuffer src) throws SSLException, IOException {
         if(initialHandshake) {
-            return 0;
+            throw new IOException("Writing not possible during handshake");
         }
         if(netData.hasRemaining()) {
-            return 0;
+            // TODO; remove
+            // This protect should be propagated from
+            // http://www.javadocexamples.com/java_source/ssl/SSLChannel.java.html
+            // to avoid IO selecting problem under MT.
+            // We have different model of selecting so it's safe to be removed I think.
+            throw new IOException("Another thread may be writing");
         }
         netData.clear();
         SSLEngineResult res = engine.wrap(src, netData);
