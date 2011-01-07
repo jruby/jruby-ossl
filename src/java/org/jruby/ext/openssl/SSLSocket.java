@@ -466,6 +466,7 @@ public class SSLSocket extends RubyObject {
     public IRubyObject syswrite(ThreadContext context, IRubyObject arg)  {
         Ruby runtime = context.getRuntime();
         try {
+            checkClosed();
             waitSelect(SelectionKey.OP_WRITE);
             byte[] bls = arg.convertToString().getBytes();
             ByteBuffer b1 = ByteBuffer.wrap(bls);
@@ -480,6 +481,12 @@ public class SSLSocket extends RubyObject {
             return getRuntime().newFixnum(written);
         } catch (IOException ioe) {
             throw runtime.newIOError(ioe.getMessage());
+        }
+    }
+
+    private void checkClosed() {
+        if (!getSocketChannel().isOpen()) {
+            throw getRuntime().newIOError("closed stream");
         }
     }
 
