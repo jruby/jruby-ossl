@@ -27,9 +27,12 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl;
 
+import java.io.StringReader;
 import java.security.MessageDigest;
 
 import org.jruby.Ruby;
+import org.jruby.RubyString;
+import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.builtin.IRubyObject;
 
 /**
@@ -54,6 +57,26 @@ public class OpenSSLImpl {
         } else {
             return obj;
         }
+    }
+    
+    public static byte[] readPEM(IRubyObject arg) {
+        arg = to_der_if_possible(arg);
+        // TODO: should handle RubyFile
+        RubyString str = arg.convertToString();
+        StringReader in = null;
+        try {
+            in = new StringReader(str.getUnicodeValue());
+            byte[] bytes = PEMInputOutput.readPEMToDER(in);
+            if (bytes != null) {
+                return bytes;
+            }
+        } catch (Exception e) {
+            // this is not PEM encoded, let's use the default argument
+            if (in != null) {
+                in.close();
+            }
+        }
+        return str.getBytes();
     }
 
     public static void defaultObjects(Ruby runtime) {

@@ -32,7 +32,6 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.io.IOException;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
@@ -56,7 +55,6 @@ import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
-import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 
 /**
@@ -99,18 +97,7 @@ public class Request extends RubyObject {
             return this;
         }
 
-        byte[] req_bytes = args[0].convertToString().getBytes();
-        // Parse PEM if we ever get passed some PEM contents
-        try {
-            StringReader in = new StringReader(args[0].convertToString().getUnicodeValue());
-            byte[] bytes = PEMInputOutput.readPEMToDER(in);
-            if (bytes != null)
-                req_bytes = bytes;
-            in.close();
-        } catch(Exception e) {
-            // this is not PEM encoded, let's use the default argument
-        }
-
+        byte[] req_bytes = OpenSSLImpl.readPEM(args[0]);
         req = new PKCS10CertificationRequestExt(req_bytes);
         version = getRuntime().newFixnum(req.getVersion());
 

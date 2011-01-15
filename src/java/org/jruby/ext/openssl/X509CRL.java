@@ -29,7 +29,6 @@ package org.jruby.ext.openssl;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
@@ -133,19 +132,7 @@ public class X509CRL extends RubyObject {
             throw newX509CRLError(getRuntime(), gse.getMessage());
         }
 
-        byte[] crl_bytes = args[0].convertToString().getBytes();
-        // Parse PEM if we ever get passed some PEM contents
-        try {
-            StringReader in = new StringReader(args[0].toString());
-            byte[] bytes = PEMInputOutput.readPEMToDER(in);
-            if (bytes != null)
-                crl_bytes = bytes;
-            in.close();
-        }
-        catch(Exception e) {
-            // this is not PEM encoded, let's use the default argument
-        }
-
+        byte[] crl_bytes = OpenSSLImpl.readPEM(args[0]);
         try {
             crl_v = new ASN1InputStream(new ByteArrayInputStream(crl_bytes)).readObject();
         } catch (IOException ioe) {
