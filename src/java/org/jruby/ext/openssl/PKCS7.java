@@ -539,10 +539,6 @@ public class PKCS7 extends RubyObject {
         try {
             p7.decrypt(key, x509, out, flg);
         } catch (PKCS7Exception pkcs7e) {
-            if (getRuntime().isDebug()) {
-                System.err.println(pkcs7e.toString());
-                pkcs7e.printStackTrace(System.err);
-            }
             throw newPKCS7Exception(getRuntime(), pkcs7e);
         }
 
