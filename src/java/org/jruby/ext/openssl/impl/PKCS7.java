@@ -47,6 +47,7 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.RC2ParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -428,7 +429,7 @@ public class PKCS7 {
         try {
             data.crlfCopy(p7bio, flags);
         } catch(IOException e) {
-            throw new PKCS7Exception(F_PKCS7_SIGN, R_PKCS7_DATAFINAL_ERROR, e.toString());
+            throw new PKCS7Exception(F_PKCS7_SIGN, R_PKCS7_DATAFINAL_ERROR, e);
         }
 
         if((flags & DETACHED) != 0) {
@@ -463,7 +464,7 @@ public class PKCS7 {
 
             return p7;
         } catch(IOException e) {
-            throw new PKCS7Exception(F_PKCS7_ENCRYPT, R_PKCS7_DATAFINAL_ERROR, e.toString());
+            throw new PKCS7Exception(F_PKCS7_ENCRYPT, R_PKCS7_DATAFINAL_ERROR, e);
         }
     }
 
@@ -488,7 +489,7 @@ public class PKCS7 {
                 }
             }
         } catch(IOException e) {
-            throw new PKCS7Exception(F_PKCS7_DECRYPT, R_DECRYPT_ERROR, e.toString());
+            throw new PKCS7Exception(F_PKCS7_DECRYPT, R_DECRYPT_ERROR, e);
         }
     }
 
@@ -659,9 +660,10 @@ public class PKCS7 {
             dataBody = getSignedAndEnveloped().getEncData().getEncData().getOctets();
             encAlg = getSignedAndEnveloped().getEncData().getAlgorithm();
             try {
-                evpCipher = getCipherBC(encAlg.getObjectId());
+                evpCipher = getCipher(encAlg.getObjectId());
             } catch(Exception e) {
-                throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
+                e.printStackTrace(System.err);
+                throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE, e);
             }
             break;
         case ASN1Registry.NID_pkcs7_enveloped: 
@@ -669,9 +671,10 @@ public class PKCS7 {
             dataBody = getEnveloped().getEncData().getEncData().getOctets();
             encAlg = getEnveloped().getEncData().getAlgorithm();
             try {
-                evpCipher = getCipherBC(encAlg.getObjectId());
+                evpCipher = getCipher(encAlg.getObjectId());
             } catch(Exception e) {
-                throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE);
+                e.printStackTrace(System.err);
+                throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNSUPPORTED_CIPHER_TYPE, e);
             }
             break;
         default:
@@ -691,7 +694,8 @@ public class PKCS7 {
                     }
                     btmp = null;
                 } catch(Exception e) {
-                    throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNKNOWN_DIGEST_TYPE);
+                    e.printStackTrace(System.err);
+                    throw new PKCS7Exception(F_PKCS7_DATADECODE, R_UNKNOWN_DIGEST_TYPE, e);
                 }
             }
         }
@@ -742,19 +746,31 @@ public class PKCS7 {
                     cipher.init(Cipher.DECRYPT_MODE, pkey);
                     tmp = cipher.doFinal(ri.getEncKey().getOctets());
                 } catch (Exception e) {
-                    throw new PKCS7Exception(F_PKCS7_DATADECODE, -1, e.toString());
+                    e.printStackTrace(System.err);
+                    throw new PKCS7Exception(F_PKCS7_DATADECODE, -1, e);
                 }
             }
 
             DEREncodable params = encAlg.getParameters();
             try {
                 if(params != null && params instanceof ASN1OctetString) {
-                    evpCipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(tmp, evpCipher.getAlgorithm()), new IvParameterSpec(((ASN1OctetString)params).getOctets()));
+                    if (evpCipher.getAlgorithm().startsWith("RC2")) {
+                        // J9's IBMJCE needs this exceptional RC2 support.
+                        // Giving IvParameterSpec throws 'Illegal parameter' on IBMJCE.
+                        SecretKeySpec sks = new SecretKeySpec(tmp, evpCipher.getAlgorithm());
+                        RC2ParameterSpec s = new RC2ParameterSpec(tmp.length * 8, ((ASN1OctetString) params).getOctets());
+                        evpCipher.init(Cipher.DECRYPT_MODE, sks, s);
+                    } else {
+                        SecretKeySpec sks = new SecretKeySpec(tmp, evpCipher.getAlgorithm());
+                        IvParameterSpec iv = new IvParameterSpec(((ASN1OctetString) params).getOctets());
+                        evpCipher.init(Cipher.DECRYPT_MODE, sks, iv);
+                    }
                 } else {
                     evpCipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(tmp, evpCipher.getAlgorithm()));
                 }
             } catch(Exception e) {
-                throw new PKCS7Exception(F_PKCS7_DATADECODE, -1, e.toString());
+                e.printStackTrace(System.err);
+                throw new PKCS7Exception(F_PKCS7_DATADECODE, -1, e);
             }
 
             etmp = BIO.cipherFilter(evpCipher);
@@ -783,7 +799,7 @@ public class PKCS7 {
     // Without Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files,
     // getting Cipher object via OID(1.2.840.113549.3.7 - DES-EDE3-CBC) causes 'Illegal Key Length'
     // exception. To avoid this, we get Cipher object via algo name(DESede/cbc/PKCS5Padding).
-    private static Cipher getCipherBC(DERObjectIdentifier oid) throws GeneralSecurityException {
+    private static Cipher getCipher(DERObjectIdentifier oid) throws GeneralSecurityException {
         // check DES-EDE3-CBC
         if (oid.getId().equals("1.2.840.113549.3.7")) {
             return OpenSSLReal.getCipherBC("DESede/cbc/PKCS5Padding");
@@ -869,7 +885,7 @@ public class PKCS7 {
                 }
             } catch (Exception e) {
                 e.printStackTrace(System.err);
-                throw new PKCS7Exception(F_PKCS7_DATAINIT, R_ERROR_SETTING_CIPHER);
+                throw new PKCS7Exception(F_PKCS7_DATAINIT, R_ERROR_SETTING_CIPHER, e);
             }
 
             DERObjectIdentifier encAlgo = ASN1Registry.sym2oid(evpCipher.getOsslName());
@@ -1003,7 +1019,7 @@ public class PKCS7 {
                         si.setEncryptedDigest(new DEROctetString(out));
                     }
                 } catch(Exception e) {
-                    throw new PKCS7Exception(F_PKCS7_DATAFINAL,-1,e.toString());
+                    throw new PKCS7Exception(F_PKCS7_DATAFINAL, -1, e);
                 }
             }
         } else if(i == ASN1Registry.NID_pkcs7_digest) {

@@ -233,7 +233,7 @@ public class SMIME {
             try {
                 boundary = prm.getParamValue().getBytes("ISO8859-1");
             } catch(Exception e) {
-                throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_MULTIPART_BOUNDARY);
+                throw new PKCS7Exception(PKCS7.F_SMIME_READ_PKCS7, PKCS7.R_NO_MULTIPART_BOUNDARY, e);
             }
 
             List<BIO> parts = multiSplit(bio, boundary);

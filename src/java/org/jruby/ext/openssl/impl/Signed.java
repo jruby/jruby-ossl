@@ -340,7 +340,7 @@ public class Signed {
         try {
             return new X509AuxCertificate(new X509CertificateObject(struct));
         } catch (CertificateParsingException cpe) {
-            throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, "exception: " + cpe);
+            throw new PKCS7Exception(PKCS7.F_B64_READ_PKCS7, PKCS7.R_CERTIFICATE_VERIFY_ERROR, cpe);
         }
     }
 

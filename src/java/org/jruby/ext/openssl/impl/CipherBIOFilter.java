@@ -60,9 +60,9 @@ public class CipherBIOFilter extends BIOFilter {
             }
             next().write(result, 0, result.length);
         } catch(IllegalBlockSizeException e) {
-            throw new PKCS7Exception(-1, -1, e.toString());
+            throw new PKCS7Exception(-1, -1, e);
         } catch(BadPaddingException e) {
-            throw new PKCS7Exception(-1, -1, e.toString());
+            throw new PKCS7Exception(-1, -1, e);
         }
     }
 

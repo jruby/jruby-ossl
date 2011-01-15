@@ -71,7 +71,7 @@ public class RecipInfo {
             keyEncAlgor = new AlgorithmIdentifier(ASN1Registry.sym2oid(algo));
             this.cert = cert;
         } catch(IOException e) {
-            throw new PKCS7Exception(-1, -1);
+            throw new PKCS7Exception(-1, -1, e);
         }
     }
 

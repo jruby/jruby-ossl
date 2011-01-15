@@ -183,7 +183,7 @@ public class SignerInfoWithPkey extends ASN1Encodable {
             BigInteger serial = x509.getSerialNumber();
             issuerAndSerialNumber = new IssuerAndSerialNumber(issuer, serial);
         } catch(IOException e) {
-            throw new PKCS7Exception(-1, -1);
+            throw new PKCS7Exception(-1, -1, e);
         }
 
         this.pkey = pkey;
