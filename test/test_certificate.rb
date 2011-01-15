@@ -57,9 +57,27 @@ nTA=
 END
 
     cert   = OpenSSL::X509::Certificate.new(pem_cert)
-    key_id = cert.extensions[2]
-
-    assert_equal "24:D1:34:18:66:91:2A:63:76:AA:19:CE:17:20:56:56:5E:10:8F:AA", key_id.value
+    cert.extensions.each do |ext|
+      value = ext.value
+      crit = ext.critical?
+      case ext.oid
+      when "keyUsage"
+        assert_equal true, crit
+        assert_equal "Key Cert Sign, cRLSign", value
+      when "basicConstraints"
+        assert_equal true, crit
+        assert_equal "CA:TRUE", value
+      when "authorityKeyIdentifier"
+        assert_equal false, crit
+        assert_equal "keyid:80:14:24:D1:34:18:66:91:2A:63:76:AA:19:CE:17:20:56:56:5E:10:8F:AA", value
+      when "subjectKeyIdentifier"
+        assert_equal false, crit
+        assert_equal "24:D1:34:18:66:91:2A:63:76:AA:19:CE:17:20:56:56:5E:10:8F:AA", value
+      when "nsComment"
+        assert_equal false, crit
+        assert_equal "Ruby/OpenSSL Generated Certificate", value
+      end
+    end
   end
 
   # JRUBY-5060
