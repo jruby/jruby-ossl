@@ -3,7 +3,7 @@ require 'test/unit'
 require 'webrick/https'
 require 'net/https'
 require 'logger'
-require File.expand_path('openssl/utils', File.dirname(__FILE__))
+require File.join(File.dirname(__FILE__), "openssl/utils.rb")
 
 
 class TestSSL < Test::Unit::TestCase
