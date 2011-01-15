@@ -611,7 +611,7 @@ public class Cipher extends RubyObject {
                 if ("RC2".equalsIgnoreCase(cryptoBase)) {
                     this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey("RC2", this.key), new RC2ParameterSpec(this.key.length * 8, this.realIV));
                 } else if ("RC4".equalsIgnoreCase(cryptoBase)) {
-                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey("ARCFOUR", this.key));
+                    this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey("RC4", this.key));
                 } else {
                     this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(realName.split("/")[0], this.key), new IvParameterSpec(this.realIV));
                 }

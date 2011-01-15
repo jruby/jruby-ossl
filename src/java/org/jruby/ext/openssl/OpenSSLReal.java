@@ -32,7 +32,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateFactory;
 import javax.crypto.SecretKeyFactory;
-import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.jruby.Ruby;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
@@ -149,10 +148,6 @@ public class OpenSSLReal {
         });
     }
 
-    public static javax.crypto.Cipher getCipherBC(final DERObjectIdentifier oid) throws GeneralSecurityException {
-        return getCipherBC(oid.getId());
-    }
-
     public static SecretKeyFactory getSecretKeyFactoryBC(final String algorithm) throws GeneralSecurityException {
         return (SecretKeyFactory) getWithBCProvider(new Callable() {
 
@@ -160,10 +155,6 @@ public class OpenSSLReal {
                 return SecretKeyFactory.getInstance(algorithm, "BC");
             }
         });
-    }
-
-    public static MessageDigest getMessageDigestBC(final DERObjectIdentifier oid) throws GeneralSecurityException {
-        return getMessageDigestBC(oid.getId());
     }
 
     public static MessageDigest getMessageDigestBC(final String algorithm) throws GeneralSecurityException {

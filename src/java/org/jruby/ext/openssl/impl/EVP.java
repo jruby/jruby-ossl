@@ -37,7 +37,6 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import org.bouncycastle.asn1.DERObjectIdentifier;
-import org.jruby.ext.openssl.OpenSSLReal;
 
 /**
  *
@@ -55,8 +54,10 @@ public class EVP {
      *
      */
     public static Cipher getCipher(DERObjectIdentifier oid) throws GeneralSecurityException {
-        // TODO: map oid -> realName and use default provider.
-        return OpenSSLReal.getCipherBC(oid);
+        String algorithm = getAlgorithmName(oid);
+        String[] cipher = org.jruby.ext.openssl.Cipher.Algorithm.osslToJsse(algorithm);
+        String realName = cipher[3];
+        return Cipher.getInstance(realName);
     }
 
     /* c: EVP_get_cipherbynid
@@ -70,7 +71,8 @@ public class EVP {
      *
      */
     public static MessageDigest getDigest(DERObjectIdentifier oid) throws GeneralSecurityException {
-        return OpenSSLReal.getMessageDigestBC(oid);
+        String algorithm = getAlgorithmName(oid);
+        return MessageDigest.getInstance(algorithm);
     }
 
     /* c: EVP_get_digestbynid
@@ -132,5 +134,14 @@ public class EVP {
                                                                IllegalBlockSizeException, 
                                                                BadPaddingException {
         return decrypt(input, 0, input.length, key);
+    }
+
+    private static String getAlgorithmName(DERObjectIdentifier oid) {
+        String algorithm = ASN1Registry.o2a(oid);
+        if (algorithm != null) {
+            return algorithm.toUpperCase();
+        } else {
+            return oid.getId();
+        }
     }
 }// EVP
