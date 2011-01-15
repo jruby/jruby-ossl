@@ -7,10 +7,7 @@ require 'test/unit'
 if defined?(OpenSSL)
 
 require 'socket'
-dir = File.expand_path(__FILE__)
-2.times {dir = File.dirname(dir)}
-$:.replace([File.join(dir, "ruby")] | $:)
-require 'ut_eof'
+require File.join(File.dirname(__FILE__), "../ut_eof")
 
 module SSLPair
   def server
