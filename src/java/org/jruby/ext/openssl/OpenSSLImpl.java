@@ -58,15 +58,15 @@ public class OpenSSLImpl {
             return obj;
         }
     }
-    
-    public static byte[] readPEM(IRubyObject arg) {
+
+    public static byte[] readX509PEM(IRubyObject arg) {
         arg = to_der_if_possible(arg);
         // TODO: should handle RubyFile
         RubyString str = arg.convertToString();
         StringReader in = null;
         try {
             in = new StringReader(str.getUnicodeValue());
-            byte[] bytes = PEMInputOutput.readPEMToDER(in);
+            byte[] bytes = PEMInputOutput.readX509PEM(in);
             if (bytes != null) {
                 return bytes;
             }

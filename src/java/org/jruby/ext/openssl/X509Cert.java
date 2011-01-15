@@ -144,7 +144,7 @@ public class X509Cert extends RubyObject {
         if(args.length == 0) {
             return this;
         }
-        byte[] bytes = OpenSSLImpl.readPEM(args[0]);
+        byte[] bytes = OpenSSLImpl.readX509PEM(args[0]);
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
         
         CertificateFactory cf;

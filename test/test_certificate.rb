@@ -111,4 +111,13 @@ END
     assert(@cert.public_key.verify(digester, sig, msg))
     assert(@cert.verify(@cert.public_key))
   end
+
+  # JRUBY-5253
+  def test_load_key_and_cert_in_one_file
+    file = File.read(File.expand_path('fixture/key_then_cert.pem', File.dirname(__FILE__)))
+    cert = OpenSSL::X509::Certificate.new(file)
+    key = OpenSSL::PKey::RSA.new(file)
+    assert_equal("Tue Dec  7 04:34:54 2010", cert.not_before.asctime)
+    assert_equal(155138628173305760586484923990788939560020632428367464748448028799529480209574373402763304069949574437177088605664104864141770364385183263453740781162330879666907894314877641447552442838727890327086630369910941911916802731723019019303432276515402934176273116832204529025371212188573318159421452591783377914839, key.n)
+  end
 end

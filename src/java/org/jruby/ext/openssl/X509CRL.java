@@ -132,7 +132,7 @@ public class X509CRL extends RubyObject {
             throw newX509CRLError(getRuntime(), gse.getMessage());
         }
 
-        byte[] crl_bytes = OpenSSLImpl.readPEM(args[0]);
+        byte[] crl_bytes = OpenSSLImpl.readX509PEM(args[0]);
         try {
             crl_v = new ASN1InputStream(new ByteArrayInputStream(crl_bytes)).readObject();
         } catch (IOException ioe) {

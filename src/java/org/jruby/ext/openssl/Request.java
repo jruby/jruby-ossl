@@ -97,7 +97,7 @@ public class Request extends RubyObject {
             return this;
         }
 
-        byte[] req_bytes = OpenSSLImpl.readPEM(args[0]);
+        byte[] req_bytes = OpenSSLImpl.readX509PEM(args[0]);
         req = new PKCS10CertificationRequestExt(req_bytes);
         version = getRuntime().newFixnum(req.getVersion());
 
