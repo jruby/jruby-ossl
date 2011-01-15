@@ -112,7 +112,9 @@ class TestIntegration < Test::Unit::TestCase
     str = "string abc foo bar baxz"
         
     cipher = OpenSSL::Cipher::Cipher.new(alg)
-    cipher.encrypt(key, iv)
+    cipher.encrypt
+    cipher.key = key
+    cipher.iv = iv
     cipher.padding = 32
     cipher.key = key
     cipher.iv = iv
