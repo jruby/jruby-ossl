@@ -1,4 +1,4 @@
-$:.unshift File.join(File.dirname(__FILE__), '..', 'mocha', 'lib')
+$:.unshift File.join(File.dirname(__FILE__), '..', 'build_lib', 'mocha', 'lib')
 
 require "test/unit"
 require 'mocha'
