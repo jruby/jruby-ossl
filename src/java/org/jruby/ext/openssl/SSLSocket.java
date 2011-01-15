@@ -238,40 +238,43 @@ public class SSLSocket extends RubyObject {
         return getRuntime().newFixnum(verifyResult);
     }
 
+    // This select impl is a copy of RubyThread.select, then blockingLock is
+    // removed. This impl just set
+    // SelectableChannel.configureBlocking(false) permanently instead of setting
+    // temporarily. SSLSocket requires wrapping IO to be selectable so it should
+    // be OK to set configureBlocking(false) permanently.
     private void waitSelect(int operations) throws IOException {
         if (!(io.getChannel() instanceof SelectableChannel)) {
             return;
         }
+        Ruby runtime = getRuntime();
+        RubyThread thread = runtime.getCurrentContext().getThread();
+
         SelectableChannel selectable = (SelectableChannel)io.getChannel();
-        ThreadContext ctx = getRuntime().getCurrentContext();
-        RubyThread thread = ctx.getThread();
-        
         selectable.configureBlocking(false);
         SelectionKey key = null;
-        Selector currentSelector = null;
+        Selector selector = null;
         try {
-            selectable.configureBlocking(false);
-            
             io.addBlockingThread(thread);
-            currentSelector = getRuntime().getSelectorPool().get();
+            selector = runtime.getSelectorPool().get();
 
-            key = selectable.register(currentSelector, operations);
+            key = selectable.register(selector, operations);
 
-            ctx.getThread().beforeBlockingCall();
-            int result = currentSelector.select();
+            thread.beforeBlockingCall();
+            int result = selector.select();
 
             // check for thread events, in case we've been woken up to die
-            ctx.getThread().pollThreadEvents();
+            thread.pollThreadEvents();
 
             if (result == 1) {
-                Set<SelectionKey> keySet = currentSelector.selectedKeys();
+                Set<SelectionKey> keySet = selector.selectedKeys();
 
                 if (keySet.iterator().next() == key) {
                     return;
                 }
             }
         } catch (IOException ioe) {
-            throw getRuntime().newRuntimeError("Error with selector: " + ioe);
+            throw runtime.newRuntimeError("Error with selector: " + ioe.getMessage());
         } finally {
             // Note: I don't like ignoring these exceptions, but it's
             // unclear how likely they are to happen or what damage we
@@ -282,27 +285,25 @@ public class SSLSocket extends RubyObject {
             // clean up the key in the selector
             try {
                 if (key != null) key.cancel();
-                if (currentSelector != null) currentSelector.selectNow();
+                if (selector != null) selector.selectNow();
             } catch (Exception e) {
                 // ignore
             }
 
             // shut down and null out the selector
             try {
-                if (currentSelector != null) {
-                    getRuntime().getSelectorPool().put(currentSelector);
+                if (selector != null) {
+                    runtime.getSelectorPool().put(selector);
                 }
             } catch (Exception e) {
                 // ignore
-            } finally {
-                currentSelector = null;
             }
 
             // remove this thread as a blocker against the given IO
             io.removeBlockingThread(thread);
 
             // clear thread state from blocking call
-            ctx.getThread().afterBlockingCall();
+            thread.afterBlockingCall();
         }
     }
 

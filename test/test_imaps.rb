@@ -21,11 +21,7 @@ class IMAPTest < Test::Unit::TestCase
   def test_imaps_unknown_ca
     assert_raise(OpenSSL::SSL::SSLError) do
       imaps_test do |port|
-        begin
-          Net::IMAP.new("localhost", port, true, nil, true)
-        rescue SystemCallError
-          skip $!
-        end
+        Net::IMAP.new("localhost", port, true, nil, true)
       end
     end
   end
@@ -33,11 +29,17 @@ class IMAPTest < Test::Unit::TestCase
   def test_imaps_with_ca_file
     assert_nothing_raised do
       imaps_test do |port|
-        begin
-          Net::IMAP.new("localhost", port, true, CA_FILE, true)
-        rescue SystemCallError
-          skip $!
-        end
+        Net::IMAP.new("localhost", port, true, CA_FILE, true)
+      end
+    end
+  end
+
+  def test_imaps_login
+    assert_raises(Net::IMAP::ByeResponseError) do
+      imaps_test do |port|
+        imaps = Net::IMAP.new("localhost", port, true, CA_FILE, true)
+        imaps.login('foo@bar.com', 'wrong password')
+        imaps
       end
     end
   end
@@ -75,9 +77,10 @@ private
         sock = ssl_server.accept
         begin
           sock.print("* OK test server\r\n")
-          sock.gets
+          sock.read(10) # emulates half-read for JRUBY-5200
           sock.print("* BYE terminating connection\r\n")
           sock.print("RUBY0001 OK LOGOUT completed\r\n")
+          sock.gets
         ensure
           sock.close
         end
@@ -87,10 +90,12 @@ private
     begin
       begin
         imap = yield(port)
-        imap.logout
+        imap.logout if !imap.disconnected?
       ensure
-        imap.disconnect if imap
+        imap.disconnect if imap && !imap.disconnected?
       end
+    rescue IOError
+      # ignore
     ensure
       ssl_server.close
     end
