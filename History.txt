@@ -1,3 +1,13 @@
+== 0.7.3
+
+- JRUBY-5200: Net::IMAP + SSL(imaps) login could hang. Fixed.
+- JRUBY-5253: Allow to load the certificate file which includes private
+  key for activemarchant compatibility.
+- JRUBY-5267: Added SSL socket error-checks to avoid busy loop under an
+  unknown condition.
+- JRUBY-5316: Improvements for J9's IBMJCE support. Now all testcases
+  pass on J9 JDK 6.
+
 == 0.7.2
 
 - JRUBY-5126: Ignore Cipher#reset and Cipher#iv= when it's a stream
