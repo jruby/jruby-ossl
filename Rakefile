@@ -26,7 +26,7 @@ task :java_compile do
   mkdir_p "pkg/classes"
 
   File.open("pkg/compile_options", "w") do |f|
-    f << "-target 1.5 -source 1.5 -Xlint:unchecked -Xlint:deprecation -d pkg/classes"
+    f << "-g -target 1.5 -source 1.5 -Xlint:unchecked -Xlint:deprecation -d pkg/classes"
   end
 
   File.open("pkg/compile_classpath", "w") do |f|
