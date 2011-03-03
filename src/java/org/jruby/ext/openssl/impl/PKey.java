@@ -58,9 +58,9 @@ import org.jruby.util.ByteList;
 public class PKey {
 
     // d2i_RSAPrivateKey_bio
-    public static PrivateKey readRSAPrivateKey(String input) throws IOException, GeneralSecurityException {
+    public static PrivateKey readRSAPrivateKey(byte[] input) throws IOException, GeneralSecurityException {
         KeyFactory fact = KeyFactory.getInstance("RSA");
-        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
+        DERSequence seq = (DERSequence) (new ASN1InputStream(input).readObject());
         if (seq.size() == 9) {
             BigInteger mod = ((DERInteger) seq.getObjectAt(1)).getValue();
             BigInteger pubexp = ((DERInteger) seq.getObjectAt(2)).getValue();
@@ -77,9 +77,9 @@ public class PKey {
     }
 
     // d2i_RSAPublicKey_bio
-    public static PublicKey readRSAPublicKey(String input) throws IOException, GeneralSecurityException {
+    public static PublicKey readRSAPublicKey(byte[] input) throws IOException, GeneralSecurityException {
         KeyFactory fact = KeyFactory.getInstance("RSA");
-        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
+        DERSequence seq = (DERSequence) (new ASN1InputStream(input).readObject());
         if (seq.size() == 2) {
             BigInteger mod = ((DERInteger) seq.getObjectAt(0)).getValue();
             BigInteger pubexp = ((DERInteger) seq.getObjectAt(1)).getValue();
@@ -90,9 +90,9 @@ public class PKey {
     }
 
     // d2i_DSAPrivateKey_bio
-    public static KeyPair readDSAPrivateKey(String input) throws IOException, GeneralSecurityException {
+    public static KeyPair readDSAPrivateKey(byte[] input) throws IOException, GeneralSecurityException {
         KeyFactory fact = KeyFactory.getInstance("DSA");
-        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
+        DERSequence seq = (DERSequence) (new ASN1InputStream(input).readObject());
         if (seq.size() == 6) {
             BigInteger p = ((DERInteger) seq.getObjectAt(1)).getValue();
             BigInteger q = ((DERInteger) seq.getObjectAt(2)).getValue();
@@ -108,9 +108,9 @@ public class PKey {
     }
 
     // d2i_DSA_PUBKEY_bio
-    public static PublicKey readDSAPublicKey(String input) throws IOException, GeneralSecurityException {
+    public static PublicKey readDSAPublicKey(byte[] input) throws IOException, GeneralSecurityException {
         KeyFactory fact = KeyFactory.getInstance("RSA");
-        DERSequence seq = (DERSequence) (new ASN1InputStream(ByteList.plain(input)).readObject());
+        DERSequence seq = (DERSequence) (new ASN1InputStream(input).readObject());
         if (seq.size() == 4) {
             BigInteger y = ((DERInteger) seq.getObjectAt(0)).getValue();
             BigInteger p = ((DERInteger) seq.getObjectAt(1)).getValue();

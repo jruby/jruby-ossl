@@ -58,7 +58,6 @@ import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.builtin.IRubyObject;
-import org.jruby.util.ByteList;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -161,7 +160,8 @@ public class PKeyDSA extends PKey {
                 if (pass != null && !pass.isNil()) {
                     passwd = pass.toString().toCharArray();
                 }
-                String input = arg.toString();
+                arg = OpenSSLImpl.to_der_if_possible(arg);
+                RubyString str = arg.convertToString();
 
                 Object val = null;
                 KeyFactory fact = null;
@@ -174,7 +174,7 @@ public class PKeyDSA extends PKey {
                 if (null == val) {
                     // PEM_read_bio_DSAPrivateKey
                     try {
-                        val = PEMInputOutput.readDSAPrivateKey(new StringReader(input), passwd);
+                        val = PEMInputOutput.readDSAPrivateKey(new StringReader(str.toString()), passwd);
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -184,7 +184,7 @@ public class PKeyDSA extends PKey {
                 if (null == val) {
                     // PEM_read_bio_DSAPublicKey
                     try {
-                        val = PEMInputOutput.readDSAPublicKey(new StringReader(input), passwd);
+                        val = PEMInputOutput.readDSAPublicKey(new StringReader(str.toString()), passwd);
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -194,7 +194,7 @@ public class PKeyDSA extends PKey {
                 if (null == val) {
                     // PEM_read_bio_DSA_PUBKEY
                     try {
-                        val = PEMInputOutput.readDSAPubKey(new StringReader(input), passwd);
+                        val = PEMInputOutput.readDSAPubKey(new StringReader(str.toString()), passwd);
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -204,7 +204,7 @@ public class PKeyDSA extends PKey {
                 if (null == val) {
                     // d2i_DSAPrivateKey_bio
                     try {
-                        val = org.jruby.ext.openssl.impl.PKey.readDSAPrivateKey(input);
+                        val = org.jruby.ext.openssl.impl.PKey.readDSAPrivateKey(str.getBytes());
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -214,7 +214,7 @@ public class PKeyDSA extends PKey {
                 if (null == val) {
                     // d2i_DSA_PUBKEY_bio
                     try {
-                        val = org.jruby.ext.openssl.impl.PKey.readDSAPublicKey(input);
+                        val = org.jruby.ext.openssl.impl.PKey.readDSAPublicKey(str.getBytes());
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -223,14 +223,14 @@ public class PKeyDSA extends PKey {
                 }
                 if (null == val) {
                     try {
-                        val = fact.generatePrivate(new PKCS8EncodedKeySpec(ByteList.plain(input)));
+                        val = fact.generatePrivate(new PKCS8EncodedKeySpec(str.getBytes()));
                     } catch (Exception e) {
                         val = null;
                     }
                 }
                 if (null == val) {
                     try {
-                        val = fact.generatePublic(new X509EncodedKeySpec(ByteList.plain(input)));
+                        val = fact.generatePublic(new X509EncodedKeySpec(str.getBytes()));
                     } catch (Exception e) {
                         val = null;
                     }

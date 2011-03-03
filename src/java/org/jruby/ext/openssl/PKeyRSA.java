@@ -65,7 +65,6 @@ import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
-import org.jruby.util.ByteList;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -188,7 +187,7 @@ public class PKeyRSA extends PKey {
                     passwd = pass.toString().toCharArray();
                 }
                 arg = OpenSSLImpl.to_der_if_possible(arg);
-                String input = arg.convertToString().toString();
+                RubyString str = arg.convertToString();
 
                 Object val = null;
                 KeyFactory fact = null;
@@ -201,7 +200,7 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // PEM_read_bio_RSAPrivateKey
                     try {
-                        val = PEMInputOutput.readPrivateKey(new StringReader(input), passwd);
+                        val = PEMInputOutput.readPrivateKey(new StringReader(str.toString()), passwd);
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -211,7 +210,7 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // PEM_read_bio_RSAPublicKey
                     try {
-                        val = PEMInputOutput.readRSAPublicKey(new StringReader(input), passwd);
+                        val = PEMInputOutput.readRSAPublicKey(new StringReader(str.toString()), passwd);
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -221,7 +220,7 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // PEM_read_bio_RSA_PUBKEY
                     try {
-                        val = PEMInputOutput.readRSAPubKey(new StringReader(input), passwd);
+                        val = PEMInputOutput.readRSAPubKey(new StringReader(str.toString()), passwd);
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -231,7 +230,7 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // d2i_RSAPrivateKey_bio
                     try {
-                        val = org.jruby.ext.openssl.impl.PKey.readRSAPrivateKey(input);
+                        val = org.jruby.ext.openssl.impl.PKey.readRSAPrivateKey(str.getBytes());
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -241,7 +240,7 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // d2i_RSAPublicKey_bio
                     try {
-                        val = org.jruby.ext.openssl.impl.PKey.readRSAPublicKey(input);
+                        val = org.jruby.ext.openssl.impl.PKey.readRSAPublicKey(str.getBytes());
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -251,7 +250,7 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // try to read PrivateKeyInfo.
                     try {
-                        val = fact.generatePrivate(new PKCS8EncodedKeySpec(ByteList.plain(input)));
+                        val = fact.generatePrivate(new PKCS8EncodedKeySpec(str.getBytes()));
                     } catch (Exception e) {
                         val = null;
                     }
@@ -259,7 +258,7 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // try to read SubjectPublicKeyInfo.
                     try {
-                        val = fact.generatePublic(new X509EncodedKeySpec(ByteList.plain(input)));
+                        val = fact.generatePublic(new X509EncodedKeySpec(str.getBytes()));
                     } catch (Exception e) {
                         val = null;
                     }
