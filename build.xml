@@ -50,10 +50,11 @@
     </jar>
   </target>
 
-  <target name="test" depends="jar">
-    <exec executable="${jruby.home}/bin/jruby" failonerror="true">
-      <arg value="-Ilib:test"/>
-      <arg value="test/test_openssl.rb"/>
-    </exec>
+  <target name="load-rake-task">
+    <taskdef name="rake" classname="org.jruby.ant.Rake" classpath="${jruby.jar}" />
+  </target>
+
+  <target name="test" depends="jar,load-rake-task">
+    <rake task="test"/>
   </target>
 </project>
