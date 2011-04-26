@@ -47,7 +47,6 @@ import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DERBoolean;
-import org.bouncycastle.asn1.DEREncodableVector;
 import org.bouncycastle.asn1.DERInteger;
 import org.bouncycastle.asn1.DERNull;
 import org.bouncycastle.asn1.DERObjectIdentifier;
@@ -904,7 +903,7 @@ public class ASN1 {
                 }
                 try {
                     @SuppressWarnings("unchecked")
-                    ASN1Encodable result = ((Class<? extends ASN1Encodable>) (ASN1_INFO[id][1])).getConstructor(new Class[] { DEREncodableVector.class })
+                    ASN1Encodable result = ((Class<? extends ASN1Encodable>) (ASN1_INFO[id][1])).getConstructor(new Class[] { ASN1EncodableVector.class })
                             .newInstance(new Object[] { vec });
                     return result;
                 } catch (Exception e) {
