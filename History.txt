@@ -1,3 +1,9 @@
+== 0.7.4
+
+- JRUBY-5519: Avoid String encoding dependency in DER loading. PEM loading failed on JRuby 1.6.x. Fixed.
+- JRUBY-5510: Add debug information to released jar
+- JRUBY-5478: Update bouncycastle jars to the latest version. (1.46)
+
 == 0.7.3
 
 - JRUBY-5200: Net::IMAP + SSL(imaps) login could hang. Fixed.
