@@ -660,11 +660,16 @@ public class StoreContext {
         }
         cb=verifyCallback;
 
+        /* first we make sure the chain we are going to build is
+         * present and that the first entry is in place */
+
         if(null == chain) {
             chain = new ArrayList<X509AuxCertificate>();
             chain.add(certificate);
             lastUntrusted = 1;
         }
+
+        /* We use a temporary STACK so we can chop and hack at it */
 
         if(untrusted != null) {
             sktmp = new ArrayList<X509AuxCertificate>(untrusted);
@@ -695,11 +700,24 @@ public class StoreContext {
             break;
         }
 
+        /* at this point, chain should contain a list of untrusted
+         * certificates.  We now need to add at least one trusted one,
+         * if possible, otherwise we complain. */
+
+        /* Examine last certificate in chain and see if it
+         * is self signed.
+         */
+
         i = chain.size();
         x = chain.get(i-1);
-
+        
         if(checkIssued.call(this,x,x) != 0) {
+            /* we have a self signed certificate */
             if(chain.size() == 1) {
+                /* We have a single self signed certificate: see if
+                 * we can find it in the store. We must have an exact
+                 * match to avoid possible impersonation.
+                 */
                 X509AuxCertificate[] p_xtmp = new X509AuxCertificate[]{xtmp};
                 ok = getIssuer.call(p_xtmp,this,x);
                 xtmp = p_xtmp[0];
@@ -713,22 +731,29 @@ public class StoreContext {
                         return ok;
                     }
                 } else {
+                    /* We have a match: replace certificate with store version
+                     * so we get any trust settings.
+                     */
                     x = xtmp;
                     chain.set(i-1,x);
                     lastUntrusted = 0;
                 }
             } else {
+                /* extract and save self signed certificate for later use */
                 chain_ss = chain.remove(chain.size()-1);
                 lastUntrusted--;
                 num--;
                 x = chain.get(num-1);
             }
         }
+        /* We now lookup certs from the certificate store */
         for(;;) {
+            /* If we have enough, we break */
             if(depth<num) {
                 break;
             }
             //xn = new X509_NAME(x.getIssuerX500Principal());
+            /* If we are self signed, we break */
             if(checkIssued.call(this,x,x) != 0) {
                 break;
             }
@@ -745,8 +770,11 @@ public class StoreContext {
             chain.add(x);
             num++;
         }
+        
+        /* we now have our chain, lets check it... */
 
         //xn = new X509_NAME(x.getIssuerX500Principal());
+        /* Is last certificate looked up self signed? */
         if(checkIssued.call(this,x,x) == 0) {
             if(chain_ss == null || checkIssued.call(this,x,chain_ss) == 0) {
                 if(lastUntrusted >= num) {
@@ -771,11 +799,15 @@ public class StoreContext {
             }
         }
 
+        /* We have the chain complete: now we need to check its purpose */
         ok = checkChainExtensions();
         if(ok == 0) {
             return ok;
         }
 
+        /* TODO: Check name constraints (from 1.0.0) */
+
+        /* The chain extensions are OK: check trust */
         if(param.trust > 0) {
             ok = checkTrust();
         }
@@ -783,11 +815,15 @@ public class StoreContext {
             return ok;
         }
 
+        /* Check revocation status: we do this after copying parameters
+         * because they may be needed for CRL signature verification.
+         */
         ok = checkRevocation.call(this);
         if(ok == 0) {
             return ok;
         }
 
+        /* At this point, we have a chain and need to verify it */
         if(verify != null && verify != Store.VerifyFunction.EMPTY) {
             ok = verify.call(this);
         } else {
@@ -796,7 +832,10 @@ public class StoreContext {
         if(ok == 0) {
             return ok;
         }
+        
+        /* TODO: RFC 3779 path validation, now that CRL check has been done (from 1.0.0) */
 
+        /* If we get this far evaluate policies */
         if(bad_chain == 0 && (param.flags & X509Utils.V_FLAG_POLICY_CHECK) != 0) {
             ok = checkPolicy.call(this);
         }
