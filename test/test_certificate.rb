@@ -122,7 +122,7 @@ END
   end
 
   # JRUBY-5834
-  def test_foo
+  def test_ids_in_subject_rdn_set
     cert_file = File.expand_path('fixture/ids_in_subject_rdn_set.pem', File.dirname(__FILE__))
     cert = OpenSSL::X509::Certificate.new(File.read(cert_file))
     keys = cert.subject.to_a.map { |k, v| k }.sort
