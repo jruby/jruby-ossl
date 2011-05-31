@@ -907,6 +907,7 @@ public class ASN1 {
                             .newInstance(new Object[] { vec });
                     return result;
                 } catch (Exception e) {
+                    // TODO: deprecated
                     throw RaiseException.createNativeRaiseException(getRuntime(), e);
                 }
             }
