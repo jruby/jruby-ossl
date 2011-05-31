@@ -131,18 +131,20 @@ public class X509Name extends RubyObject {
         oids = new ArrayList<Object>();
         values = new ArrayList<Object>();
         types = new ArrayList<Object>();
-        for(Enumeration enm = seq.getObjects();enm.hasMoreElements();) {
-            ASN1Sequence value = (ASN1Sequence)(((ASN1Set)enm.nextElement()).getObjectAt(0));
-            oids.add(value.getObjectAt(0));
-            if(value.getObjectAt(1) instanceof DERString) {
-                values.add(((DERString)value.getObjectAt(1)).getString());
-            } else {
-                values.add(null);
+        for (Enumeration enumRdn = seq.getObjects(); enumRdn.hasMoreElements();) {
+            ASN1Set rdn = (ASN1Set) enumRdn.nextElement();
+            for (Enumeration enumTypeAndValue = rdn.getObjects(); enumTypeAndValue.hasMoreElements();) {
+                ASN1Sequence typeAndValue = (ASN1Sequence) enumTypeAndValue.nextElement();
+                oids.add(typeAndValue.getObjectAt(0));
+                if (typeAndValue.getObjectAt(1) instanceof DERString) {
+                    values.add(((DERString) typeAndValue.getObjectAt(1)).getString());
+                } else {
+                    values.add(null);
+                }
+                types.add(getRuntime().newFixnum(ASN1.idForClass(typeAndValue.getObjectAt(1).getClass())));
             }
-            types.add(getRuntime().newFixnum(ASN1.idForClass(value.getObjectAt(1).getClass())));
         }
     }
-
 
     @JRubyMethod(rest=true, frame=true)
     public IRubyObject initialize(IRubyObject[] args, Block unusedBlock) {
