@@ -104,6 +104,12 @@ public class PKCS7 {
         this.data = PKCS7Data.fromASN1(nid, content);
     }
 
+    public static PKCS7 newEmpty() {
+        PKCS7 p7 = new PKCS7();
+        p7.data = new PKCS7DataData();
+        return p7;
+    }
+
     /**
      * ContentInfo ::= SEQUENCE {
      *   contentType ContentType,
