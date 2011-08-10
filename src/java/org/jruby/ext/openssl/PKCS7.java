@@ -260,6 +260,7 @@ public class PKCS7 extends RubyObject {
     public IRubyObject _initialize(IRubyObject[] args) {
         IRubyObject arg = null;
         if(Arity.checkArgumentCount(getRuntime(), args, 0, 1) == 0) {
+            p7 = new org.jruby.ext.openssl.impl.PKCS7();
             return this;
         }
         arg = args[0];
@@ -288,9 +289,10 @@ public class PKCS7 extends RubyObject {
     }
 
     @JRubyMethod(name="type=")
-    public IRubyObject set_type(IRubyObject obj) {
-        System.err.println("WARNING: unimplemented method called PKCS7#type=");
-        return getRuntime().getNil();
+    public IRubyObject set_type(IRubyObject obj) throws PKCS7Exception {
+        String str = obj.convertToString().asJavaString();
+        p7.setTypeByName(str);
+        return obj;
     }
 
     @JRubyMethod(name="type")
