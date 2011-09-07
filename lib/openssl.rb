@@ -14,6 +14,10 @@
   $Id: openssl.rb 12496 2007-06-08 15:02:04Z technorama $
 =end
 
+unless defined? JRUBY_VERSION
+  warn 'Loading jruby-openssl in a non-JRuby interpreter'
+end
+
 # TODO: remove this chunk after 1.4 support is dropped
 require 'digest'
 unless defined?(::Digest::Class)
