@@ -104,6 +104,12 @@ public class PKCS7 {
         this.data = PKCS7Data.fromASN1(nid, content);
     }
 
+    public static PKCS7 newEmpty() {
+        PKCS7 p7 = new PKCS7();
+        p7.data = new PKCS7DataData();
+        return p7;
+    }
+
     /**
      * ContentInfo ::= SEQUENCE {
      *   contentType ContentType,
@@ -491,6 +497,21 @@ public class PKCS7 {
         } catch(IOException e) {
             throw new PKCS7Exception(F_PKCS7_DECRYPT, R_DECRYPT_ERROR, e);
         }
+    }
+
+    public void setTypeByName(String type) throws PKCS7Exception {
+        if (TYPE_signed.equals(type))
+            this.data = new PKCS7DataSigned();
+        else if (TYPE_data.equals(type))
+            this.data = new PKCS7DataData();
+        else if (TYPE_signedAndEnveloped.equals(type))
+            this.data = new PKCS7DataSignedAndEnveloped();
+        else if (TYPE_enveloped.equals(type))
+            this.data = new PKCS7DataEnveloped();
+        else if (TYPE_encrypted.equals(type))
+            this.data = new PKCS7DataEncrypted();
+        else
+            throw new PKCS7Exception(F_PKCS7_SET_TYPE,R_UNSUPPORTED_CONTENT_TYPE);
     }
 
     /** c: PKCS7_set_type
@@ -1261,5 +1282,12 @@ public class PKCS7 {
         }
         return null;
     }
+
+    public final static String TYPE_signed = "signed";
+    public final static String TYPE_encrypted = "encrypted";
+    public final static String TYPE_enveloped = "enveloped";
+    public final static String TYPE_signedAndEnveloped = "signedAndEnveloped";
+    public final static String TYPE_data = "data";
+
 }// PKCS7
 

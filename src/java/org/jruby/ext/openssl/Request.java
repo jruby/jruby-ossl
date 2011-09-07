@@ -138,9 +138,20 @@ public class Request extends RubyObject {
         }
         ASN1Set in_attrs = req.getCertificationRequestInfo().getAttributes();
         for(Enumeration enm = in_attrs.getObjects();enm.hasMoreElements();) {
-            DERSet obj = (DERSet)enm.nextElement();
-            for(Enumeration enm2 = obj.getObjects();enm2.hasMoreElements();) {
-                DERSequence val = (DERSequence)enm2.nextElement();
+            Enumeration enm2;
+            Object next = enm.nextElement();
+            if (next instanceof DERSet) {
+                enm2 = ((DERSet)next).getObjects();
+                while(enm2.hasMoreElements()) {
+                    DERSequence val = (DERSequence)enm2.nextElement();
+                    DERObjectIdentifier v0 = (DERObjectIdentifier)val.getObjectAt(0);
+                    DERObject v1 = (DERObject)val.getObjectAt(1);
+                    IRubyObject a1 = getRuntime().newString(ASN1.getSymLookup(getRuntime()).get(v0));
+                    IRubyObject a2 = ASN1.decode(getRuntime().getClassFromPath("OpenSSL::ASN1"), RubyString.newString(getRuntime(), v1.getDEREncoded()));
+                    add_attribute(Utils.newRubyInstance(getRuntime(), "OpenSSL::X509::Attribute", new IRubyObject[] { a1, a2 }));
+                }
+            } else if (next instanceof DERSequence) {
+                DERSequence val = (DERSequence)next;
                 DERObjectIdentifier v0 = (DERObjectIdentifier)val.getObjectAt(0);
                 DERObject v1 = (DERObject)val.getObjectAt(1);
                 IRubyObject a1 = getRuntime().newString(ASN1.getSymLookup(getRuntime()).get(v0));

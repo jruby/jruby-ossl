@@ -27,12 +27,14 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.impl;
 
+import java.util.Enumeration;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DEREncodable;
 import org.bouncycastle.asn1.DERObjectIdentifier;
+import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
@@ -157,7 +159,26 @@ public class EncContent {
         ec.setAlgorithm(AlgorithmIdentifier.getInstance(sequence.getObjectAt(1)));
         if(sequence.size() > 2 && sequence.getObjectAt(2) instanceof DERTaggedObject && ((DERTaggedObject)(sequence.getObjectAt(2))).getTagNo() == 0) {
             DEREncodable ee = ((DERTaggedObject)(sequence.getObjectAt(2))).getObject();
-            if(ee instanceof ASN1Sequence) {
+            if(ee instanceof ASN1Sequence) { // OctetString split into multiple OctetStrings in a Sequence
+                if (((ASN1Sequence)ee).size() > 0) {
+                    // merge back into single OctetString
+                    int totalSize = 0;
+                    Enumeration e = ((ASN1Sequence)ee).getObjects();
+                    while (e.hasMoreElements()) {
+                        byte[] octets = ((ASN1OctetString)e.nextElement()).getOctets();
+                        totalSize += octets.length;
+                    }
+                    byte[] data = new byte[totalSize];
+
+                    int current = 0;
+                    e = ((ASN1Sequence)ee).getObjects();
+                    while (e.hasMoreElements()) {
+                        byte[] octets = ((ASN1OctetString)e.nextElement()).getOctets();
+                        System.arraycopy(octets, 0, data, current, octets.length);
+                        current += octets.length;
+                    }
+                    ec.setEncData(new DEROctetString(data));
+                }
             } else {
                 ec.setEncData((ASN1OctetString)ee);
             }
