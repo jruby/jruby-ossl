@@ -37,4 +37,20 @@ END
     p7 = OpenSSL::PKCS7.encrypt(certs, msg, cipher, OpenSSL::PKCS7::BINARY)
     assert_equal(msg, p7.data)
   end
+
+  EMPTY_PEM = <<END
+-----BEGIN PKCS7-----
+MAMGAQA=
+-----END PKCS7-----
+END
+
+  def test_empty_pkcs7
+    p7 = OpenSSL::PKCS7.new
+    assert_equal(EMPTY_PEM, p7.to_pem)
+  end
+
+  def test_load_empty_pkcs7
+    p7 = OpenSSL::PKCS7.new(EMPTY_PEM)
+    assert_equal(EMPTY_PEM, p7.to_pem)
+  end
 end

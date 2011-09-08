@@ -37,6 +37,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DERSequence;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyBignum;
@@ -260,6 +264,12 @@ public class PKCS7 extends RubyObject {
     public IRubyObject _initialize(IRubyObject[] args) {
         IRubyObject arg = null;
         if(Arity.checkArgumentCount(getRuntime(), args, 0, 1) == 0) {
+            p7 = new org.jruby.ext.openssl.impl.PKCS7();
+            try {
+                p7.setType(ASN1Registry.NID_undef);
+            } catch (PKCS7Exception pkcs7e) {
+                throw newPKCS7Exception(getRuntime(), pkcs7e);
+            }
             return this;
         }
         arg = args[0];
