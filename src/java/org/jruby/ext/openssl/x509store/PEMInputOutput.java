@@ -757,142 +757,97 @@ public class PEMInputOutput {
         }
     }
 
-    public static void writeDSAPrivateKey(Writer _out, DSAPrivateKey obj, String algo, char[] f) throws IOException {
+    public static void writeDSAPrivateKey(Writer _out, DSAPrivateKey obj, CipherSpec cipher, char[] passwd) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        ByteArrayInputStream    bIn = new ByteArrayInputStream(getEncoded(obj));
-        ASN1InputStream         aIn = new ASN1InputStream(bIn);
-        PrivateKeyInfo          info = new PrivateKeyInfo((ASN1Sequence)aIn.readObject());
-        ByteArrayOutputStream   bOut = new ByteArrayOutputStream();
-        ASN1OutputStream        aOut = new ASN1OutputStream(bOut);
+        ByteArrayInputStream bIn = new ByteArrayInputStream(getEncoded(obj));
+        ASN1InputStream aIn = new ASN1InputStream(bIn);
+        PrivateKeyInfo info = new PrivateKeyInfo((ASN1Sequence) aIn.readObject());
+        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+        ASN1OutputStream aOut = new ASN1OutputStream(bOut);
 
-        DSAParameter        p = DSAParameter.getInstance(info.getAlgorithmId().getParameters());
+        DSAParameter p = DSAParameter.getInstance(info.getAlgorithmId().getParameters());
         ASN1EncodableVector v = new ASN1EncodableVector();
-                
         v.add(new DERInteger(0));
         v.add(new DERInteger(p.getP()));
         v.add(new DERInteger(p.getQ()));
         v.add(new DERInteger(p.getG()));
-                
+
         BigInteger x = obj.getX();
         BigInteger y = p.getG().modPow(x, p.getP());
-                
+
         v.add(new DERInteger(y));
         v.add(new DERInteger(x));
-                
+
         aOut.writeObject(new DERSequence(v));
         byte[] encoding = bOut.toByteArray();
 
-        if(algo != null && f != null) {
-            byte[] salt = new byte[8];
-            byte[] encData = null;
-            random.nextBytes(salt);
-            OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
-            pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(f), salt);
-            SecretKey secretKey = null;
-            if (algo.equalsIgnoreCase("DESede/CBC/PKCS5Padding")) {
-                // generate key
-                int keyLength = 24;
-                KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLength * 8);
-                secretKey = new SecretKeySpec(param.getKey(), "DESede");
-            } else {
-                throw new IOException("unknown algorithm in write_DSAPrivateKey: " + algo);
-            }
-
-            // cipher  
-            try {
-                Cipher c = Cipher.getInstance("DESede/CBC/PKCS5Padding");
-                c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(salt));
-                encData = c.doFinal(encoding);
-            } catch (Exception e) {
-                throw new IOException("exception using cipher: " + e.toString());
-            }
-       
-            // write the data
-            out.write(BEF_G + PEM_STRING_DSA + AFT);
-            out.newLine();
-            out.write("Proc-Type: 4,ENCRYPTED");
-            out.newLine();
-            out.write("DEK-Info: DES-EDE3-CBC,");
-            writeHexEncoded(out,salt);
-            out.newLine();
-            out.newLine();
-            writeEncoded(out,encData);
-            out.write(BEF_E + PEM_STRING_DSA + AFT);   
-            out.flush();
+        if (cipher != null && passwd != null) {
+            writePemEncrypted(out, PEM_STRING_DSA, encoding, cipher, passwd);
         } else {
-            out.write(BEF_G + PEM_STRING_DSA + AFT);
-            out.newLine();
-            writeEncoded(out,encoding);
-            out.write(BEF_E + PEM_STRING_DSA + AFT);
-            out.newLine();
-            out.flush();
+            writePemPlain(out, PEM_STRING_DSA, encoding);
         }
     }
 
     public static void writeRSAPrivateKey(Writer _out, RSAPrivateCrtKey obj, CipherSpec cipher, char[] passwd) throws IOException {
-        assert(obj != null);
+        assert (obj != null);
         BufferedWriter out = makeBuffered(_out);
-        RSAPrivateKeyStructure keyStruct = new RSAPrivateKeyStructure(
-                obj.getModulus(),
-                obj.getPublicExponent(),
-                obj.getPrivateExponent(),
-                obj.getPrimeP(),
-                obj.getPrimeQ(),
-                obj.getPrimeExponentP(),
-                obj.getPrimeExponentQ(),
-                obj.getCrtCoefficient());
-       
-        // convert to bytearray
+        RSAPrivateKeyStructure keyStruct = new RSAPrivateKeyStructure(obj.getModulus(), obj.getPublicExponent(), obj.getPrivateExponent(), obj.getPrimeP(),
+                obj.getPrimeQ(), obj.getPrimeExponentP(), obj.getPrimeExponentQ(), obj.getCrtCoefficient());
+
         ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-        ASN1OutputStream      aOut = new ASN1OutputStream(bOut);
-            
+        ASN1OutputStream aOut = new ASN1OutputStream(bOut);
         aOut.writeObject(keyStruct);
         aOut.close();
-        
         byte[] encoding = bOut.toByteArray();
 
-        if(cipher != null && passwd != null) {
-            Cipher c = cipher.getCipher();
-            String algoBase = c.getAlgorithm();
-            if (algoBase.indexOf('/') != -1) {
-                algoBase = algoBase.split("/")[0];
-            }
-            byte[] iv = new byte[c.getBlockSize()];
-            random.nextBytes(iv);
-            byte[] salt = new byte[8];
-            System.arraycopy(iv,  0, salt, 0, 8);
-            OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
-            pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(passwd), salt);
-            KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(cipher.getKeyLenInBits());
-            SecretKey secretKey = new SecretKeySpec(param.getKey(), algoBase);
-            byte[] encData = null;
-            try {
-                c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
-                encData = c.doFinal(encoding);
-            } catch (GeneralSecurityException gse) {
-                throw new IOException("exception using cipher: " + gse.toString());
-            }
-       
-            // write the data
-            out.write(BEF_G + PEM_STRING_RSA + AFT);
-            out.newLine();
-            out.write("Proc-Type: 4,ENCRYPTED");
-            out.newLine();
-            out.write("DEK-Info: " + cipher.getOsslName() + ",");
-            writeHexEncoded(out,iv);
-            out.newLine();
-            out.newLine();
-            writeEncoded(out,encData);
-            out.write(BEF_E + PEM_STRING_RSA + AFT);   
-            out.flush();
+        if (cipher != null && passwd != null) {
+            writePemEncrypted(out, PEM_STRING_RSA, encoding, cipher, passwd);
         } else {
-            out.write(BEF_G + PEM_STRING_RSA + AFT);
-            out.newLine();
-            writeEncoded(out,encoding);
-            out.write(BEF_E + PEM_STRING_RSA + AFT);
-            out.newLine();
-            out.flush();
+            writePemPlain(out, PEM_STRING_RSA, encoding);
         }
+    }
+
+    private static void writePemPlain(BufferedWriter out, String pemHeader, byte[] encoding) throws IOException {
+        out.write(BEF_G + pemHeader + AFT);
+        out.newLine();
+        writeEncoded(out, encoding);
+        out.write(BEF_E + pemHeader + AFT);
+        out.newLine();
+        out.flush();
+    }
+
+    private static void writePemEncrypted(BufferedWriter out, String pemHeader, byte[] encoding, CipherSpec cipher, char[] passwd) throws IOException {
+        Cipher c = cipher.getCipher();
+        String algoBase = c.getAlgorithm();
+        if (algoBase.indexOf('/') != -1) {
+            algoBase = algoBase.split("/")[0];
+        }
+        byte[] iv = new byte[c.getBlockSize()];
+        random.nextBytes(iv);
+        byte[] salt = new byte[8];
+        System.arraycopy(iv, 0, salt, 0, 8);
+        OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
+        pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(passwd), salt);
+        KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(cipher.getKeyLenInBits());
+        SecretKey secretKey = new SecretKeySpec(param.getKey(), algoBase);
+        byte[] encData = null;
+        try {
+            c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
+            encData = c.doFinal(encoding);
+        } catch (GeneralSecurityException gse) {
+            throw new IOException("exception using cipher: " + gse.toString());
+        }
+        out.write(BEF_G + pemHeader + AFT);
+        out.newLine();
+        out.write("Proc-Type: 4,ENCRYPTED");
+        out.newLine();
+        out.write("DEK-Info: " + cipher.getOsslName() + ",");
+        writeHexEncoded(out, iv);
+        out.newLine();
+        out.newLine();
+        writeEncoded(out, encData);
+        out.write(BEF_E + pemHeader + AFT);
+        out.flush();
     }
     
     public static void writeDHParameters(Writer _out, DHParameterSpec params) throws IOException {
@@ -1003,12 +958,11 @@ public class PEMInputOutput {
     /**
      * Read a Key Pair
      */
-    private static KeyPair readKeyPair(BufferedReader _in, char[] passwd, String type,String endMarker)
-        throws Exception {
-        boolean         isEncrypted = false;
-        String          line = null;
-        String          dekInfo = null;
-        StringBuffer    buf = new StringBuffer();
+    private static KeyPair readKeyPair(BufferedReader _in, char[] passwd, String type, String endMarker) throws Exception {
+        boolean isEncrypted = false;
+        String line = null;
+        String dekInfo = null;
+        StringBuffer buf = new StringBuffer();
 
         while ((line = _in.readLine()) != null) {
             if (line.startsWith("Proc-Type: 4,ENCRYPTED")) {
@@ -1042,8 +996,8 @@ public class PEMInputOutput {
                 throw new IOException("Illegal IV length");
             }
             byte[] salt = new byte[8];
-            System.arraycopy(iv,  0, salt, 0, 8);
-             OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
+            System.arraycopy(iv, 0, salt, 0, 8);
+            OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
             pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(passwd), salt);
             KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLen * 8);
             SecretKey secretKey = new javax.crypto.spec.SecretKeySpec(param.getKey(), realName);

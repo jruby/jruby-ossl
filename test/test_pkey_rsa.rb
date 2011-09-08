@@ -1,11 +1,7 @@
-begin
-  require "openssl"
-rescue LoadError
-end
-
+require "openssl"
 require "test/unit"
 
-class TestPKey < Test::Unit::TestCase
+class TestPKeyRSA < Test::Unit::TestCase
   def test_has_correct_methods
     pkey_methods = OpenSSL::PKey::PKey.instance_methods(false).sort - ["initialize"]
     assert_equal ["sign", "verify"], pkey_methods
@@ -14,11 +10,6 @@ class TestPKey < Test::Unit::TestCase
     assert_equal ["d", "d=", "dmp1", "dmp1=", "dmq1", "dmq1=", "e", "e=", "export", "iqmp", "iqmp=", "n", "n=", "p", "p=", "params", "private?", "private_decrypt", "private_encrypt", "public?", "public_decrypt", "public_encrypt", "public_key", "q", "q=", "to_der", "to_pem", "to_s", "to_text"], rsa_methods
 
     assert_equal ["generate"], OpenSSL::PKey::RSA.methods(false)
-    
-#     dsa_methods = OpenSSL::PKey::DSA.instance_methods(false).sort - ["initialize"]
-#     assert_equal ["export", "g", "g=", "p", "p=", "params", "priv_key", "priv_key=", "private?", "pub_key", "pub_key=", "public?", "public_key", "q", "q=", "syssign", "sysverify", "to_der", "to_pem", "to_s", "to_text"], dsa_methods
-
-#     assert_equal ["generate"], OpenSSL::PKey::DSA.methods(false)
   end
   
   #iqmp == coefficient
@@ -32,10 +23,6 @@ class TestPKey < Test::Unit::TestCase
   
   def test_can_generate_rsa_key
     OpenSSL::PKey::RSA.generate(512)
-  end
-
-  def test_can_generate_dsa_key
-    OpenSSL::PKey::DSA.generate(512)
   end
 
   def test_malformed_rsa_handling
@@ -156,53 +143,31 @@ __EOP__
     assert_equal(pkey.to_der, OpenSSL::PKey::RSA.new(pkey.to_der).to_der)
   end
 
-  # jruby-openssl/0.6 causes NPE
-  def test_generate_pkey_dsa_empty
-    assert_nothing_raised do
-      OpenSSL::PKey::DSA.new.to_pem
-    end
+  def test_load_rsa_des_encrypted
+    password = 'pass'
+    pkey = OpenSSL::PKey::RSA.generate(1024)
+    cipher = OpenSSL::Cipher::Cipher.new('des-cbc')
+    pem = pkey.to_pem(cipher, password)
+    assert_equal(pkey.n, OpenSSL::PKey::RSA.new(pem, password).n)
   end
 
-  # jruby-openssl/0.6 ignores fixnum arg => to_pem returned 65 bytes with 'MAA='
-  def test_generate_pkey_dsa_length
-    assert(OpenSSL::PKey::DSA.new(512).to_pem.size > 100)
+  def test_load_rsa_3des_encrypted
+    password = 'pass'
+    pkey = OpenSSL::PKey::RSA.generate(1024)
+    cipher = OpenSSL::Cipher::Cipher.new('des-ede3-cbc')
+    pem = pkey.to_pem(cipher, password)
+    assert_equal(pkey.n, OpenSSL::PKey::RSA.new(pem, password).n)
   end
 
-  # jruby-openssl/0.6 returns nil for DSA#to_text
-  def test_generate_pkey_dsa_to_text
-    assert_match(
-      /Private-Key: \(512 bit\)/,
-      OpenSSL::PKey::DSA.new(512).to_text
-    )
+  def test_load_rsa_aes_encrypted
+    password = 'pass'
+    pkey = OpenSSL::PKey::RSA.generate(1024)
+    cipher = OpenSSL::Cipher::Cipher.new('aes-128-cbc')
+    pem = pkey.to_pem(cipher, password)
+    assert_equal(pkey.n, OpenSSL::PKey::RSA.new(pem, password).n)
   end
 
-  def test_load_pkey_dsa
-    pkey = OpenSSL::PKey::DSA.new(512)
-    assert_equal(pkey.to_pem, OpenSSL::PKey::DSA.new(pkey.to_pem).to_pem)
-  end
-
-  def test_load_pkey_dsa_public
-    pkey = OpenSSL::PKey::DSA.new(512).public_key
-    assert_equal(pkey.to_pem, OpenSSL::PKey::DSA.new(pkey.to_pem).to_pem)
-  end
-
-  def test_load_pkey_dsa_der
-    pkey = OpenSSL::PKey::DSA.new(512)
-    assert_equal(pkey.to_der, OpenSSL::PKey::DSA.new(pkey.to_der).to_der)
-  end
-
-  def test_load_pkey_dsa_public_der
-    pkey = OpenSSL::PKey::DSA.new(512).public_key
-    assert_equal(pkey.to_der, OpenSSL::PKey::DSA.new(pkey.to_der).to_der)
-  end
-
-  def test_load_pkey_dsa_net_ssh
-    blob = "0\201\367\002\001\000\002A\000\203\316/\037u\272&J\265\003l3\315d\324h\372{\t8\252#\331_\026\006\035\270\266\255\343\353Z\302\276\335\336\306\220\375\202L\244\244J\206>\346\b\315\211\302L\246x\247u\a\376\366\345\302\016#\002\025\000\244\274\302\221Og\275/\302+\356\346\360\024\373wI\2573\361\002@\027\215\270r*\f\213\350C\245\021:\350 \006\\\376\345\022`\210b\262\3643\023XLKS\320\370\002\276\347A\nU\204\276\324\256`=\026\240\330\306J\316V\213\024\e\030\215\355\006\037q\337\356ln\002@\017\257\034\f\260\333'S\271#\237\230E\321\312\027\021\226\331\251Vj\220\305\316\036\v\266+\000\230\270\177B\003?t\a\305]e\344\261\334\023\253\323\251\223M\2175)a(\004\"lI8\312\303\307\a\002\024_\aznW\345\343\203V\326\246ua\203\376\201o\350\302\002"
-    pkey = OpenSSL::PKey::DSA.new(blob)
-    assert_equal(blob, pkey.to_der)
-  end
-
-  CRUBY_DES_PEM = <<END
+  CRUBY_DES_RSA_PEM = <<END
 -----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-CBC,D22ABA5D7A345AAF
@@ -218,7 +183,7 @@ N2nTwx0ZtZRxFakP8CMyrVCn7BVYdIF3ISgX7RT+GwkujKwWAO0xrjkMc3y3Pv2R
 -----END RSA PRIVATE KEY-----
 END
 
-  JRUBY_DES_PEM = <<END
+  JRUBY_DES_RSA_PEM = <<END
 -----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-CBC,14f319c66f99b413
@@ -239,7 +204,7 @@ CLxLcO6qbYRDyoFEpMrYq/O2beA1BH28BXnDkODbOje/lbvL9sSaHg==
 -----END RSA PRIVATE KEY-----
 END
 
-  CRUBY_3DES_PEM = <<END
+  CRUBY_3DES_RSA_PEM = <<END
 -----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-EDE3-CBC,F4E217EFFC0C21F0
@@ -255,7 +220,7 @@ dQ7IaJwE9xygO1hVHLJze1pZs+xHsxdR
 -----END RSA PRIVATE KEY-----
 END
 
-  JRUBY_3DES_PEM = <<END
+  JRUBY_3DES_RSA_PEM = <<END
 -----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-EDE3-CBC,102c5e7fdd051c1a
@@ -276,7 +241,7 @@ C4/lMsQ5zUyRI0fwpnSJv1RjYemNJMV+oUiHFDKN5jQ=
 -----END RSA PRIVATE KEY-----
 END
 
-  CRUBY_AES_PEM = <<END
+  CRUBY_AES_RSA_PEM = <<END
 -----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: AES-128-CBC,E6FB0DECDE6009CF6EEE61885679905E
@@ -292,7 +257,7 @@ wQTwaLdJYnu9I4HaS8tWCLHgNYRKbvNcTRX7CMxlV82ndn7aKoIDb/x8O5frObEF
 -----END RSA PRIVATE KEY-----
 END
 
-  JRUBY_AES_PEM = <<END
+  JRUBY_AES_RSA_PEM = <<END
 -----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: AES-128-CBC,5c6a1d2d24302e15a23bb77483db3966
@@ -313,45 +278,21 @@ jfdOf8b35frgdBJrFb1fNxXUDiOmHxBeffidJ7LEHD0zvh8yke9iqCRquRbQw4ua
 -----END RSA PRIVATE KEY-----
 END
 
-  def test_load_des_encrypted
+  def test_load_rsa_des_encrypted_compat
     password = 'pass'
-    pkey = OpenSSL::PKey::RSA.generate(1024)
-    cipher = OpenSSL::Cipher::Cipher.new('des-cbc')
-    pem = pkey.to_pem(cipher, password)
-    assert_equal(pkey.n, OpenSSL::PKey::RSA.new(pem, password).n)
+    assert_equal(171121679472900958735046240032013822902814135418044632926746858725279957006460484359346082493980272450155346042705805047522822137075000873718614673206839485927470809962483274240113443184049955325778842883884472730809338103721103527723371013427831682847229398280665281140996554391864952366240593334371598093357, OpenSSL::PKey::RSA.new(CRUBY_DES_RSA_PEM, password).n)
+    assert_equal(95186390926176289293448721787465460008681849005943627766414746880750829275325362105354699806095724614833850511391997530422798534550053092884697848715098905298125981139872096315909555296044739053126836027629923201408465604387441696201951345435727705264545384652266958892017406564235498456780610723946372077161, OpenSSL::PKey::RSA.new(JRUBY_DES_RSA_PEM, password).n)
   end
 
-  def test_load_3des_encrypted
+  def test_load_rsa_3des_encrypted_compat
     password = 'pass'
-    pkey = OpenSSL::PKey::RSA.generate(1024)
-    cipher = OpenSSL::Cipher::Cipher.new('des-ede3-cbc')
-    pem = pkey.to_pem(cipher, password)
-    assert_equal(pkey.n, OpenSSL::PKey::RSA.new(pem, password).n)
+    assert_equal(159891081887610779337613110093558981667630640397086024796277575756132362092191306947719745882625669532365621381440788450544049011459945371880102089907577418294502920328095107337128188112059054500699255092076505828498357575128536918367005034864200777995404401769611478230798677758186716282278489076140546075717, OpenSSL::PKey::RSA.new(CRUBY_3DES_RSA_PEM, password).n)
+    assert_equal(132634270546428248975101416587398035596645524786882670408365466475894396526829329830349264854502825314377251520406282650983030314030180184335663605776194424399755874220996106852804569548140575796496611429489809370931661876941690628312711482612941088835232077828296662784479160183720585553373956579796213039707, OpenSSL::PKey::RSA.new(JRUBY_3DES_RSA_PEM, password).n)
   end
 
-  def test_load_aes_encrypted
+  def test_load_rsa_aes_encrypted_compat
     password = 'pass'
-    pkey = OpenSSL::PKey::RSA.generate(1024)
-    cipher = OpenSSL::Cipher::Cipher.new('aes-128-cbc')
-    pem = pkey.to_pem(cipher, password)
-    assert_equal(pkey.n, OpenSSL::PKey::RSA.new(pem, password).n)
-  end
-
-  def test_load_des_encrypted_compat
-    password = 'pass'
-    assert_equal(171121679472900958735046240032013822902814135418044632926746858725279957006460484359346082493980272450155346042705805047522822137075000873718614673206839485927470809962483274240113443184049955325778842883884472730809338103721103527723371013427831682847229398280665281140996554391864952366240593334371598093357, OpenSSL::PKey::RSA.new(CRUBY_DES_PEM, password).n)
-    assert_equal(95186390926176289293448721787465460008681849005943627766414746880750829275325362105354699806095724614833850511391997530422798534550053092884697848715098905298125981139872096315909555296044739053126836027629923201408465604387441696201951345435727705264545384652266958892017406564235498456780610723946372077161, OpenSSL::PKey::RSA.new(JRUBY_DES_PEM, password).n)
-  end
-
-  def test_load_3des_encrypted_compat
-    password = 'pass'
-    assert_equal(159891081887610779337613110093558981667630640397086024796277575756132362092191306947719745882625669532365621381440788450544049011459945371880102089907577418294502920328095107337128188112059054500699255092076505828498357575128536918367005034864200777995404401769611478230798677758186716282278489076140546075717, OpenSSL::PKey::RSA.new(CRUBY_3DES_PEM, password).n)
-    assert_equal(132634270546428248975101416587398035596645524786882670408365466475894396526829329830349264854502825314377251520406282650983030314030180184335663605776194424399755874220996106852804569548140575796496611429489809370931661876941690628312711482612941088835232077828296662784479160183720585553373956579796213039707, OpenSSL::PKey::RSA.new(JRUBY_3DES_PEM, password).n)
-  end
-
-  def test_load_aes_encrypted_compat
-    password = 'pass'
-    assert_equal(152164605304862839347386799863418642272176047421496804966498177563653853015174053675480323318393334405555865282832768092329962715390636176200784476670180320842603832200246642618431746763085706624847469867394029459008113763032679106133646348160741974785288005086128311619599829066360227829804048705177001887963, OpenSSL::PKey::RSA.new(CRUBY_AES_PEM, password).n)
-    assert_equal(120124464337037052596736192517844019014106857114253451267066925743499301063116479220243836708739023567649536721432121286547319736881999977669587689339777273865695637895993003754843628769179367393259439036333237000420047538052601743699164582419555307462460610926941760286052729693393703143580060262101504625743, OpenSSL::PKey::RSA.new(JRUBY_AES_PEM, password).n)
+    assert_equal(152164605304862839347386799863418642272176047421496804966498177563653853015174053675480323318393334405555865282832768092329962715390636176200784476670180320842603832200246642618431746763085706624847469867394029459008113763032679106133646348160741974785288005086128311619599829066360227829804048705177001887963, OpenSSL::PKey::RSA.new(CRUBY_AES_RSA_PEM, password).n)
+    assert_equal(120124464337037052596736192517844019014106857114253451267066925743499301063116479220243836708739023567649536721432121286547319736881999977669587689339777273865695637895993003754843628769179367393259439036333237000420047538052601743699164582419555307462460610926941760286052729693393703143580060262101504625743, OpenSSL::PKey::RSA.new(JRUBY_AES_RSA_PEM, password).n)
   end
 end

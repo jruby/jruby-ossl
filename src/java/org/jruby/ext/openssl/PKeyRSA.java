@@ -376,7 +376,7 @@ public class PKeyRSA extends PKey {
         return getRuntime().newString(result.toString());
     }
 
-    @JRubyMethod(name = {"export", "to_pem", "to_s"}, rest = true)
+    @JRubyMethod(name = { "export", "to_pem", "to_s" }, rest = true)
     public IRubyObject export(IRubyObject[] args) {
         StringWriter w = new StringWriter();
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 0, 2);
