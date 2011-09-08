@@ -89,7 +89,7 @@ public class Cipher extends RubyObject {
             return recv.getRuntime().newArray(result);
         }
 
-        static boolean isSupportedCipher(String name) {
+        public static boolean isSupportedCipher(String name) {
             initializeCiphers();
             return CIPHERS.indexOf(name.toUpperCase()) != -1;
         }
@@ -231,6 +231,60 @@ public class Cipher extends RubyObject {
 
             return new String[]{cryptoBase, cryptoVersion, cryptoMode, realName, paddingType};
         }
+        
+        public static int[] osslKeyIvLength(String name) {
+            String[] values = Algorithm.osslToJsse(name);
+            String cryptoBase = values[0];
+            String cryptoVersion = values[1];
+            String cryptoMode = values[2];
+            String realName = values[3];
+
+            int keyLen = -1;
+            int ivLen = -1;
+
+            if (hasLen(cryptoBase) && null != cryptoVersion) {
+                try {
+                    keyLen = Integer.parseInt(cryptoVersion) / 8;
+                } catch (NumberFormatException e) {
+                    keyLen = -1;
+                }
+            }
+            if (keyLen == -1) {
+                if ("DES".equalsIgnoreCase(cryptoBase)) {
+                    ivLen = 8;
+                    if ("EDE3".equalsIgnoreCase(cryptoVersion)) {
+                        keyLen = 24;
+                    } else {
+                        keyLen = 8;
+                    }
+                } else if ("RC4".equalsIgnoreCase(cryptoBase)) {
+                    ivLen = 0;
+                    keyLen = 16;
+                } else {
+                    keyLen = 16;
+                    try {
+                        if ((javax.crypto.Cipher.getMaxAllowedKeyLength(name) / 8) < keyLen) {
+                            keyLen = javax.crypto.Cipher.getMaxAllowedKeyLength(name) / 8;
+                        }
+                    } catch (Exception e) {
+                        // I hate checked exceptions
+                    }
+                }
+            }
+
+            if (ivLen == -1) {
+                if ("AES".equalsIgnoreCase(cryptoBase)) {
+                    ivLen = 16;
+                } else {
+                    ivLen = 8;
+                }
+            }
+            return new int[] { keyLen, ivLen };
+        }
+
+        public static boolean hasLen(String cryptoBase) {
+            return "AES".equalsIgnoreCase(cryptoBase) || "RC2".equalsIgnoreCase(cryptoBase) || "RC4".equalsIgnoreCase(cryptoBase);
+        }
     }
 
     private static boolean tryCipher(final String rubyName) {
@@ -306,43 +360,11 @@ public class Cipher extends RubyObject {
         padding_type = values[4];
         ciph = getCipher();
 
-        if (hasLen(cryptoBase) && null != cryptoVersion) {
-            try {
-                keyLen = Integer.parseInt(cryptoVersion) / 8;
-            } catch (NumberFormatException e) {
-                keyLen = -1;
-            }
-        }
-        if (keyLen == -1) {
-            if ("DES".equalsIgnoreCase(cryptoBase)) {
-                ivLen = 8;
-                if ("EDE3".equalsIgnoreCase(cryptoVersion)) {
-                    keyLen = 24;
-                } else {
-                    keyLen = 8;
-                }
-                generateKeyLen = keyLen / 8 * 7;
-            } else if ("RC4".equalsIgnoreCase(cryptoBase)) {
-                ivLen = 0;
-                keyLen = 16;
-            } else {
-                keyLen = 16;
-                try {
-                    if ((javax.crypto.Cipher.getMaxAllowedKeyLength(name) / 8) < keyLen) {
-                        keyLen = javax.crypto.Cipher.getMaxAllowedKeyLength(name) / 8;
-                    }
-                } catch (Exception e) {
-                    // I hate checked exceptions
-                }
-            }
-        }
-
-        if (ivLen == -1) {
-            if ("AES".equalsIgnoreCase(cryptoBase)) {
-                ivLen = 16;
-            } else {
-                ivLen = 8;
-            }
+        int[] lengths = Algorithm.osslKeyIvLength(name);
+        keyLen = lengths[0];
+        ivLen = lengths[1];
+        if ("DES".equalsIgnoreCase(cryptoBase)) {
+            generateKeyLen = keyLen / 8 * 7;
         }
         
         // given 'rc4' must be 'RC4' here. OpenSSL checks it as a LN of object
@@ -551,10 +573,6 @@ public class Cipher extends RubyObject {
         }
     }
 
-    private static boolean hasLen(String cryptoBase) {
-        return "AES".equalsIgnoreCase(cryptoBase) || "RC2".equalsIgnoreCase(cryptoBase) || "RC4".equalsIgnoreCase(cryptoBase);
-    }
-
     @JRubyMethod(required = 1, optional = 3)
     public IRubyObject pkcs5_keyivgen(IRubyObject[] args) {
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 1, 4);
@@ -742,6 +760,10 @@ public class Cipher extends RubyObject {
         return this.cryptoMode;
     }
 
+    int getKeyLen() {
+        return keyLen;
+    }
+    
     int getGenerateKeyLen() {
         return (generateKeyLen == -1) ? keyLen : generateKeyLen;
     }

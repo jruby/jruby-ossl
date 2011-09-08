@@ -75,7 +75,10 @@ import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.pkcs.RSAPrivateKeyStructure;
 import org.bouncycastle.asn1.x509.RSAPublicKeyStructure;
 import org.bouncycastle.crypto.PBEParametersGenerator;
+import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.generators.OpenSSLPBEParametersGenerator;
+import org.bouncycastle.crypto.generators.PKCS12ParametersGenerator;
+import org.bouncycastle.crypto.generators.PKCS5S2ParametersGenerator;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
@@ -106,7 +109,9 @@ import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.asn1.pkcs.PKCS12PBEParams;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.jruby.ext.openssl.Cipher.CipherModule;
 import org.jruby.ext.openssl.impl.ASN1Registry;
+import org.jruby.ext.openssl.impl.CipherSpec;
 
 /**
  * Helper class to read and write PEM files correctly.
@@ -824,7 +829,7 @@ public class PEMInputOutput {
         }
     }
 
-    public static void writeRSAPrivateKey(Writer _out, RSAPrivateCrtKey obj, String algo, char[] f) throws IOException {
+    public static void writeRSAPrivateKey(Writer _out, RSAPrivateCrtKey obj, CipherSpec cipher, char[] passwd) throws IOException {
         assert(obj != null);
         BufferedWriter out = makeBuffered(_out);
         RSAPrivateKeyStructure keyStruct = new RSAPrivateKeyStructure(
@@ -846,33 +851,26 @@ public class PEMInputOutput {
         
         byte[] encoding = bOut.toByteArray();
 
-        if(algo != null && f != null) {
-            byte[] salt = new byte[8];
-            byte[] encData = null;
-            random.nextBytes(salt);
-            OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
-            pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(f), salt);
-            SecretKey secretKey = null;
-
-            if (algo.startsWith("DES")) {
-                // generate key
-                int keyLength = 24;
-                if (algo.equalsIgnoreCase("DESEDE")) {
-                    algo = "DESede/CBC/PKCS5Padding";
-                }
-                KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLength * 8);
-                secretKey = new SecretKeySpec(param.getKey(), algo.split("/")[0]);
-            } else {
-                throw new IOException("unknown algorithm `" + algo + "' in write_DSAPrivateKey");
+        if(cipher != null && passwd != null) {
+            Cipher c = cipher.getCipher();
+            String algoBase = c.getAlgorithm();
+            if (algoBase.indexOf('/') != -1) {
+                algoBase = algoBase.split("/")[0];
             }
-
-            // cipher  
+            byte[] iv = new byte[c.getBlockSize()];
+            random.nextBytes(iv);
+            byte[] salt = new byte[8];
+            System.arraycopy(iv,  0, salt, 0, 8);
+            OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
+            pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(passwd), salt);
+            KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(cipher.getKeyLenInBits());
+            SecretKey secretKey = new SecretKeySpec(param.getKey(), algoBase);
+            byte[] encData = null;
             try {
-                Cipher c = Cipher.getInstance(algo);
-                c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(salt));
+                c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
                 encData = c.doFinal(encoding);
-            } catch (Exception e) {
-                throw new IOException("exception using cipher: " + e.toString());
+            } catch (GeneralSecurityException gse) {
+                throw new IOException("exception using cipher: " + gse.toString());
             }
        
             // write the data
@@ -880,8 +878,8 @@ public class PEMInputOutput {
             out.newLine();
             out.write("Proc-Type: 4,ENCRYPTED");
             out.newLine();
-            out.write("DEK-Info: DES-EDE3-CBC,");
-            writeHexEncoded(out,salt);
+            out.write("DEK-Info: " + cipher.getOsslName() + ",");
+            writeHexEncoded(out,iv);
             out.newLine();
             out.newLine();
             writeEncoded(out,encData);
@@ -947,20 +945,6 @@ public class PEMInputOutput {
         }
 
         return Base64.decode(buf.toString());
-    }
-
-    /**
-     * create the secret key needed for this object, fetching the password
-     */
-    private static SecretKey getKey(char[] k1, String algorithm, int keyLength, byte[] salt) throws IOException {
-        char[] password = k1;
-        if (password == null) {
-            throw new IOException("Password is null, but a password is required");
-        }
-        OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
-        pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(password), salt);
-        KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLength * 8);
-        return new javax.crypto.spec.SecretKeySpec(param.getKey(), algorithm);
     }
 
     private static RSAPublicKey readRSAPublicKey(BufferedReader in, String endMarker) throws IOException {
@@ -1037,30 +1021,37 @@ public class PEMInputOutput {
                 buf.append(line.trim());
             }
         }
-        byte[]  keyBytes = null;
+        byte[] keyBytes = null;
+        byte[] decoded = Base64.decode(buf.toString());
         if (isEncrypted) {
-            StringTokenizer tknz = new StringTokenizer(dekInfo, ",");
-            String          encoding = tknz.nextToken();
-
-            if (encoding.equals("DES-EDE3-CBC")) {
-                String  alg = "DESede";
-                byte[]  iv = Hex.decode(tknz.nextToken());
-                Key     sKey = getKey(passwd,alg, 24, iv);
-                Cipher  c = Cipher.getInstance("DESede/CBC/PKCS5Padding");
-                c.init(Cipher.DECRYPT_MODE, sKey, new IvParameterSpec(iv));
-                keyBytes = c.doFinal(Base64.decode(buf.toString()));
-            } else if (encoding.equals("DES-CBC")) {
-                String  alg = "DES";
-                byte[]  iv = Hex.decode(tknz.nextToken());
-                Key     sKey = getKey(passwd,alg, 8, iv);
-                Cipher  c = Cipher.getInstance("DES/CBC/PKCS5Padding");
-                c.init(Cipher.DECRYPT_MODE, sKey, new IvParameterSpec(iv));
-                keyBytes = c.doFinal(Base64.decode(buf.toString()));
-            } else {
-                throw new IOException("unknown encryption with private key");
+            if (passwd == null) {
+                throw new IOException("Password is null, but a password is required");
             }
+            StringTokenizer tknz = new StringTokenizer(dekInfo, ",");
+            String algorithm = tknz.nextToken();
+            byte[] iv = Hex.decode(tknz.nextToken());
+            if (!CipherModule.isSupportedCipher(algorithm)) {
+                throw new IOException("Unknown algorithm: " + algorithm);
+            }
+            String[] cipher = org.jruby.ext.openssl.Cipher.Algorithm.osslToJsse(algorithm);
+            String realName = cipher[3];
+            int[] lengths = org.jruby.ext.openssl.Cipher.Algorithm.osslKeyIvLength(algorithm);
+            int keyLen = lengths[0];
+            int ivLen = lengths[1];
+            if (iv.length != ivLen) {
+                throw new IOException("Illegal IV length");
+            }
+            byte[] salt = new byte[8];
+            System.arraycopy(iv,  0, salt, 0, 8);
+             OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
+            pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(passwd), salt);
+            KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLen * 8);
+            SecretKey secretKey = new javax.crypto.spec.SecretKeySpec(param.getKey(), realName);
+            Cipher c = Cipher.getInstance(realName);
+            c.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(iv));
+            keyBytes = c.doFinal(decoded);
         } else {
-            keyBytes = Base64.decode(buf.toString());
+            keyBytes = decoded;
         }
         return readPrivateKeySequence(keyBytes, type);
     }

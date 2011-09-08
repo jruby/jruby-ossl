@@ -59,6 +59,7 @@ import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.exceptions.RaiseException;
+import org.jruby.ext.openssl.impl.CipherSpec;
 import org.jruby.ext.openssl.x509store.PEMInputOutput;
 import org.jruby.runtime.Arity;
 import org.jruby.runtime.Block;
@@ -379,17 +380,18 @@ public class PKeyRSA extends PKey {
     public IRubyObject export(IRubyObject[] args) {
         StringWriter w = new StringWriter();
         org.jruby.runtime.Arity.checkArgumentCount(getRuntime(), args, 0, 2);
+        CipherSpec ciph = null;
         char[] passwd = null;
-        String algo = null;
         if (args.length > 0 && !args[0].isNil()) {
-            algo = ((org.jruby.ext.openssl.Cipher) args[0]).getAlgorithm();
+            org.jruby.ext.openssl.Cipher c = (org.jruby.ext.openssl.Cipher) args[0];
+            ciph = new CipherSpec(c.getCipher(), c.getName(), c.getKeyLen() * 8);
             if (args.length > 1 && !args[1].isNil()) {
                 passwd = args[1].toString().toCharArray();
             }
         }
         try {
             if (privKey != null) {
-                PEMInputOutput.writeRSAPrivateKey(w, privKey, algo, passwd);
+                PEMInputOutput.writeRSAPrivateKey(w, privKey, ciph, passwd);
             } else {
                 PEMInputOutput.writeRSAPublicKey(w, pubKey);
             }
