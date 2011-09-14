@@ -191,6 +191,11 @@ public class SSLSocket extends RubyObject {
     }
 
     @JRubyMethod
+    public IRubyObject connect_nonblock(ThreadContext context) {
+        throw new UnsupportedOperationException();
+    }
+
+    @JRubyMethod
     public IRubyObject accept(ThreadContext context) {
         Ruby runtime = context.getRuntime();
         if (!rubyCtx.isProtocolForServer()) {
@@ -227,6 +232,11 @@ public class SSLSocket extends RubyObject {
             throw SSL.newSSLError(runtime, ex);
         }
         return this;
+    }
+
+    @JRubyMethod
+    public IRubyObject accept_nonblock(ThreadContext context) {
+        throw new UnsupportedOperationException();
     }
 
     @JRubyMethod
@@ -535,6 +545,11 @@ public class SSLSocket extends RubyObject {
         }
     }
 
+    @JRubyMethod(rest = true, required = 1, optional = 1)
+    public IRubyObject sysread_nonblock(ThreadContext context, IRubyObject[] args) {
+        throw new UnsupportedOperationException();
+    }
+
     @JRubyMethod
     public IRubyObject syswrite(ThreadContext context, IRubyObject arg)  {
         Ruby runtime = context.getRuntime();
@@ -555,6 +570,11 @@ public class SSLSocket extends RubyObject {
         } catch (IOException ioe) {
             throw runtime.newIOError(ioe.getMessage());
         }
+    }
+
+    @JRubyMethod
+    public IRubyObject syswrite_nonblock(ThreadContext context) {
+        throw new UnsupportedOperationException();
     }
 
     private void checkClosed() {
@@ -659,6 +679,16 @@ public class SSLSocket extends RubyObject {
     public IRubyObject pending() {
         System.err.println("WARNING: unimplemented method called: SSLSocket#pending");
         return getRuntime().getNil();
+    }
+
+    @JRubyMethod
+    public IRubyObject session_reused_p() {
+        throw new UnsupportedOperationException();
+    }
+
+    @JRubyMethod
+    public synchronized IRubyObject session_set(IRubyObject aSession) {
+        throw new UnsupportedOperationException();
     }
     
     private SocketChannel getSocketChannel() {
