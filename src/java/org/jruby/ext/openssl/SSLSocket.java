@@ -50,6 +50,7 @@ import javax.net.ssl.SSLSession;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
+import org.jruby.RubyException;
 import org.jruby.RubyIO;
 import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
@@ -497,8 +498,7 @@ public class SSLSocket extends RubyObject {
         flushData();
     }
 
-    @JRubyMethod(rest = true, required = 1, optional = 1)
-    public IRubyObject sysread(ThreadContext context, IRubyObject[] args) {
+    private IRubyObject do_sysread(ThreadContext context, IRubyObject[] args, boolean nonBlock) {
         Ruby runtime = context.getRuntime();
         int len = RubyNumeric.fix2int(args[0]);
         RubyString str = null;
@@ -518,8 +518,15 @@ public class SSLSocket extends RubyObject {
 
         try {
             // So we need to make sure to only block when there is no data left to process
-            if(engine == null || !(peerAppData.hasRemaining() || peerNetData.position() > 0)) {
-                waitSelect(SelectionKey.OP_READ);
+            if (engine == null || !(peerAppData.hasRemaining() || peerNetData.position() > 0)) {
+                if (nonBlock) {
+                    RaiseException re = newSSLError(runtime, "read would raise");
+                    IRubyObject waitReadable = runtime.getIO().getConstant("WaitReadable");
+                    re.getException().extend(new IRubyObject[] {waitReadable});
+                    throw re;
+                } else {
+                    waitSelect(SelectionKey.OP_READ);
+                }
             }
 
             ByteBuffer dst = ByteBuffer.allocate(len);
@@ -546,16 +553,27 @@ public class SSLSocket extends RubyObject {
     }
 
     @JRubyMethod(rest = true, required = 1, optional = 1)
+    public IRubyObject sysread(ThreadContext context, IRubyObject[] args) {
+        return do_sysread(context, args, false);
+    }
+    
+    @JRubyMethod(rest = true, required = 1, optional = 1)
     public IRubyObject sysread_nonblock(ThreadContext context, IRubyObject[] args) {
-        throw new UnsupportedOperationException();
+        return do_sysread(context, args, true);
     }
 
-    @JRubyMethod
-    public IRubyObject syswrite(ThreadContext context, IRubyObject arg)  {
+    private IRubyObject do_syswrite(ThreadContext context, IRubyObject arg, boolean nonBlock)  {
         Ruby runtime = context.getRuntime();
         try {
             checkClosed();
-            waitSelect(SelectionKey.OP_WRITE);
+            if (nonBlock) {
+                RaiseException re = newSSLError(runtime, "write would raise");
+                IRubyObject waitWritable = runtime.getIO().getConstant("WaitWritable");
+                re.getException().extend(new IRubyObject[] {waitWritable});
+                throw re;
+            } else {
+                waitSelect(SelectionKey.OP_WRITE);
+            }
             byte[] bls = arg.convertToString().getBytes();
             ByteBuffer b1 = ByteBuffer.wrap(bls);
             int written;
@@ -573,8 +591,13 @@ public class SSLSocket extends RubyObject {
     }
 
     @JRubyMethod
-    public IRubyObject syswrite_nonblock(ThreadContext context) {
-        throw new UnsupportedOperationException();
+    public IRubyObject syswrite(ThreadContext context, IRubyObject arg) {
+        return do_syswrite(context, arg, false);
+    }
+
+    @JRubyMethod
+    public IRubyObject syswrite_nonblock(ThreadContext context, IRubyObject arg) {
+        return do_syswrite(context, arg, true);
     }
 
     private void checkClosed() {
