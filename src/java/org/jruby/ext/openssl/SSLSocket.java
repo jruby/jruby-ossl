@@ -641,12 +641,16 @@ public class SSLSocket extends RubyObject {
     public IRubyObject cert() {
         try {
             Certificate[] cert = engine.getSession().getLocalCertificates();
-            if (cert.length > 0) {
+
+            if (cert != null && cert.length > 0) {
                 return X509Cert.wrap(getRuntime(), cert[0]);
             }
         } catch (CertificateEncodingException ex) {
             throw X509Cert.newCertificateError(getRuntime(), ex);
-        }
+        } catch (NullPointerException ex) {
+            return getRuntime().getNil();
+        } 
+
         return getRuntime().getNil();
     }
 
