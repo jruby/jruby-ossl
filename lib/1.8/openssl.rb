@@ -14,10 +14,6 @@
   $Id: openssl.rb 12496 2007-06-08 15:02:04Z technorama $
 =end
 
-unless defined? JRUBY_VERSION
-  warn 'Loading jruby-openssl in a non-JRuby interpreter'
-end
-
 # TODO: remove this chunk after 1.4 support is dropped
 require 'digest'
 unless defined?(::Digest::Class)
@@ -62,19 +58,10 @@ unless defined?(::Digest::Class)
 end
 # end of compat chunk.
 
-begin
-  require 'bouncy-castle-java'
-rescue LoadError
-  # runs under restricted mode.
-end
-require 'jopenssl'
-
-
 require 'openssl/bn'
 require 'openssl/cipher'
 require 'openssl/config'
 require 'openssl/digest'
 require 'openssl/pkcs7'
-require 'openssl/ssl'
-require 'openssl/x509'
-
+require 'openssl/ssl-internal'
+require 'openssl/x509-internal'

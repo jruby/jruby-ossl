@@ -11,10 +11,8 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: x509.rb 11708 2007-02-12 23:01:19Z shyouhei $
+  $Id$
 =end
-
-require "openssl"
 
 module OpenSSL
   module X509
@@ -28,7 +26,7 @@ module OpenSSL
       end
 
       def create_ext_from_array(ary)
-        raise ExtensionError, "unexpected array form" if ary.size > 3 
+        raise ExtensionError, "unexpected array form" if ary.size > 3
         create_ext(ary[0], ary[1], ary[2])
       end
 
@@ -38,12 +36,12 @@ module OpenSSL
         value.strip!
         create_ext(oid, value)
       end
-      
+
       def create_ext_from_hash(hash)
         create_ext(hash["oid"], hash["value"], hash["critical"])
       end
     end
-    
+
     class Extension
       def to_s # "oid = critical, value"
         str = self.oid
@@ -51,7 +49,7 @@ module OpenSSL
         str << "critical, " if self.critical?
         str << self.value.gsub(/\n/, ", ")
       end
-        
+
       def to_h # {"oid"=>sn|ln, "value"=>value, "critical"=>true|false}
         {"oid"=>self.oid,"value"=>self.value,"critical"=>self.critical?}
       end
@@ -82,7 +80,8 @@ module OpenSSL
 
         def expand_pair(str)
           return nil unless str
-          return str.gsub(Pair){|pair|
+          return str.gsub(Pair){
+            pair = $&
             case pair.size
             when 2 then pair[1,1]
             when 3 then Integer("0x#{pair[1,2]}").chr
@@ -93,7 +92,7 @@ module OpenSSL
 
         def expand_hexstring(str)
           return nil unless str
-          der = str.gsub(HexPair){|hex| Integer("0x#{hex}").chr }
+          der = str.gsub(HexPair){$&.to_i(16).chr }
           a1 = OpenSSL::ASN1.decode(der)
           return a1.value, a1.tag
         end

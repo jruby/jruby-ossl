@@ -11,10 +11,9 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: ssl.rb 16193 2008-04-25 06:51:21Z knu $
+  $Id$
 =end
 
-require "openssl"
 require "openssl/buffering"
 require "fcntl"
 
@@ -36,6 +35,7 @@ module OpenSSL
 
       def set_params(params={})
         params = DEFAULT_PARAMS.merge(params)
+        # ssl_version need to be set at first.
         self.ssl_version = params.delete(:ssl_version)
         params.each{|name, value| self.__send__("#{name}=", value) }
         if self.verify_mode != OpenSSL::SSL::VERIFY_NONE

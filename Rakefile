@@ -1,7 +1,7 @@
 require 'rake'
 require 'rake/testtask'
 
-MANIFEST = FileList["Rakefile", "History.txt", "Manifest.txt", "README.txt", "License.txt", "lib/jopenssl.jar", "lib/**/*", "test/**/*"]
+MANIFEST = FileList["Rakefile", "History.txt", "Manifest.txt", "README.txt", "License.txt", "lib/shared/jopenssl.jar", "lib/**/*", "test/**/*"]
 BC_JARS = FileList["build_lib/bc*.jar"]
 
 task :default => [:java_compile, :test]
@@ -38,23 +38,29 @@ task :java_compile do
   end
 
   sh "javac @pkg/compile_options @pkg/compile_classpath @pkg/compile_sourcefiles"
-  sh "jar cf lib/jopenssl.jar -C pkg/classes/ ."
+  sh "jar cf lib/shared/jopenssl.jar -C pkg/classes/ ."
 end
-file "lib/jopenssl.jar" => :java_compile
+file "lib/shared/jopenssl.jar" => :java_compile
 
 task :more_clean do
-  rm_f FileList['lib/jopenssl.jar']
+  rm_f FileList['lib/shared/jopenssl.jar']
 end
 task :clean => :more_clean
 
 File.open("Manifest.txt", "w") {|f| MANIFEST.each {|n| f.puts n } }
 
 begin
+  # easiest way to configure ruby_flags for Hoe.
+  ENV['RUBY_FLAGS'] ||= [
+    (RUBY_VERSION >= '1.9.0' ? '--1.9' : '--1.8'),
+    '-w',
+    '-Ibuild_lib:lib/shared:test',
+    ENV['RUBY_DEBUG']
+  ].compact.join(' ')
   require 'hoe'
   Hoe.plugin :gemcutter
-  Hoe.add_include_dirs('build_lib')
   hoe = Hoe.spec("jruby-openssl") do |p|
-    load File.dirname(__FILE__) + "/lib/jopenssl/version.rb"
+    load File.dirname(__FILE__) + "/lib/shared/jopenssl/version.rb"
     p.version = Jopenssl::Version::VERSION
     p.rubyforge_name = "jruby-extras"
     p.url = "http://jruby-extras.rubyforge.org/jruby-openssl"
@@ -67,6 +73,8 @@ begin
     p.extra_deps << ['bouncy-castle-java', '>= 1.5.0146.1']
   end
   hoe.spec.dependencies.delete_if { |dep| dep.name == "hoe" }
+  # Either lib/1.8 or lib/1.9 is added to $LOAD_PATH dynamically.
+  hoe.spec.require_paths = ['lib/shared']
 
   task :gemspec do
     File.open("#{hoe.name}.gemspec", "w") {|f| f << hoe.spec.to_ruby }
