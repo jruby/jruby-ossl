@@ -3,7 +3,7 @@ require 'test/unit'
 require 'webrick/https'
 require 'net/https'
 require 'logger'
-require File.join(File.dirname(__FILE__), "1.8/utils.rb")
+require File.join(File.dirname(__FILE__), (RUBY_VERSION >= '1.9.0' ? '1.9' : '1.8'), "utils.rb")
 
 
 class TestSSL < Test::Unit::TestCase
