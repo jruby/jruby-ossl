@@ -535,7 +535,7 @@ public class ASN1 {
             } else if(v instanceof DERNull) {
                 return c.callMethod(tc,"new",asnM.getRuntime().getNil());
             } else if(v instanceof DERInteger) {
-                return c.callMethod(tc,"new",RubyNumeric.str2inum(asnM.getRuntime(),asnM.getRuntime().newString(((DERInteger)v).getValue().toString()),10));
+                return c.callMethod(tc, "new", BN.newBN(asnM.getRuntime(), ((DERInteger) v).getValue()));
             } else if(v instanceof DERUTCTime) {
                 Date d = dateF.parse(((DERUTCTime)v).getAdjustedTime());
                 Calendar cal = Calendar.getInstance();

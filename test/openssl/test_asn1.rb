@@ -35,6 +35,7 @@ class  OpenSSL::TestASN1 < Test::Unit::TestCase
     assert_equal(1, version.value.size)
     assert_equal(OpenSSL::ASN1::Integer, version.value[0].class)
     assert_equal(2, version.value[0].value)
+    assert_equal(OpenSSL::BN, version.value[0].value.class)
 
     serial = tbs_cert.value[1]
     assert_equal(OpenSSL::ASN1::Integer, serial.class)
