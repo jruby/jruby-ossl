@@ -200,19 +200,6 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
 
       assert_raise(ArgumentError) { ssl.sysread(-1) }
 
-      # syswrite and sysread
-      ITERATIONS.times{|i|
-        str = "x" * 100 + "\n"
-        ssl.syswrite(str)
-        assert_equal(str, ssl.sysread(str.size))
-
-        str = "x" * i * 100 + "\n"
-        buf = ""
-        ssl.syswrite(str)
-        assert_equal(buf.object_id, ssl.sysread(str.size, buf).object_id)
-        assert_equal(str, buf)
-      }
-
       # puts and gets
       ITERATIONS.times{
         str = "x" * 100 + "\n"
@@ -237,6 +224,14 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
     }
   end
 
+  def sysread_size(ssl, size)
+    buf = ''
+    while buf.bytesize < size
+      buf += ssl.sysread(size - buf.bytesize)
+    end
+    buf
+  end
+
   def test_sysread_chunks
     args = {}
     args[:server_proc] = proc { |ctx, ssl|
@@ -257,11 +252,11 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
       ssl.sync_close = true
       ssl.connect
       ssl.syswrite("hello\n")
-      assert_equal("0" * 200, ssl.sysread(200))
-      assert_equal("0" * 200, ssl.sysread(200))
-      assert_equal("0" * 200, ssl.sysread(200))
-      assert_equal("0" * 200, ssl.sysread(200))
-      assert_equal("1" * 200, ssl.sysread(200))
+      assert_equal("0" * 200, sysread_size(ssl, 200))
+      assert_equal("0" * 200, sysread_size(ssl, 200))
+      assert_equal("0" * 200, sysread_size(ssl, 200))
+      assert_equal("0" * 200, sysread_size(ssl, 200))
+      assert_equal("1" * 200, sysread_size(ssl, 200))
       ssl.close
     }
   end
@@ -285,12 +280,14 @@ class OpenSSL::TestSSL < Test::Unit::TestCase
         read = ssl.sysread(str.size, buf)
         assert(!read.empty?)
         assert_equal(buf.object_id, read.object_id)
-        assert_equal(str, buf)
+        assert_equal(str[0, buf.bytesize], buf)
+        sysread_size(ssl, str.bytesize - buf.bytesize) # drop unread bytes
 
         ssl.syswrite(str)
         read = ssl.sysread(str.size, nil)
         assert(!read.empty?)
-        assert_equal(str, read)
+        assert_equal(str[0, read.bytesize], read)
+        sysread_size(ssl, str.bytesize - read.bytesize) # drop unread bytes
       }
       ssl.close
     }

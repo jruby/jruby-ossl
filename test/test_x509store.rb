@@ -63,6 +63,14 @@ class TestX509Store < Test::Unit::TestCase
     assert_equal(true, @store.verify(cert))
   end
 
+  # keyUsage: no digitalSignature bit, keyEncipherment bit only.
+  def test_purpose_ssl_server_no_dsig_in_keyUsage
+    @store.add_file(path("fixture/purpose/cacert.pem"))
+    cert = OpenSSL::X509::Certificate.new(File.read(path("fixture/purpose/sslserver_no_dsig_in_keyUsage.pem")))
+    @store.purpose = OpenSSL::X509::PURPOSE_SSL_SERVER
+    assert_equal(true, @store.verify(cert))
+  end
+
   def test_add_file_multiple
     f = Tempfile.new("globalsign-root.pem")
     f << GLOBALSIGN_ROOT_CA
