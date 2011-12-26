@@ -639,23 +639,25 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod
     public IRubyObject cert() {
+        if (engine == null) {
+            return getRuntime().getNil();
+        }
         try {
             Certificate[] cert = engine.getSession().getLocalCertificates();
-
             if (cert != null && cert.length > 0) {
                 return X509Cert.wrap(getRuntime(), cert[0]);
             }
         } catch (CertificateEncodingException ex) {
             throw X509Cert.newCertificateError(getRuntime(), ex);
-        } catch (NullPointerException ex) {
-            return getRuntime().getNil();
-        } 
-
+        }
         return getRuntime().getNil();
     }
 
     @JRubyMethod
-    public IRubyObject peer_cert()  {
+    public IRubyObject peer_cert() {
+        if (engine == null) {
+            return getRuntime().getNil();
+        }
         try {
             Certificate[] cert = engine.getSession().getPeerCertificates();
             if (cert.length > 0) {
@@ -673,11 +675,13 @@ public class SSLSocket extends RubyObject {
 
     @JRubyMethod
     public IRubyObject peer_cert_chain() {
+        if (engine == null) {
+            return getRuntime().getNil();
+        }
         try {
             javax.security.cert.Certificate[] certs = engine.getSession().getPeerCertificateChain();
-
             RubyArray arr = getRuntime().newArray(certs.length);
-            for(int i = 0 ; i < certs.length; i++ ) {
+            for (int i = 0; i < certs.length; i++) {
                 arr.add(X509Cert.wrap(getRuntime(), certs[i]));
             }
             return arr;
