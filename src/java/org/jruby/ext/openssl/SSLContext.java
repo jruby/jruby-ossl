@@ -237,6 +237,8 @@ public class SSLContext extends RubyObject {
         value = getInstanceVariable("@verify_callback");
         if (value != null && !value.isNil()) {
             internalCtx.store.setExtraData(1, value);
+        } else {
+            internalCtx.store.setExtraData(1, null);
         }
 
         value = getInstanceVariable("@timeout");
@@ -247,6 +249,8 @@ public class SSLContext extends RubyObject {
         value = getInstanceVariable("@verify_depth");
         if (value != null && !value.isNil()) {
             internalCtx.store.setDepth(RubyNumeric.fix2int(value));
+        } else {
+            internalCtx.store.setDepth(-1);
         }
 
         /* TODO: should be implemented for SSLSession
@@ -723,6 +727,10 @@ public class SSLContext extends RubyObject {
                     throw new CertificateException("certificate verify failed");
                 }
             } catch (Exception e) {
+                ctx.setLastVerifyResultInternal(storeCtx.error);
+                if (storeCtx.error == X509Utils.V_OK) {
+                    ctx.setLastVerifyResultInternal(X509Utils.V_ERR_CERT_REJECTED);
+                }
                 throw new CertificateException("certificate verify failed", e);
             }
         }
