@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
   s.authors = ["Ola Bini and JRuby contributors"]
-  s.date = "2011-12-25"
+  s.date = "2011-12-26"
   s.description = "JRuby-OpenSSL is an add-on gem for JRuby that emulates the Ruby OpenSSL native library."
   s.email = "ola.bini@gmail.com"
   s.extra_rdoc_files = ["History.txt", "Manifest.txt", "README.txt", "License.txt"]
@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.rdoc_options = ["--main", "README.txt"]
   s.require_paths = ["lib/shared"]
   s.rubyforge_project = "jruby-extras"
-  s.rubygems_version = "1.8.12"
+  s.rubygems_version = "1.8.13"
   s.summary = "OpenSSL add-on for JRuby"
   s.test_files = ["test/test_all.rb"]
 
