@@ -279,25 +279,16 @@ aPgwHyJBiK1/ebK3tYcrSKrOoRyrAgEC
 
         block.call(server, port.to_i)
       ensure
-        begin
-          begin
-            tcps.shutdown
-          rescue Errno::ENOTCONN
-            # when `Errno::ENOTCONN: Socket is not connected' on some platforms,
-            # call #close instead of #shutdown.
-            tcps.close
-            tcps = nil
-          end if (tcps)
-          if (server)
-            server.join(5)
-            if server.alive?
-              server.kill
-              server.join
-              flunk("TCPServer was closed and SSLServer is still alive") unless $!
-            end
+        # TODO: as a workaround, stop TCPServer#accept by close, not by shutdown.
+        # JRuby's IO cannot handle shutdown correctly for now.
+        tcps.close if (tcps)
+        if (server)
+          server.join(5)
+          if server.alive?
+            server.kill
+            server.join
+            flunk("TCPServer was closed and SSLServer is still alive") unless $!
           end
-        ensure
-          tcps.close if (tcps)
         end
       end
     end
