@@ -1,6 +1,6 @@
 require_relative 'utils'
 
-if defined?(OpenSSL)
+if defined?(OpenSSL) && defined?(OpenSSL::Engine)
 
 class OpenSSL::TestEngine < Test::Unit::TestCase
 
