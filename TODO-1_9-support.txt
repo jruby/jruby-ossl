@@ -1,0 +1,17 @@
+TODO for 1.9 support
+
+* Debug test failures
+  * 1F for test_pkey_rsa.rb
+  * 23F57E for test_openssl.rb
+  * 100% CPU for test_ssl.rb
+  * 100% CPU for test_integration.rb
+
+* Implement some methods of SSLSocket
+  * sysread_nonblock
+  * syswrite_nonblock
+
+* Fixes needed for JRuby
+  * Implement BasicSocket#connect_address for test_pair.rb
+  * Stop Socket#accept by Socket#shutdown, not by Socket#close
+
+* Implement SSL::Session
