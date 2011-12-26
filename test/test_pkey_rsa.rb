@@ -3,13 +3,13 @@ require "test/unit"
 
 class TestPKeyRSA < Test::Unit::TestCase
   def test_has_correct_methods
-    pkey_methods = OpenSSL::PKey::PKey.instance_methods(false).sort - ["initialize"]
-    assert_equal ["sign", "verify"], pkey_methods
+    pkey_methods = OpenSSL::PKey::PKey.instance_methods(false).sort.map(&:intern) - [:initialize]
+    assert_equal [:sign, :verify], pkey_methods
 
-    rsa_methods = OpenSSL::PKey::RSA.instance_methods(false).sort - ["initialize"]
-    assert_equal ["d", "d=", "dmp1", "dmp1=", "dmq1", "dmq1=", "e", "e=", "export", "iqmp", "iqmp=", "n", "n=", "p", "p=", "params", "private?", "private_decrypt", "private_encrypt", "public?", "public_decrypt", "public_encrypt", "public_key", "q", "q=", "to_der", "to_pem", "to_s", "to_text"], rsa_methods
+    rsa_methods = OpenSSL::PKey::RSA.instance_methods(false).sort.map(&:intern) - [:initialize]
+    assert_equal [:d, :d=, :dmp1, :dmp1=, :dmq1, :dmq1=, :e, :e=, :export, :iqmp, :iqmp=, :n, :n=, :p, :p=, :params, :private?, :private_decrypt, :private_encrypt, :public?, :public_decrypt, :public_encrypt, :public_key, :q, :q=, :to_der, :to_pem, :to_s, :to_text], rsa_methods
 
-    assert_equal ["generate"], OpenSSL::PKey::RSA.methods(false)
+    assert_equal [:generate], OpenSSL::PKey::RSA.methods(false).map(&:intern)
   end
   
   #iqmp == coefficient
