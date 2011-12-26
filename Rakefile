@@ -54,7 +54,7 @@ begin
   ENV['RUBY_FLAGS'] ||= [
     (RUBY_VERSION >= '1.9.0' ? '--1.9' : '--1.8'),
     '-w',
-    '-Ibuild_lib:lib/shared:test',
+    '-Ibuild_lib:lib/shared:lib:test',
     ENV['RUBY_DEBUG']
   ].compact.join(' ')
   require 'hoe'

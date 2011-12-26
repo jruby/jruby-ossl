@@ -1,14 +1,38 @@
 TODO for 1.9 support
 
 * Debug test failures
-  * 1F for test_pkey_rsa.rb
-  * 23F57E for test_openssl.rb
+  * 23F57E for test/test_openssl.rb
+    * 2F0E	test/1.9/test_ssl.rb
+    * 0F3E	test/1.9/test_pair.rb
+    * 2F0E	test/1.9/test_x509name.rb
+    * 2F1E	test/1.9/test_cipher.rb
+    * 11F11E	test/1.9/test_asn1.rb
+    * 1F11E	test/1.9/test_pkey_dsa.rb
+    * 1F11E	test/1.9/test_pkey_rsa.rb
+    * 0F7E	test/1.9/test_pkcs12.rb
+    * 0F4E	test/1.9/test_pkey_dh.rb
+    * 0F1E	test/1.9/test_digest.rb
+    * 1F0E	test/1.9/test_x509ext.rb
+    * 1F0E	test/1.9/test_config.rb
+    * 0F3E	test/1.9/test_ocsp.rb
+
   * 100% CPU for test_ssl.rb
   * 100% CPU for test_integration.rb
 
-* Implement some methods of SSLSocket
-  * sysread_nonblock
-  * syswrite_nonblock
+* Implement some mehotds properly
+  * OpenSSL::ASN1::ObjectId.new for SHA-2 ids such as SHA224
+  * X509Name#cmp
+  * Cipher#pkcs5_keyivgen
+  * AES encryption without a key specified
+  * ASN.1 handling
+
+* Implement some methods
+  * PKey.read
+  * PKey::DH#public_key
+  * SSLSocket#sysread_nonblock
+  * SSLSocket#syswrite_nonblock
+  * OCSP
+  * config file
 
 * Fixes needed for JRuby
   * Implement BasicSocket#connect_address for test_pair.rb
