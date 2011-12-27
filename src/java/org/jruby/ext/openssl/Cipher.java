@@ -352,6 +352,9 @@ public class Cipher extends RubyObject {
         if (!CipherModule.isSupportedCipher(name)) {
             throw newCipherError(getRuntime(), String.format("unsupported cipher algorithm (%s)", name));
         }
+        if (ciph != null) {
+            throw getRuntime().newRuntimeError("Cipher already inititalized!");
+        }
         String[] values = Algorithm.osslToJsse(name, padding);
         cryptoBase = values[0];
         cryptoVersion = values[1];
@@ -489,6 +492,7 @@ public class Cipher extends RubyObject {
 
     @JRubyMethod
     public IRubyObject block_size() {
+        checkInitialized();
         if (isStreamCipher()) {
             // getBlockSize() returns 0 for stream cipher in JCE. OpenSSL returns 1 for RC4.
             return getRuntime().newFixnum(1);
@@ -552,6 +556,7 @@ public class Cipher extends RubyObject {
 
     @JRubyMethod
     public IRubyObject reset() {
+        checkInitialized();
         if (!isStreamCipher()) {
             this.realIV = orgIV;
             doInitialize();
@@ -616,10 +621,11 @@ public class Cipher extends RubyObject {
             System.out.println("*** doInitialize");
             dumpVars();
         }
-        ciphInited = true;
+        checkInitialized();
+        if (key == null) {
+            throw newCipherError(getRuntime(), "key not specified");
+        }
         try {
-            assert (key.length * 8 == keyLen) || (key.length == keyLen) : "Key wrong length";
-            assert (this.realIV.length * 8 == ivLen) || (this.realIV.length == ivLen) : "IV wrong length";
             if (!"ECB".equalsIgnoreCase(cryptoMode)) {
                 if (this.realIV == null) {
                     this.realIV = new byte[ivLen];
@@ -642,6 +648,7 @@ public class Cipher extends RubyObject {
             }
             throw newCipherError(getRuntime(), e.getMessage());
         }
+        ciphInited = true;
     }
     private byte[] lastIv = null;
 
@@ -650,7 +657,7 @@ public class Cipher extends RubyObject {
         if (DEBUG) {
             System.out.println("*** update [" + data + "]");
         }
-
+        checkInitialized();
         byte[] val = data.convertToString().getBytes();
         if (val.length == 0) {
             throw getRuntime().newArgumentError("data must not be empty");
@@ -700,6 +707,7 @@ public class Cipher extends RubyObject {
 
     @JRubyMethod(name = "final")
     public IRubyObject _final() {
+        checkInitialized();
         if (!ciphInited) {
             doInitialize();
         }
@@ -766,6 +774,12 @@ public class Cipher extends RubyObject {
     
     int getGenerateKeyLen() {
         return (generateKeyLen == -1) ? keyLen : generateKeyLen;
+    }
+    
+    private void checkInitialized() {
+        if (ciph == null) {
+            throw getRuntime().newRuntimeError("Cipher not inititalized!");
+        }
     }
     
     private boolean isStreamCipher() {

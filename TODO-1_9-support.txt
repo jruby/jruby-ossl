@@ -2,10 +2,6 @@ TODO for 1.9 support
 
 * Debug test failures
   * 23F57E for test/test_openssl.rb
-    * 2F0E	test/1.9/test_ssl.rb
-    * 0F3E	test/1.9/test_pair.rb
-    * 2F0E	test/1.9/test_x509name.rb
-    * 2F1E	test/1.9/test_cipher.rb
     * 11F11E	test/1.9/test_asn1.rb
     * 1F11E	test/1.9/test_pkey_dsa.rb
     * 1F11E	test/1.9/test_pkey_rsa.rb
@@ -15,9 +11,7 @@ TODO for 1.9 support
     * 1F0E	test/1.9/test_x509ext.rb
     * 1F0E	test/1.9/test_config.rb
     * 0F3E	test/1.9/test_ocsp.rb
-
-  * 100% CPU for test_ssl.rb
-  * 100% CPU for test_integration.rb
+    * 2F0E	test/1.9/test_x509name.rb
 
 * Implement some mehotds properly
   * OpenSSL::ASN1::ObjectId.new for SHA-2 ids such as SHA224
@@ -33,9 +27,11 @@ TODO for 1.9 support
   * SSLSocket#syswrite_nonblock
   * OCSP
   * config file
+  * SSLSession#client_ca can we get CertificateRequest* in ServerHello?
 
 * Fixes needed for JRuby
   * Implement BasicSocket#connect_address for test_pair.rb
   * Stop Socket#accept by Socket#shutdown, not by Socket#close
+  * busy loop for SSLSocket#read_nonblock (and revert net/protocol.rb)
 
 * Implement SSL::Session
