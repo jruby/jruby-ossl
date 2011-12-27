@@ -16,8 +16,6 @@ TODO for 1.9 support
 * Implement some mehotds properly
   * OpenSSL::ASN1::ObjectId.new for SHA-2 ids such as SHA224
   * X509Name#cmp
-  * Cipher#pkcs5_keyivgen
-  * AES encryption without a key specified
   * ASN.1 handling
 
 * Implement some methods
@@ -27,11 +25,10 @@ TODO for 1.9 support
   * SSLSocket#syswrite_nonblock
   * OCSP
   * config file
-  * SSLSession#client_ca can we get CertificateRequest* in ServerHello?
+  * SSLSocket#client_ca - can we get CertificateRequest* in ServerHello?
+  * SSL::Session - can we?
 
 * Fixes needed for JRuby
   * Implement BasicSocket#connect_address for test_pair.rb
   * Stop Socket#accept by Socket#shutdown, not by Socket#close
   * busy loop for SSLSocket#read_nonblock (and revert net/protocol.rb)
-
-* Implement SSL::Session
