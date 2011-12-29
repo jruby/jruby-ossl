@@ -31,10 +31,19 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateFactory;
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.crypto.SecretKeyFactory;
 import org.jruby.Ruby;
+import org.jruby.RubyArray;
 import org.jruby.RubyClass;
 import org.jruby.RubyModule;
+import org.jruby.anno.JRubyMethod;
+import org.jruby.anno.JRubyModule;
+import org.jruby.ext.openssl.Cipher.CipherModule;
+import org.jruby.ext.openssl.x509store.X509Error;
+import org.jruby.runtime.builtin.IRubyObject;
 
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
@@ -98,6 +107,7 @@ public class OpenSSLReal {
         RubyModule ossl = runtime.getOrCreateModule("OpenSSL");
         RubyClass standardError = runtime.getClass("StandardError");
         ossl.defineClassUnder("OpenSSLError", standardError, standardError.getAllocator());
+        ossl.defineAnnotatedMethods(OpenSSLModule.class);
 
         // those are BC provider free (uses BC class but does not use BC provider)
         PKey.createPKey(runtime, ossl);
@@ -137,6 +147,32 @@ public class OpenSSLReal {
         ossl.setConstant("OPENSSL_VERSION",
                 runtime.newString("jruby-ossl " + jopensslVersion));
         ossl.setConstant("OPENSSL_VERSION_NUMBER", runtime.newFixnum(9469999));
+        OpenSSLModule.setDebug(ossl,  runtime.getFalse());
+    }
+
+    @JRubyModule(name = "OpenSSL")
+    public static class OpenSSLModule {
+
+        @JRubyMethod(name = "errors", meta = true)
+        public static IRubyObject errors(IRubyObject recv) {
+            Ruby runtime = recv.getRuntime();
+            RubyArray result = runtime.newArray();
+            for (X509Error.ErrorException e : X509Error.getErrors()) {
+                result.add(runtime.newString(e.getMessage()));
+            }
+            return result;
+        }
+
+        @JRubyMethod(name = "debug", meta = true)
+        public static IRubyObject getDebug(IRubyObject recv) {
+            return ((RubyModule) recv).getInstanceVariable("debug");
+        }
+
+        @JRubyMethod(name = "debug=", meta = true)
+        public static IRubyObject setDebug(IRubyObject recv, IRubyObject debug) {
+            ((RubyModule) recv).setInstanceVariable("debug", debug);
+            return debug;
+        }
     }
 
     public static javax.crypto.Cipher getCipherBC(final String algorithm) throws GeneralSecurityException {
