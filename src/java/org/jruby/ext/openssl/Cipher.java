@@ -355,27 +355,7 @@ public class Cipher extends RubyObject {
         if (ciph != null) {
             throw getRuntime().newRuntimeError("Cipher already inititalized!");
         }
-        String[] values = Algorithm.osslToJsse(name, padding);
-        cryptoBase = values[0];
-        cryptoVersion = values[1];
-        cryptoMode = values[2];
-        realName = values[3];
-        padding_type = values[4];
-        ciph = getCipher();
-
-        int[] lengths = Algorithm.osslKeyIvLength(name);
-        keyLen = lengths[0];
-        ivLen = lengths[1];
-        if ("DES".equalsIgnoreCase(cryptoBase)) {
-            generateKeyLen = keyLen / 8 * 7;
-        }
-        
-        // given 'rc4' must be 'RC4' here. OpenSSL checks it as a LN of object
-        // ID and set SN. We don't check 'name' is allowed as a LN in ASN.1 for
-        // the possibility of JCE specific algorithm so just do upperCase here
-        // for OpenSSL compatibility.
-        name = name.toUpperCase();
-
+        updateCipher(name, padding);
         return this;
     }
 
@@ -564,6 +544,31 @@ public class Cipher extends RubyObject {
         return this;
     }
 
+    private void updateCipher(String name, String padding) {
+        // given 'rc4' must be 'RC4' here. OpenSSL checks it as a LN of object
+        // ID and set SN. We don't check 'name' is allowed as a LN in ASN.1 for
+        // the possibility of JCE specific algorithm so just do upperCase here
+        // for OpenSSL compatibility.
+        this.name = name.toUpperCase();
+        this.padding = padding;
+
+        String[] values = Algorithm.osslToJsse(name, padding);
+        cryptoBase = values[0];
+        cryptoVersion = values[1];
+        cryptoMode = values[2];
+        realName = values[3];
+        padding_type = values[4];
+
+        int[] lengths = Algorithm.osslKeyIvLength(name);
+        keyLen = lengths[0];
+        ivLen = lengths[1];
+        if ("DES".equalsIgnoreCase(cryptoBase)) {
+            generateKeyLen = keyLen / 8 * 7;
+        }
+
+        ciph = getCipher();
+    }
+
     javax.crypto.Cipher getCipher() {
         try {
             return javax.crypto.Cipher.getInstance(realName);
@@ -747,8 +752,7 @@ public class Cipher extends RubyObject {
 
     @JRubyMethod(name = "padding=")
     public IRubyObject set_padding(IRubyObject padding) {
-        this.padding = padding.toString();
-        initialize(getRuntime().newString(name));
+        updateCipher(name, padding.toString());
         return padding;
     }
 
