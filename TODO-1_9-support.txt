@@ -1,19 +1,7 @@
 TODO for 1.9 support
 
-* Debug test failures
-  * 23F57E for test/test_openssl.rb
-    * 11F11E	test/1.9/test_asn1.rb
-    * 1F11E	test/1.9/test_pkey_dsa.rb
-    * 1F11E	test/1.9/test_pkey_rsa.rb
-    * 0F7E	test/1.9/test_pkcs12.rb
-    * 0F4E	test/1.9/test_pkey_dh.rb
-    * 0F1E	test/1.9/test_digest.rb
-    * 1F0E	test/1.9/test_x509ext.rb
-    * 1F0E	test/1.9/test_config.rb
-    * 0F3E	test/1.9/test_ocsp.rb
-    * 2F0E	test/1.9/test_x509name.rb
-
 * Implement some mehotds properly
+  * ASN1 (fix lots of failing tests)
   * OpenSSL::ASN1::ObjectId.new for SHA-2 ids such as SHA224
   * X509Name#cmp
   * ASN.1 handling
@@ -27,6 +15,7 @@ TODO for 1.9 support
   * config file
   * SSLSocket#client_ca - can we get CertificateRequest* in ServerHello?
   * SSL::Session - can we?
+  * @crlDisPts of tX509Extension
 
 * Fixes needed for JRuby
   * Implement BasicSocket#connect_address for test_pair.rb

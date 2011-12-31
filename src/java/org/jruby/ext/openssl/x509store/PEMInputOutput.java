@@ -85,6 +85,8 @@ import org.bouncycastle.util.encoders.Hex;
 import org.bouncycastle.cms.CMSSignedData;
 
 import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -100,7 +102,10 @@ import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.StringTokenizer;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
@@ -289,20 +294,17 @@ public class PEMInputOutput {
             } else if (line.indexOf(BEF_G + PEM_STRING_PKCS8INF) != -1) {
                 try {
                     byte[] bytes = readBytes(_in, BEF_E + PEM_STRING_PKCS8INF);
-                    ByteArrayInputStream bIn = new ByteArrayInputStream(bytes);
-                    ASN1InputStream aIn = new ASN1InputStream(bIn);
-                    PrivateKeyInfo info = new PrivateKeyInfo((ASN1Sequence) aIn.readObject());
+                    PrivateKeyInfo info = new PrivateKeyInfo((ASN1Sequence) new ASN1InputStream(bytes).readObject());
                     String type = getPrivateKeyTypeFromObjectId(info.getAlgorithmId().getObjectId());
-                    return readPrivateKeySequence(info.getPrivateKey().getDEREncoded(), type);
+                    return org.jruby.ext.openssl.impl.PKey.readPrivateKey(info.getPrivateKey().getDEREncoded(), type);
                 } catch (Exception e) {
                     throw new IOException("problem creating private key: " + e.toString());
                 }
             } else if (line.indexOf(BEF_G + PEM_STRING_PKCS8) != -1) {
                 try {
                     byte[] bytes = readBytes(_in, BEF_E + PEM_STRING_PKCS8);
-                    ByteArrayInputStream bIn = new ByteArrayInputStream(bytes);
-                    ASN1InputStream aIn = new ASN1InputStream(bIn);
-                    org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo eIn = new org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo((ASN1Sequence) aIn.readObject());
+                    org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo eIn = new org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo(
+                            (ASN1Sequence) new ASN1InputStream(bytes).readObject());
                     AlgorithmIdentifier algId = eIn.getEncryptionAlgorithm();
                     String algorithm = ASN1Registry.o2a(algId.getObjectId());
                     algorithm = (algorithm.split("-"))[0];
@@ -540,8 +542,7 @@ public class PEMInputOutput {
         return null;
     }
 
-    public static DHParameterSpec readDHParameters(Reader _in)
-    throws IOException, InvalidParameterSpecException {
+    public static DHParameterSpec readDHParameters(Reader _in) throws IOException {
         BufferedReader in = makeBuffered(_in);
         String line;
         StringBuilder buf = new StringBuilder();
@@ -549,8 +550,7 @@ public class PEMInputOutput {
             if (line.indexOf(BEF_G + PEM_STRING_DHPARAMS) >= 0) {
                 do {
                     buf.append(line.trim());
-                } while (line.indexOf(BEF_E + PEM_STRING_DHPARAMS) < 0 &&
-                        (line = in.readLine()) != null);
+                } while (line.indexOf(BEF_E + PEM_STRING_DHPARAMS) < 0 && (line = in.readLine()) != null);
                 break;
             }
         }
@@ -558,16 +558,12 @@ public class PEMInputOutput {
         if (m.find()) {
             try {
                 byte[] decoded = Base64.decode(m.group(DH_PARAM_GROUP));
-                ASN1InputStream aIn = new ASN1InputStream(new ByteArrayInputStream(decoded));
-                ASN1Sequence seq = (ASN1Sequence)aIn.readObject();
-                BigInteger p = ((DERInteger)seq.getObjectAt(0)).getValue();
-                BigInteger g = ((DERInteger)seq.getObjectAt(1)).getValue();
-                return new DHParameterSpec(p, g);
-            } catch (Exception e) {}
+                return org.jruby.ext.openssl.impl.PKey.readDHParameter(decoded);
+            } catch (Exception e) {
+                e.printStackTrace(System.err);
+            }
         }
-        // probably not exactly the intended use of this exception, but
-        // close enough for internal throw/catch
-        throw new InvalidParameterSpecException("invalid " + PEM_STRING_DHPARAMS);
+        return null;
     }
     
     private static byte[] getEncoded(java.security.Key key) {
@@ -759,9 +755,7 @@ public class PEMInputOutput {
 
     public static void writeDSAPrivateKey(Writer _out, DSAPrivateKey obj, CipherSpec cipher, char[] passwd) throws IOException {
         BufferedWriter out = makeBuffered(_out);
-        ByteArrayInputStream bIn = new ByteArrayInputStream(getEncoded(obj));
-        ASN1InputStream aIn = new ASN1InputStream(bIn);
-        PrivateKeyInfo info = new PrivateKeyInfo((ASN1Sequence) aIn.readObject());
+        PrivateKeyInfo info = new PrivateKeyInfo((ASN1Sequence) new ASN1InputStream(getEncoded(obj)).readObject());
         ByteArrayOutputStream bOut = new ByteArrayOutputStream();
         ASN1OutputStream aOut = new ASN1OutputStream(bOut);
 
@@ -903,9 +897,7 @@ public class PEMInputOutput {
     }
 
     private static RSAPublicKey readRSAPublicKey(BufferedReader in, String endMarker) throws IOException {
-        ByteArrayInputStream bAIS = new ByteArrayInputStream(readBytes(in,endMarker));
-        ASN1InputStream ais = new ASN1InputStream(bAIS);
-        Object asnObject = ais.readObject();
+        Object asnObject = new ASN1InputStream(readBytes(in, endMarker)).readObject();
         ASN1Sequence sequence = (ASN1Sequence) asnObject;
         RSAPublicKeyStructure rsaPubStructure = new RSAPublicKeyStructure(sequence);
         RSAPublicKeySpec keySpec = new RSAPublicKeySpec(
@@ -924,32 +916,31 @@ public class PEMInputOutput {
         return  null;
     }
 
-    private static PublicKey readPublicKey(BufferedReader in, String alg, String endMarker) throws IOException {
-        KeySpec keySpec = new X509EncodedKeySpec(readBytes(in,endMarker));
+    private static PublicKey readPublicKey(byte[] input, String alg, String endMarker) throws IOException {
+        KeySpec keySpec = new X509EncodedKeySpec(input);
         try {
             KeyFactory keyFact = KeyFactory.getInstance(alg);
             PublicKey pubKey = keyFact.generatePublic(keySpec);
             return pubKey;
-        } catch (NoSuchAlgorithmException e) { 
+        } catch (NoSuchAlgorithmException e) {
             // ignore
-        } catch (InvalidKeySpecException e) { 
+        } catch (InvalidKeySpecException e) {
             // ignore
         }
         return null;
     }
 
+    private static PublicKey readPublicKey(BufferedReader in, String alg, String endMarker) throws IOException {
+        return readPublicKey(readBytes(in, endMarker), alg, endMarker);
+    }
+
     private static PublicKey readPublicKey(BufferedReader in, String endMarker) throws IOException {
-        KeySpec keySpec = new X509EncodedKeySpec(readBytes(in,endMarker));
-        String[] algs = {"RSA","DSA"};
-        for(int i=0;i<algs.length;i++) {
-            try {
-                KeyFactory keyFact = KeyFactory.getInstance(algs[i]);
-                PublicKey pubKey = keyFact.generatePublic(keySpec);
-                return pubKey;
-            } catch (NoSuchAlgorithmException e) { 
-                // ignore
-            } catch (InvalidKeySpecException e) { 
-                // ignore
+        byte[] input = readBytes(in, endMarker);
+        String[] algs = { "RSA", "DSA" };
+        for (int i = 0; i < algs.length; i++) {
+            PublicKey key = readPublicKey(input, algs[i], endMarker);
+            if (key != null) {
+                return key;
             }
         }
         return null;
@@ -978,66 +969,40 @@ public class PEMInputOutput {
         byte[] keyBytes = null;
         byte[] decoded = Base64.decode(buf.toString());
         if (isEncrypted) {
-            if (passwd == null) {
-                throw new IOException("Password is null, but a password is required");
-            }
-            StringTokenizer tknz = new StringTokenizer(dekInfo, ",");
-            String algorithm = tknz.nextToken();
-            byte[] iv = Hex.decode(tknz.nextToken());
-            if (!CipherModule.isSupportedCipher(algorithm)) {
-                throw new IOException("Unknown algorithm: " + algorithm);
-            }
-            String[] cipher = org.jruby.ext.openssl.Cipher.Algorithm.osslToJsse(algorithm);
-            String realName = cipher[3];
-            int[] lengths = org.jruby.ext.openssl.Cipher.Algorithm.osslKeyIvLength(algorithm);
-            int keyLen = lengths[0];
-            int ivLen = lengths[1];
-            if (iv.length != ivLen) {
-                throw new IOException("Illegal IV length");
-            }
-            byte[] salt = new byte[8];
-            System.arraycopy(iv, 0, salt, 0, 8);
-            OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
-            pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(passwd), salt);
-            KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLen * 8);
-            SecretKey secretKey = new javax.crypto.spec.SecretKeySpec(param.getKey(), realName);
-            Cipher c = Cipher.getInstance(realName);
-            c.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(iv));
-            keyBytes = c.doFinal(decoded);
+            keyBytes = decrypt(decoded, dekInfo, passwd);
         } else {
             keyBytes = decoded;
         }
-        return readPrivateKeySequence(keyBytes, type);
+        return org.jruby.ext.openssl.impl.PKey.readPrivateKey(keyBytes, type);
     }
 
-    private static KeyPair readPrivateKeySequence(byte[] in, String type) throws Exception {
-        KeySpec pubSpec = null;
-        KeySpec privSpec = null;
-        ByteArrayInputStream bIn = new ByteArrayInputStream(in);
-        ASN1InputStream aIn = new ASN1InputStream(bIn);
-        ASN1Sequence seq = (ASN1Sequence) aIn.readObject();
-        if (type.equals("RSA")) {
-            DERInteger mod = (DERInteger) seq.getObjectAt(1);
-            DERInteger pubExp = (DERInteger) seq.getObjectAt(2);
-            DERInteger privExp = (DERInteger) seq.getObjectAt(3);
-            DERInteger p1 = (DERInteger) seq.getObjectAt(4);
-            DERInteger p2 = (DERInteger) seq.getObjectAt(5);
-            DERInteger exp1 = (DERInteger) seq.getObjectAt(6);
-            DERInteger exp2 = (DERInteger) seq.getObjectAt(7);
-            DERInteger crtCoef = (DERInteger) seq.getObjectAt(8);
-            pubSpec = new RSAPublicKeySpec(mod.getValue(), pubExp.getValue());
-            privSpec = new RSAPrivateCrtKeySpec(mod.getValue(), pubExp.getValue(), privExp.getValue(), p1.getValue(), p2.getValue(), exp1.getValue(), exp2.getValue(), crtCoef.getValue());
-        } else { // assume "DSA" for now.
-            DERInteger p = (DERInteger) seq.getObjectAt(1);
-            DERInteger q = (DERInteger) seq.getObjectAt(2);
-            DERInteger g = (DERInteger) seq.getObjectAt(3);
-            DERInteger y = (DERInteger) seq.getObjectAt(4);
-            DERInteger x = (DERInteger) seq.getObjectAt(5);
-            privSpec = new DSAPrivateKeySpec(x.getValue(), p.getValue(), q.getValue(), g.getValue());
-            pubSpec = new DSAPublicKeySpec(y.getValue(), p.getValue(), q.getValue(), g.getValue());
+    private static byte[] decrypt(byte[] decoded, String dekInfo, char[] passwd) throws IOException, GeneralSecurityException {
+        if (passwd == null) {
+            throw new IOException("Password is null, but a password is required");
         }
-        KeyFactory fact = KeyFactory.getInstance(type);
-        return new KeyPair(fact.generatePublic(pubSpec), fact.generatePrivate(privSpec));
+        StringTokenizer tknz = new StringTokenizer(dekInfo, ",");
+        String algorithm = tknz.nextToken();
+        byte[] iv = Hex.decode(tknz.nextToken());
+        if (!CipherModule.isSupportedCipher(algorithm)) {
+            throw new IOException("Unknown algorithm: " + algorithm);
+        }
+        String[] cipher = org.jruby.ext.openssl.Cipher.Algorithm.osslToJsse(algorithm);
+        String realName = cipher[3];
+        int[] lengths = org.jruby.ext.openssl.Cipher.Algorithm.osslKeyIvLength(algorithm);
+        int keyLen = lengths[0];
+        int ivLen = lengths[1];
+        if (iv.length != ivLen) {
+            throw new IOException("Illegal IV length");
+        }
+        byte[] salt = new byte[8];
+        System.arraycopy(iv, 0, salt, 0, 8);
+        OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
+        pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(passwd), salt);
+        KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(keyLen * 8);
+        SecretKey secretKey = new javax.crypto.spec.SecretKeySpec(param.getKey(), realName);
+        Cipher c = Cipher.getInstance(realName);
+        c.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(iv));
+        return c.doFinal(decoded);
     }
 
     /**
@@ -1046,36 +1011,26 @@ public class PEMInputOutput {
      * @return the X509Certificate
      * @throws IOException if an I/O error occured
      */
-    private static X509Certificate readCertificate(BufferedReader in,String  endMarker) throws IOException {
-        String          line;
-        StringBuffer    buf = new StringBuffer();
-  
-        while ((line = in.readLine()) != null)
-        {
-            if (line.indexOf(endMarker) != -1)
-            {
+    private static X509Certificate readCertificate(BufferedReader in, String endMarker) throws IOException {
+        String line;
+        StringBuffer buf = new StringBuffer();
+
+        while ((line = in.readLine()) != null) {
+            if (line.indexOf(endMarker) != -1) {
                 break;
             }
             buf.append(line.trim());
         }
 
-        if (line == null)
-        {
+        if (line == null) {
             throw new IOException(endMarker + " not found");
         }
 
-        ByteArrayInputStream    bIn = new ByteArrayInputStream(
-                                                Base64.decode(buf.toString()));
-
-        try
-        {
-            CertificateFactory certFact
-                    = CertificateFactory.getInstance("X.509");
-
-            return (X509Certificate)certFact.generateCertificate(bIn);
-        }
-        catch (Exception e)
-        {
+        try {
+            CertificateFactory certFact = CertificateFactory.getInstance("X.509");
+            ByteArrayInputStream bIn = new ByteArrayInputStream(Base64.decode(buf.toString()));
+            return (X509Certificate) certFact.generateCertificate(bIn);
+        } catch (Exception e) {
             throw new IOException("problem parsing cert: " + e.toString());
         }
     }
@@ -1143,36 +1098,26 @@ public class PEMInputOutput {
      * @return the X509CRL
      * @throws IOException if an I/O error occured
      */
-    private static X509CRL readCRL(BufferedReader in, String  endMarker) throws IOException {
-        String          line;
-        StringBuffer    buf = new StringBuffer();
-  
-        while ((line = in.readLine()) != null)
-        {
-            if (line.indexOf(endMarker) != -1)
-            {
+    private static X509CRL readCRL(BufferedReader in, String endMarker) throws IOException {
+        String line;
+        StringBuffer buf = new StringBuffer();
+
+        while ((line = in.readLine()) != null) {
+            if (line.indexOf(endMarker) != -1) {
                 break;
             }
             buf.append(line.trim());
         }
 
-        if (line == null)
-        {
+        if (line == null) {
             throw new IOException(endMarker + " not found");
         }
 
-        ByteArrayInputStream    bIn = new ByteArrayInputStream(
-                                                Base64.decode(buf.toString()));
-
-        try
-        {
-            CertificateFactory certFact
-                    = CertificateFactory.getInstance("X.509");
-
-            return (X509CRL)certFact.generateCRL(bIn);
-        }
-        catch (Exception e)
-        {
+        try {
+            CertificateFactory certFact = CertificateFactory.getInstance("X.509");
+            ByteArrayInputStream bIn = new ByteArrayInputStream(Base64.decode(buf.toString()));
+            return (X509CRL) certFact.generateCRL(bIn);
+        } catch (Exception e) {
             throw new IOException("problem parsing cert: " + e.toString());
         }
     }
@@ -1183,30 +1128,24 @@ public class PEMInputOutput {
      * @return the certificate request.
      * @throws IOException if an I/O error occured
      */
-    private static PKCS10CertificationRequestExt readCertificateRequest(BufferedReader in, String  endMarker) throws IOException {
-        String          line;
-        StringBuffer    buf = new StringBuffer();
-  
-        while ((line = in.readLine()) != null)
-        {
-            if (line.indexOf(endMarker) != -1)
-            {
+    private static PKCS10CertificationRequestExt readCertificateRequest(BufferedReader in, String endMarker) throws IOException {
+        String line;
+        StringBuffer buf = new StringBuffer();
+
+        while ((line = in.readLine()) != null) {
+            if (line.indexOf(endMarker) != -1) {
                 break;
             }
             buf.append(line.trim());
         }
 
-        if (line == null)
-        {
+        if (line == null) {
             throw new IOException(endMarker + " not found");
         }
 
-        try
-        {
+        try {
             return new PKCS10CertificationRequestExt(Base64.decode(buf.toString()));
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             throw new IOException("problem parsing cert: " + e.toString());
         }
     }
@@ -1243,11 +1182,11 @@ public class PEMInputOutput {
      * @return the X509Certificate
      * @throws IOException if an I/O error occured
      */
-    private static CMSSignedData readPKCS7(BufferedReader in, char[] p, String  endMarker) throws IOException {
-        String                                  line;
-        StringBuffer                        buf = new StringBuffer();
-        ByteArrayOutputStream    bOut = new ByteArrayOutputStream();
-  
+    private static CMSSignedData readPKCS7(BufferedReader in, char[] p, String endMarker) throws IOException {
+        String line;
+        StringBuffer buf = new StringBuffer();
+        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+
         while ((line = in.readLine()) != null) {
             if (line.indexOf(endMarker) != -1) {
                 break;
@@ -1263,9 +1202,8 @@ public class PEMInputOutput {
         if (line == null) {
             throw new IOException(endMarker + " not found");
         }
-        ByteArrayInputStream    bIn = new ByteArrayInputStream(bOut.toByteArray());
         try {
-            ASN1InputStream aIn = new ASN1InputStream(bIn);
+            ASN1InputStream aIn = new ASN1InputStream(bOut.toByteArray());
             return new CMSSignedData(ContentInfo.getInstance(aIn.readObject()));
         } catch (Exception e) {
             throw new IOException("problem parsing PKCS7 object: " + e.toString());
