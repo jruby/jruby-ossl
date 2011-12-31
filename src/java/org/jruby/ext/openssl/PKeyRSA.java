@@ -95,9 +95,19 @@ public class PKeyRSA extends PKey {
     public static RaiseException newRSAError(Ruby runtime, String message) {
         return Utils.newError(runtime, "OpenSSL::PKey::RSAError", message);
     }
-   
+
     public PKeyRSA(Ruby runtime, RubyClass type) {
-        super(runtime,type);
+        super(runtime, type);
+    }
+
+    public PKeyRSA(Ruby runtime, RubyClass type, RSAPrivateCrtKey privKey, RSAPublicKey pubKey) {
+        super(runtime, type);
+        this.privKey = privKey;
+        this.pubKey = pubKey;
+    }
+
+    public PKeyRSA(Ruby runtime, RubyClass type, RSAPublicKey pubKey) {
+        this(runtime, type, null, pubKey);
     }
 
     private transient volatile RSAPrivateCrtKey privKey;
@@ -221,7 +231,7 @@ public class PKeyRSA extends PKey {
                 if (null == val) {
                     // PEM_read_bio_RSA_PUBKEY
                     try {
-                        val = PEMInputOutput.readRSAPubKey(new StringReader(str.toString()), passwd);
+                        val = PEMInputOutput.readRSAPubKey(new StringReader(str.toString()));
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {

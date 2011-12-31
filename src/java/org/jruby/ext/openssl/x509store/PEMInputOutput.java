@@ -326,10 +326,19 @@ public class PEMInputOutput {
         return null;
     }
 
+    // PEM_read_bio_PUBKEY
+    public static PublicKey readPubKey(Reader in) throws IOException {
+        PublicKey pubKey = readRSAPubKey(in);
+        if (pubKey == null) {
+            pubKey = readDSAPubKey(in);
+        }
+        return pubKey;
+    }
+
     /*
      * c: PEM_read_bio_DSA_PUBKEY
      */
-    public static DSAPublicKey readDSAPubKey(Reader in, char[] f) throws IOException {
+    public static DSAPublicKey readDSAPubKey(Reader in) throws IOException {
         BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
@@ -384,7 +393,7 @@ public class PEMInputOutput {
      * reads an RSA public key encoded in an SubjectPublicKeyInfo RSA structure.
      * c: PEM_read_bio_RSA_PUBKEY
      */
-    public static RSAPublicKey readRSAPubKey(Reader in, char[] f) throws IOException {
+    public static RSAPublicKey readRSAPubKey(Reader in) throws IOException {
         BufferedReader _in = makeBuffered(in);
         String  line;
         while ((line = _in.readLine()) != null) {
@@ -560,7 +569,6 @@ public class PEMInputOutput {
                 byte[] decoded = Base64.decode(m.group(DH_PARAM_GROUP));
                 return org.jruby.ext.openssl.impl.PKey.readDHParameter(decoded);
             } catch (Exception e) {
-                e.printStackTrace(System.err);
             }
         }
         return null;

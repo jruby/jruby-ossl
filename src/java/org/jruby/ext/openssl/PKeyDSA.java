@@ -84,9 +84,19 @@ public class PKeyDSA extends PKey {
     public static RaiseException newDSAError(Ruby runtime, String message) {
         return Utils.newError(runtime, "OpenSSL::PKey::DSAError", message);
     }
-    
+
     public PKeyDSA(Ruby runtime, RubyClass type) {
-        super(runtime,type);
+        super(runtime, type);
+    }
+
+    public PKeyDSA(Ruby runtime, RubyClass type, DSAPrivateKey privKey, DSAPublicKey pubKey) {
+        super(runtime, type);
+        this.privKey = privKey;
+        this.pubKey = pubKey;
+    }
+
+    public PKeyDSA(Ruby runtime, RubyClass type, DSAPublicKey pubKey) {
+        this(runtime, type, null, pubKey);
     }
 
     private DSAPrivateKey privKey;
@@ -195,7 +205,7 @@ public class PKeyDSA extends PKey {
                 if (null == val) {
                     // PEM_read_bio_DSA_PUBKEY
                     try {
-                        val = PEMInputOutput.readDSAPubKey(new StringReader(str.toString()), passwd);
+                        val = PEMInputOutput.readDSAPubKey(new StringReader(str.toString()));
                     } catch (NoClassDefFoundError e) {
                         val = null;
                     } catch (Exception e) {
@@ -422,6 +432,16 @@ public class PKeyDSA extends PKey {
             if ((param = specValues[SPEC_Y]) != null) {
                 return BN.newBN(getRuntime(), param);
             }
+        }
+        return getRuntime().getNil();
+    }
+
+    @JRubyMethod(name="priv_key")
+    public synchronized IRubyObject get_priv_key() {
+        DSAPrivateKey key;
+        BigInteger param;
+        if ((key = this.privKey) != null) {
+            return BN.newBN(getRuntime(), key.getX());
         }
         return getRuntime().getNil();
     }

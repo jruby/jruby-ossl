@@ -93,8 +93,44 @@ public class PKey {
         return new KeyPair(fact.generatePublic(pubSpec), fact.generatePrivate(privSpec));
     }
 
+    // d2i_PrivateKey_bio
+    public static KeyPair readPrivateKey(byte[] input) throws IOException, GeneralSecurityException {
+        KeyPair key = null;
+        try {
+            key = readRSAPrivateKey(input);
+        } catch (Exception e) {
+            // ignore
+        }
+        if (key == null) {
+            try {
+                key = readDSAPrivateKey(input);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return key;
+    }
+
+    // d2i_PUBKEY_bio
+    public static PublicKey readPublicKey(byte[] input) throws IOException, GeneralSecurityException {
+        PublicKey key = null;
+        try {
+            key = readRSAPublicKey(input);
+        } catch (Exception e) {
+            // ignore
+        }
+        if (key == null) {
+            try {
+                key = readDSAPublicKey(input);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return key;
+    }
+
     // d2i_RSAPrivateKey_bio
-    public static PrivateKey readRSAPrivateKey(byte[] input) throws IOException, GeneralSecurityException {
+    public static KeyPair readRSAPrivateKey(byte[] input) throws IOException, GeneralSecurityException {
         KeyFactory fact = KeyFactory.getInstance("RSA");
         DERSequence seq = (DERSequence) (new ASN1InputStream(input).readObject());
         if (seq.size() == 9) {
@@ -106,7 +142,9 @@ public class PKey {
             BigInteger primeep = ((DERInteger) seq.getObjectAt(6)).getValue();
             BigInteger primeeq = ((DERInteger) seq.getObjectAt(7)).getValue();
             BigInteger crtcoeff = ((DERInteger) seq.getObjectAt(8)).getValue();
-            return fact.generatePrivate(new RSAPrivateCrtKeySpec(mod, pubexp, privexp, primep, primeq, primeep, primeeq, crtcoeff));
+            PrivateKey priv = fact.generatePrivate(new RSAPrivateCrtKeySpec(mod, pubexp, privexp, primep, primeq, primeep, primeeq, crtcoeff));
+            PublicKey pub = fact.generatePublic(new RSAPublicKeySpec(mod, pubexp));
+            return new KeyPair(pub, priv);
         } else {
             return null;
         }
