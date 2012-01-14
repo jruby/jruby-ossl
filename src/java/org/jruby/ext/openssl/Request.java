@@ -138,15 +138,26 @@ public class Request extends RubyObject {
         }
         ASN1Set in_attrs = req.getCertificationRequestInfo().getAttributes();
         for(Enumeration enm = in_attrs.getObjects();enm.hasMoreElements();) {
-            DERSet obj = (DERSet)enm.nextElement();
-            for(Enumeration enm2 = obj.getObjects();enm2.hasMoreElements();) {
-                DERSequence val = (DERSequence)enm2.nextElement();
-                DERObjectIdentifier v0 = (DERObjectIdentifier)val.getObjectAt(0);
-                DERObject v1 = (DERObject)val.getObjectAt(1);
-                IRubyObject a1 = getRuntime().newString(ASN1.getSymLookup(getRuntime()).get(v0));
-                IRubyObject a2 = ASN1.decode(getRuntime().getClassFromPath("OpenSSL::ASN1"), RubyString.newString(getRuntime(), v1.getDEREncoded()));
-                add_attribute(Utils.newRubyInstance(getRuntime(), "OpenSSL::X509::Attribute", new IRubyObject[] { a1, a2 }));
-            }
+            Object o = enm.nextElement();
+            System.out.println("enm: " + o.getClass());
+            if (o instanceof DERSequence) {
+              DERSequence val = (DERSequence)o;
+              DERObjectIdentifier v0 = (DERObjectIdentifier)val.getObjectAt(0);
+              DERObject v1 = (DERObject)val.getObjectAt(1);
+              IRubyObject a1 = getRuntime().newString(ASN1.getSymLookup(getRuntime()).get(v0));
+              IRubyObject a2 = ASN1.decode(getRuntime().getClassFromPath("OpenSSL::ASN1"), RubyString.newString(getRuntime(), v1.getDEREncoded()));
+              add_attribute(Utils.newRubyInstance(getRuntime(), "OpenSSL::X509::Attribute", new IRubyObject[] { a1, a2 }));
+            } else {
+              DERSet obj = (DERSet)o;
+              for(Enumeration enm2 = obj.getObjects();enm2.hasMoreElements();) {
+                  DERSequence val = (DERSequence)enm2.nextElement();
+                  DERObjectIdentifier v0 = (DERObjectIdentifier)val.getObjectAt(0);
+                  DERObject v1 = (DERObject)val.getObjectAt(1);
+                  IRubyObject a1 = getRuntime().newString(ASN1.getSymLookup(getRuntime()).get(v0));
+                  IRubyObject a2 = ASN1.decode(getRuntime().getClassFromPath("OpenSSL::ASN1"), RubyString.newString(getRuntime(), v1.getDEREncoded()));
+                  add_attribute(Utils.newRubyInstance(getRuntime(), "OpenSSL::X509::Attribute", new IRubyObject[] { a1, a2 }));
+              }
+           }
         }
         this.valid = true;
         return this;
