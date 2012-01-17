@@ -509,7 +509,8 @@ public class SSLContext extends RubyObject {
     private X509Cert[] convertToX509Certs(IRubyObject value) {
         final ArrayList<X509Cert> result = new ArrayList<X509Cert>();
         ThreadContext ctx = getRuntime().getCurrentContext();
-        RuntimeHelpers.invoke(ctx, value, "each", CallBlock.newCallClosure(value, null, Arity.NO_ARGUMENTS, new BlockCallback() {
+        RubyClass klass = Utils.getClassFromPath(ctx.runtime, "OpenSSL::SSL::SSLContext");
+        RuntimeHelpers.invoke(ctx, value, "each", CallBlock.newCallClosure(value, klass, Arity.NO_ARGUMENTS, new BlockCallback() {
 
             public IRubyObject call(ThreadContext context, IRubyObject[] args, Block block) {
                 Utils.checkKind(getRuntime(), args[0], "OpenSSL::X509::Certificate");
