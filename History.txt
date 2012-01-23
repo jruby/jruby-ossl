@@ -8,7 +8,7 @@ libraries and part of features should work fine on 1.9 mode, too.
 - JRUBY-6260: OpenSSL::ASN1::Integer#value incompatibility
 - JRUBY-6044: Improve Ecrypted RSA/DSA pem support
 - JRUBY-5972: Allow to load/dump empty PKCS7 data
-- JRUBY-5833: Fix X509Name handling; X509Name RDN can include multiple elements
+- JRUBY-5834: Fix X509Name handling; X509Name RDN can include multiple elements
 - JRUBY-5362: Improved 1.9 support
 - JRUBY-4992: Warn if loaded by non JRuby interpreter
 
