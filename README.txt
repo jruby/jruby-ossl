@@ -1,6 +1,6 @@
 = JRuby-OpenSSL
 
-* http://jruby-extras.rubyforge.org/jruby-openssl
+* https://github.com/jruby/jruby-ossl
 
 == DESCRIPTION:
 

@@ -63,7 +63,7 @@ begin
     load File.dirname(__FILE__) + "/lib/shared/jopenssl/version.rb"
     p.version = Jopenssl::Version::VERSION
     p.rubyforge_name = "jruby-extras"
-    p.url = "http://jruby-extras.rubyforge.org/jruby-openssl"
+    p.url = "https://github.com/jruby/jruby-ossl"
     p.author = "Ola Bini and JRuby contributors"
     p.email = "ola.bini@gmail.com"
     p.summary = "OpenSSL add-on for JRuby"
