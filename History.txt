@@ -1,6 +1,21 @@
+== 0.7.5
+
+This release improved 1.9 mode support with help of
+Duncan Mak <duncan@earthaid.net>.  Now jruby-ossl gem includes both 1.8 and 1.9
+libraries and part of features should work fine on 1.9 mode, too.
+
+- JRUBY-6270: Wrong keyUsage check for SSL server
+- JRUBY-6260: OpenSSL::ASN1::Integer#value incompatibility
+- JRUBY-6044: Improve Ecrypted RSA/DSA pem support
+- JRUBY-5972: Allow to load/dump empty PKCS7 data
+- JRUBY-5833: Fix X509Name handling; X509Name RDN can include multiple elements
+- JRUBY-5362: Improved 1.9 support
+- JRUBY-4992: Warn if loaded by non JRuby interpreter
+
 == 0.7.4
 
-- JRUBY-5519: Avoid String encoding dependency in DER loading. PEM loading failed on JRuby 1.6.x. Fixed.
+- JRUBY-5519: Avoid String encoding dependency in DER loading. PEM loading
+  failed on JRuby 1.6.x. Fixed.
 - JRUBY-5510: Add debug information to released jar
 - JRUBY-5478: Update bouncycastle jars to the latest version. (1.46)
 
@@ -59,18 +74,22 @@
 -- JRUBY-4342: Follow ruby-openssl of CRuby 1.8.7.
 -- JRUBY-4346: Sync tests with tests for ruby-openssl of CRuby 1.8.7.
 -- JRUBY-4444: OpenSSL crash running RubyGems tests
--- JRUBY-4075: Net::SSH gives OpenSSL::Cipher::CipherError "No message available"
+-- JRUBY-4075: Net::SSH gives OpenSSL::Cipher::CipherError "No message
+   available"
 -- JRUBY-4076: Net::SSH padding error using 3des-cbc on Solaris
 -- JRUBY-4541: jruby-openssl doesn't load on App Engine.
 -- JRUBY-4077: Net::SSH "all authorization methods failed" Solaris -> Solaris
 -- JRUBY-4535: Issues with the BouncyCastle provider
 -- JRUBY-4510: JRuby-OpenSSL crashes when JCE fails a initialise bcprov
--- JRUBY-4343: Update BouncyCastle jar to upstream version; jdk14-139 -> jdk15-144
+-- JRUBY-4343: Update BouncyCastle jar to upstream version; jdk14-139 ->
+   jdk15-144
 - Cipher issues
--- JRUBY-4012: Initialization vector length handled differently than in MRI (longer IV sequence are trimmed to fit the required)
+-- JRUBY-4012: Initialization vector length handled differently than in MRI
+   (longer IV sequence are trimmed to fit the required)
 -- JRUBY-4473: Implemented DSA key generation
 -- JRUBY-4472: Cipher does not support RC4 and CAST
--- JRUBY-4577: InvalidParameterException 'Wrong keysize: must be equal to 112 or 168' for DES3 + SunJCE
+-- JRUBY-4577: InvalidParameterException 'Wrong keysize: must be equal to 112 or
+   168' for DES3 + SunJCE
 - SSL and X.509(PKIX) issues
 -- JRUBY-4384: TCP socket connection causes busy loop of SSL server
 -- JRUBY-4370: Implement SSLContext#ciphers
@@ -80,16 +99,23 @@
 -- JRUBY-4684: SSLContext#verify_depth is ignored
 -- JRUBY-4398: SSLContext#options does not affect to SSL sessions
 -- JRUBY-4360: Implement SSLSocket#verify_result and dependents
--- JRUBY-3829: SSLSocket#read should clear given buffer before concatenating (ByteBuffer.java:328:in `allocate': java.lang.IllegalArgumentException when returning SOAP queries over a certain size)
--- JRUBY-4686: SSLSocket can drop last chunk of data just before inbound channel close
+-- JRUBY-3829: SSLSocket#read should clear given buffer before concatenating
+   (ByteBuffer.java:328:in `allocate': java.lang.IllegalArgumentException when
+   returning SOAP queries over a certain size) 
+-- JRUBY-4686: SSLSocket can drop last chunk of data just before inbound channel
+   close
 -- JRUBY-4369: X509Store#verify_callback is not called
--- JRUBY-4409: OpenSSL::X509::Store#add_file corrupts when it includes certificates which have the same subject (problem with ruby-openid-apps-discovery (github jruby-openssl issue #2))
+-- JRUBY-4409: OpenSSL::X509::Store#add_file corrupts when it includes
+   certificates which have the same subject (problem with
+   ruby-openid-apps-discovery (github jruby-openssl issue #2))
 -- JRUBY-4333: PKCS#8 formatted privkey read
 -- JRUBY-4454: Loading Key file as a Certificate causes NPE
--- JRUBY-4455: calling X509::Certificate#sign for the Certificate initialized from PEM causes IllegalStateException
+-- JRUBY-4455: calling X509::Certificate#sign for the Certificate initialized
+   from PEM causes IllegalStateException 
 - PKCS#7 issues
 -- JRUBY-4379: PKCS7#sign failed for DES3 cipher algorithm
--- JRUBY-4428: Allow to use DES-EDE3-CBC in PKCS#7 w/o the Policy Files (rake test doesn't finish on JDK5 w/o policy files update)
+-- JRUBY-4428: Allow to use DES-EDE3-CBC in PKCS#7 w/o the Policy Files (rake
+   test doesn't finish on JDK5 w/o policy files update) 
 -  Misc
 -- JRUBY-4574: jruby-openssl deprecation warning cleanup
 -- JRUBY-4591: jruby-1.4 support
@@ -132,21 +158,25 @@
 
 == 0.5.1
 
-* Multiple fixes by Brice Figureau to get net/ssh working. Requires JRuby 1.3.1 to be 100%
+* Multiple fixes by Brice Figureau to get net/ssh working. Requires JRuby 1.3.1
+  to be 100%
 * Fix by Frederic Jean for a character-decoding issue for some certificates
 
 == 0.5
 
 * Fixed JRUBY-3614: Unsupported HMAC algorithm (HMACSHA-256)
-* Fixed JRUBY-3570: ActiveMerchant's AuthorizeNet Gateway throws OpenSSL Cert Validation Error, when there should be no error
+* Fixed JRUBY-3570: ActiveMerchant's AuthorizeNet Gateway throws OpenSSL Cert
+  Validation Error, when there should be no error
 * Fixed JRUBY-3557 Class cast exception in PKeyRSA.java
 * Fixed JRUBY-3468 X.509 certificates: subjectKeyIdentifier corrupted
-* Fixed JRUBY-3285 Unsupported HMAC algorithm (HMACSHA1) error when generating digest
+* Fixed JRUBY-3285 Unsupported HMAC algorithm (HMACSHA1) error when generating
+  digest
 * Misc code cleanup
 
 == 0.2
 
-- Enable remaining tests; fix a nil string issue in SSLSocket.sysread (JRUBY-1888)
+- Enable remaining tests; fix a nil string issue in SSLSocket.sysread
+  (JRUBY-1888)
 - Fix socket buffering issue by setting socket IO sync = true
 - Fix bad file descriptor issue caused by unnecessary close (JRUBY-2152)
 - Fix AES key length (JRUBY-2187)
