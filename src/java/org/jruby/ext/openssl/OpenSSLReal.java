@@ -165,12 +165,12 @@ public class OpenSSLReal {
 
         @JRubyMethod(name = "debug", meta = true)
         public static IRubyObject getDebug(IRubyObject recv) {
-            return ((RubyModule) recv).getInstanceVariable("debug");
+            return (IRubyObject)((RubyModule) recv).getInternalVariable("debug");
         }
 
         @JRubyMethod(name = "debug=", meta = true)
         public static IRubyObject setDebug(IRubyObject recv, IRubyObject debug) {
-            ((RubyModule) recv).setInstanceVariable("debug", debug);
+            ((RubyModule) recv).setInternalVariable("debug", debug);
             return debug;
         }
     }
