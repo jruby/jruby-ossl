@@ -1,3 +1,10 @@
+== 0.7.6
+
+This release includes initial implementation of PKCS12 by Owen Ou.
+
+ - JRUBY-5066: Implement OpenSSL::PKCS12 (only for simple case)
+ - JRUBY-6385: Assertion failure with -J-ea
+
 == 0.7.5
 
 This release improved 1.9 mode support with help of
