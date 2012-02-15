@@ -42,7 +42,7 @@
     <pathconvert property="bcjars" pathsep=" " refid="bcpath">
       <map from="${basedir}/${build_lib.dir}/" to=""/>
     </pathconvert>
-    <jar destfile="${lib.dir}/jopenssl.jar" basedir="${target.classes}">
+    <jar destfile="${lib.dir}/shared/jopenssl.jar" basedir="${target.classes}">
       <manifest>
         <attribute name="Built-By" value="${user.name}"/>
         <attribute name="Class-Path" value="${bcjars}"/>
