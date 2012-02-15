@@ -16,3 +16,5 @@ else
   $LOAD_PATH.unshift(File.expand_path('../../1.8', __FILE__))
   load(File.expand_path('../../1.8/openssl.rb', __FILE__))
 end
+
+require 'openssl/pkcs12'
