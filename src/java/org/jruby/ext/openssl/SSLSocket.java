@@ -322,15 +322,17 @@ public class SSLSocket extends RubyObject {
         while (true) {
             SSLEngineResult res;
             waitSelect(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-            if(hsStatus == SSLEngineResult.HandshakeStatus.FINISHED) {
+            switch (hsStatus) {
+            case FINISHED:
                 if (initialHandshake) {
                     finishInitialHandshake();
                 }
                 return;
-            } else if(hsStatus == SSLEngineResult.HandshakeStatus.NEED_TASK) {
+            case NEED_TASK:
                 doTasks();
-            } else if(hsStatus == SSLEngineResult.HandshakeStatus.NEED_UNWRAP) {
-                if(readAndUnwrap() == -1 && hsStatus != SSLEngineResult.HandshakeStatus.FINISHED) {
+                break;
+            case NEED_UNWRAP:
+                if (readAndUnwrap() == -1 && hsStatus != SSLEngineResult.HandshakeStatus.FINISHED) {
                     throw new SSLHandshakeException("Socket closed");
                 }
                 // during initialHandshake, calling readAndUnwrap that results UNDERFLOW
@@ -339,18 +341,23 @@ public class SSLSocket extends RubyObject {
                 if (initialHandshake && status == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
                     waitSelect(SelectionKey.OP_READ);
                 }
-            } else if(hsStatus == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
+                break;
+            case NEED_WRAP:
                 if (netData.hasRemaining()) {
-                    while(flushData()) {}
+                    while (flushData()) {
+                    }
                 }
                 netData.clear();
                 res = engine.wrap(dummy, netData);
                 hsStatus = res.getHandshakeStatus();
                 netData.flip();
                 flushData();
-            } else {
-                assert false : "doHandshake() should never reach the NOT_HANDSHAKING state";
+                break;
+            case NOT_HANDSHAKING:
+                // Opposite side could close while unwrapping. Handle this as same as FINISHED
                 return;
+            default:
+                throw new IllegalStateException("Unknown handshaking status: " + hsStatus);
             }
         }
     }
