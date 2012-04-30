@@ -251,8 +251,14 @@ public class PKeyDSA extends PKey {
                 }
 
                 if (val instanceof KeyPair) {
-                    privKey = (DSAPrivateKey) (((KeyPair) val).getPrivate());
-                    pubKey = (DSAPublicKey) (((KeyPair) val).getPublic());
+                    PrivateKey privateKey = ((KeyPair) val).getPrivate();
+                    PublicKey publicKey = ((KeyPair) val).getPublic();
+                    if (privateKey instanceof DSAPrivateKey) {
+                        privKey = (DSAPrivateKey) privateKey;
+                        pubKey = (DSAPublicKey) publicKey;
+                    } else {
+                        throw newDSAError(getRuntime(), "Neither PUB key nor PRIV key:");
+                    }
                 } else if (val instanceof DSAPrivateKey) {
                     privKey = (DSAPrivateKey) val;
                 } else if (val instanceof DSAPublicKey) {

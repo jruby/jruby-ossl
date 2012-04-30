@@ -279,8 +279,14 @@ public class PKeyRSA extends PKey {
                 }
 
                 if (val instanceof KeyPair) {
-                    privKey = (RSAPrivateCrtKey) (((KeyPair) val).getPrivate());
-                    pubKey = (RSAPublicKey) (((KeyPair) val).getPublic());
+                    PrivateKey privateKey = ((KeyPair) val).getPrivate();
+                    PublicKey publicKey = ((KeyPair) val).getPublic();
+                    if (privateKey instanceof RSAPrivateCrtKey) {
+                        privKey = (RSAPrivateCrtKey) privateKey;
+                        pubKey = (RSAPublicKey) publicKey;
+                    } else {
+                        throw newRSAError(getRuntime(), "Neither PUB key nor PRIV key:");
+                    }
                 } else if (val instanceof RSAPrivateCrtKey) {
                     privKey = (RSAPrivateCrtKey) val;
                     try {
