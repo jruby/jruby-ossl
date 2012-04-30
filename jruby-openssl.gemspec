@@ -2,11 +2,11 @@
 
 Gem::Specification.new do |s|
   s.name = "jruby-openssl"
-  s.version = "0.7.6"
+  s.version = "0.7.7.dev"
 
-  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
+  s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
   s.authors = ["Ola Bini and JRuby contributors"]
-  s.date = "2012-02-15"
+  s.date = "2012-04-30"
   s.description = "JRuby-OpenSSL is an add-on gem for JRuby that emulates the Ruby OpenSSL native library."
   s.email = "ola.bini@gmail.com"
   s.extra_rdoc_files = ["History.txt", "Manifest.txt", "README.txt", "License.txt"]
@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.rdoc_options = ["--main", "README.txt"]
   s.require_paths = ["lib/shared"]
   s.rubyforge_project = "jruby-extras"
-  s.rubygems_version = "1.8.15"
+  s.rubygems_version = "1.8.24"
   s.summary = "OpenSSL add-on for JRuby"
   s.test_files = ["test/test_all.rb"]
 
@@ -24,10 +24,13 @@ Gem::Specification.new do |s|
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
       s.add_runtime_dependency(%q<bouncy-castle-java>, [">= 1.5.0146.1"])
+      s.add_development_dependency(%q<rdoc>, ["~> 3.10"])
     else
       s.add_dependency(%q<bouncy-castle-java>, [">= 1.5.0146.1"])
+      s.add_dependency(%q<rdoc>, ["~> 3.10"])
     end
   else
     s.add_dependency(%q<bouncy-castle-java>, [">= 1.5.0146.1"])
+    s.add_dependency(%q<rdoc>, ["~> 3.10"])
   end
 end
