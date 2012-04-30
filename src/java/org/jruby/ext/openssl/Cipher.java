@@ -647,6 +647,8 @@ public class Cipher extends RubyObject {
             } else {
                 this.ciph.init(encryptMode ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE, new SimpleSecretKey(realName.split("/")[0], this.key));
             }
+        } catch (java.security.InvalidKeyException ike) {
+            throw newCipherError(getRuntime(), ike.getMessage() + ": possibly you need to install Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files for your JRE");
         } catch (Exception e) {
             if (DEBUG) {
                 e.printStackTrace();
