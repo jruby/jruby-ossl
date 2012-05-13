@@ -28,6 +28,10 @@
  ***** END LICENSE BLOCK *****/
 package org.jruby.ext.openssl.x509store;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.io.BufferedWriter;
@@ -56,9 +60,11 @@ import javax.crypto.spec.DHParameterSpec;
 
 import org.jruby.ext.openssl.OpenSSLReal;
 import org.jruby.ext.openssl.PKCS10CertificationRequestExt;
+import org.jruby.ext.openssl.SimpleSecretKey;
 
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1OutputStream;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -71,15 +77,30 @@ import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DERObject;
 import org.bouncycastle.asn1.x509.DSAParameter;
 import org.bouncycastle.asn1.cms.ContentInfo;
+import org.bouncycastle.asn1.pkcs.EncryptionScheme;
+import org.bouncycastle.asn1.pkcs.PBES2Parameters;
+import org.bouncycastle.asn1.pkcs.PBKDF2Params;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.asn1.pkcs.RC2CBCParameter;
 import org.bouncycastle.asn1.pkcs.RSAPrivateKeyStructure;
 import org.bouncycastle.asn1.x509.RSAPublicKeyStructure;
+import org.bouncycastle.crypto.BlockCipher;
+import org.bouncycastle.crypto.BufferedBlockCipher;
+import org.bouncycastle.crypto.CipherParameters;
+import org.bouncycastle.crypto.DataLengthException;
+import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.PBEParametersGenerator;
 import org.bouncycastle.crypto.digests.SHA1Digest;
+import org.bouncycastle.crypto.engines.DESedeEngine;
+import org.bouncycastle.crypto.engines.RC2Engine;
 import org.bouncycastle.crypto.generators.OpenSSLPBEParametersGenerator;
 import org.bouncycastle.crypto.generators.PKCS12ParametersGenerator;
 import org.bouncycastle.crypto.generators.PKCS5S2ParametersGenerator;
+import org.bouncycastle.crypto.modes.CBCBlockCipher;
+import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 import org.bouncycastle.cms.CMSSignedData;
@@ -97,6 +118,7 @@ import java.security.spec.DSAPrivateKeySpec;
 import java.security.spec.DSAPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -306,17 +328,12 @@ public class PEMInputOutput {
                     org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo eIn = new org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo(
                             (ASN1Sequence) new ASN1InputStream(bytes).readObject());
                     AlgorithmIdentifier algId = eIn.getEncryptionAlgorithm();
-                    String algorithm = ASN1Registry.o2a(algId.getObjectId());
-                    algorithm = (algorithm.split("-"))[0];
-                    PKCS12PBEParams pbeParams = new PKCS12PBEParams((ASN1Sequence) algId.getParameters());
-                    SecretKeyFactory fact = OpenSSLReal.getSecretKeyFactoryBC(algorithm); // need to use BC for PKCS12PBEParams.
-                    PBEKeySpec pbeSpec = new PBEKeySpec(password);
-                    SecretKey key = fact.generateSecret(pbeSpec);
-                    PBEParameterSpec defParams = new PBEParameterSpec(pbeParams.getIV(), pbeParams.getIterations().intValue());
-                    Cipher cipher = OpenSSLReal.getCipherBC(algorithm); // need to use BC for PBEParameterSpec.
-                    cipher.init(Cipher.UNWRAP_MODE, key, defParams);
-                    // wrappedKeyAlgorithm is unknown ("")
-                    PrivateKey privKey = (PrivateKey) cipher.unwrap(eIn.getEncryptedData(), "", Cipher.PRIVATE_KEY);
+                    PrivateKey privKey;
+                    if (algId.getAlgorithm().toString().equals("1.2.840.113549.1.5.13")) { // PBES2
+                        privKey = derivePrivateKeyPBES2(eIn, algId, password);
+                    } else {
+                        privKey = derivePrivateKeyPBES1(eIn, algId, password);
+                    }
                     return new KeyPair(null, privKey);
                 } catch (Exception e) {
                     throw new IOException("problem creating private key: " + e.toString());
@@ -324,6 +341,66 @@ public class PEMInputOutput {
             }
         }
         return null;
+    }
+
+    private static PrivateKey derivePrivateKeyPBES1(org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo eIn, AlgorithmIdentifier algId, char[] password)
+            throws GeneralSecurityException {
+        PKCS12PBEParams pkcs12Params = new PKCS12PBEParams((ASN1Sequence) algId.getParameters());
+        PBEParameterSpec pbeParams = new PBEParameterSpec(pkcs12Params.getIV(), pkcs12Params.getIterations().intValue());
+
+        String algorithm = ASN1Registry.o2a(algId.getAlgorithm());
+        algorithm = (algorithm.split("-"))[0];
+        Cipher cipher = OpenSSLReal.getCipherBC(algorithm); // need to use BC for PBEParameterSpec.
+
+        SecretKeyFactory fact = OpenSSLReal.getSecretKeyFactoryBC(algorithm); // need to use BC for PKCS12PBEParams.
+        SecretKey key = fact.generateSecret(new PBEKeySpec(password));
+
+        cipher.init(Cipher.UNWRAP_MODE, key, pbeParams);
+        // wrappedKeyAlgorithm is unknown ("")
+        return (PrivateKey) cipher.unwrap(eIn.getEncryptedData(), "", Cipher.PRIVATE_KEY);
+    }
+
+    private static PrivateKey derivePrivateKeyPBES2(org.bouncycastle.asn1.pkcs.EncryptedPrivateKeyInfo eIn, AlgorithmIdentifier algId, char[] password)
+            throws GeneralSecurityException, InvalidCipherTextException {
+        PBES2Parameters pbeParams = new PBES2Parameters((ASN1Sequence) algId.getParameters());
+        CipherParameters cipherParams = extractPBES2CipherParams(password, pbeParams);
+
+        EncryptionScheme scheme = pbeParams.getEncryptionScheme();
+        BufferedBlockCipher cipher;
+        if (scheme.getAlgorithm().equals(PKCSObjectIdentifiers.RC2_CBC)) {
+            RC2CBCParameter rc2Params = new RC2CBCParameter((ASN1Sequence) scheme.getObject());
+            byte[] iv = rc2Params.getIV();
+            CipherParameters param = new ParametersWithIV(cipherParams, iv);
+            cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new RC2Engine()));
+            cipher.init(false, param);
+        } else {
+            byte[] iv = ((ASN1OctetString) scheme.getObject()).getOctets();
+            CipherParameters param = new ParametersWithIV(cipherParams, iv);
+            cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new DESedeEngine()));
+            cipher.init(false, param);
+        }
+
+        byte[] data = eIn.getEncryptedData();
+        byte[] out = new byte[cipher.getOutputSize(data.length)];
+        int len = cipher.processBytes(data, 0, data.length, out, 0);
+        len += cipher.doFinal(out, len);
+        byte[] pkcs8 = new byte[len];
+        System.arraycopy(out, 0, pkcs8, 0, len);
+        KeyFactory fact = KeyFactory.getInstance("RSA"); // It seems to work for both RSA and DSA.
+        return fact.generatePrivate(new PKCS8EncodedKeySpec(pkcs8));
+    }
+
+    private static CipherParameters extractPBES2CipherParams(char[] password, PBES2Parameters pbeParams) {
+        PBKDF2Params pbkdfParams = PBKDF2Params.getInstance(pbeParams.getKeyDerivationFunc().getParameters());
+        int keySize = 192;
+        if (pbkdfParams.getKeyLength() != null) {
+            keySize = pbkdfParams.getKeyLength().intValue() * 8;
+        }
+        int iterationCount = pbkdfParams.getIterationCount().intValue();
+        byte[] salt = pbkdfParams.getSalt();
+        PBEParametersGenerator generator = new PKCS5S2ParametersGenerator();
+        generator.init(PBEParametersGenerator.PKCS5PasswordToBytes(password), salt, iterationCount);
+        return generator.generateDerivedParameters(keySize);
     }
 
     // PEM_read_bio_PUBKEY

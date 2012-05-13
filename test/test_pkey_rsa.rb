@@ -103,6 +103,37 @@ __EOP__
     end
   end
 
+  # JRUBY-6622
+  def test_load_pkey_rsa_enc_pbes2
+    # password is 'password'
+    pem = <<__EOP__
+-----BEGIN ENCRYPTED PRIVATE KEY-----
+MIICxjBABgkqhkiG9w0BBQ0wMzAbBgkqhkiG9w0BBQwwDgQIaYgszaX31yECAggA
+MBQGCCqGSIb3DQMHBAij3LmXGCmB8wSCAoDcLnAeXiBugFmwXd3wrvznlKvwHkP2
+76lIrTiwDRZOLuaKHdBgNQDJ3NP+UPGdM7YEyNqdfdbN/3cLd0qfzeobuU+c/lGI
+aE5pAwlWm5lK9boTsJnCqaDFEgJz2khZF+7RqYQVSG7MTM9SnIRNScLKjhTk7AaF
+PD2qSnMVtixw/VfwdzhUknuwP2monLY8Ip/l9abicmBp9HGQ+0WA/nKQLQ/egWG0
+S6rrXsH91exaxL7gcZL8jF+Ub7VDt4Hvx1RB/3r12k7AQGsK+TyIrKQFUllSnSq/
+eFwBqpLSKWYyGJZlkJzW5MTHyeXqpTvav6T7e2mKZ4GG/a8THoWxLLrKeODFFoWn
+LQNOQZ2Axa15E0TdeSkaumsOWPJm5DgFxf/1cRNxhJqYdX68QjWXeNS2SXPZBwlx
+HCaAYo6OoCHZQ7O/3MpiT3rUAk30fbSa09VSvrenYi5s5lPieKFt3QZI44uGvi9j
+MXyN4fkjzzXasE0xZzf6bQLS6aM+ucyQ8CMv0oAgAndoeKu10Ha4KmdT5dZf3LHj
+BUXZDYp3Q5UF6ePyxKBdAqJf4PNKl4+VehYJ4eQ6CIQiSxSuWv9T+2b90PyDuRkz
+sB1XZpeDD6dhQuU9GjdwCTyatITcm97ZkbdZEoQiDpiWQB4parTvKLKbD4AbP/+E
+08btPFgXNocFUjLb5lB4Y/6RqaQxY7VoaFOPOfPpWPXF26X9Y5y3y+ymXdYFpkhp
+wGBGScH+dutQWHoRV1TWUjv9a7CuzUxCX2Hrjooz1BtOnG8CoPA7K43+kvire5jN
+529p6u+FtUZPUWLm5L5WHBUECEtJGw3ImjosX1HtoM/rW34XDmMHuN0u
+-----END ENCRYPTED PRIVATE KEY-----
+__EOP__
+    assert_nothing_raised do
+      pkey = OpenSSL::PKey::RSA.new(pem, 'password')
+      pkey2 = OpenSSL::PKey::RSA.new(pkey.to_pem)
+      assert_equal(pkey.n, pkey2.n)
+      assert_equal(pkey.e, pkey2.e)
+      assert_equal(pkey.d, pkey2.d)
+    end
+  end
+
   # jruby-openssl/0.6 causes NPE
   def test_generate_pkey_rsa_empty
     assert_nothing_raised do
