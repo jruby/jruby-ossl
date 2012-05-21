@@ -1,3 +1,13 @@
+== 0.7.7
+
+This release includes bug fixes.
+
+ - JRUBY-6622: Support loading encrypted RSA key with PBES2
+ - JRUBY-4326: Confusing (and late) OpenSSL error message
+ - JRUBY-6579: Avoid ClassCastException for public key loading
+ - JRUBY-6515: sending UTF-8 data over SSL can hang with openssl
+ - Update tests to sync with CRuby ruby_1_9_3
+
 == 0.7.6
 
 This release includes initial implementation of PKCS12 by Owen Ou.
