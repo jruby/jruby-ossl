@@ -255,6 +255,9 @@ public class SSLSocket extends RubyObject {
     // temporarily. SSLSocket requires wrapping IO to be selectable so it should
     // be OK to set configureBlocking(false) permanently.
     private void waitSelect(int operations) throws IOException {
+      waitSelect(operations, false);
+    }
+    private void waitSelect(int operations, boolean nonBlock) throws IOException {
         if (!(io.getChannel() instanceof SelectableChannel)) {
             return;
         }
@@ -272,10 +275,29 @@ public class SSLSocket extends RubyObject {
             key = selectable.register(selector, operations);
 
             thread.beforeBlockingCall();
-            int result = selector.select();
-
-            // check for thread events, in case we've been woken up to die
-            thread.pollThreadEvents();
+            int result;
+            if (nonBlock) {
+                result = selector.selectNow();
+                if (result == 0) {
+                  if ((operations & SelectionKey.OP_READ) != 0 && (operations & SelectionKey.OP_WRITE) != 0) {
+                    if (key.isReadable()) {
+                      writeWouldBlock();     
+                    } else if (key.isWritable()) {
+                      readWouldBlock();
+                    } else { //neither, pick one
+                      readWouldBlock();
+                    }
+                  } else if ((operations & SelectionKey.OP_READ) != 0) {
+                    readWouldBlock();
+                  } else if ((operations & SelectionKey.OP_WRITE) != 0) {
+                    writeWouldBlock();     
+                  }
+                }
+            } else {
+                result = selector.select();
+                // check for thread events, in case we've been woken up to die
+                thread.pollThreadEvents();
+            }
 
             if (result == 1) {
                 Set<SelectionKey> keySet = selector.selectedKeys();
@@ -316,6 +338,20 @@ public class SSLSocket extends RubyObject {
             // clear thread state from blocking call
             thread.afterBlockingCall();
         }
+    }
+
+    private void readWouldBlock() {
+        Ruby runtime = getRuntime();
+        RaiseException eagain = newSSLError(runtime, "read would block");
+        eagain.getException().extend(new IRubyObject[] {runtime.getIO().getConstant("WaitReadable")});
+        throw eagain;
+    }
+
+    private void writeWouldBlock() {
+        Ruby runtime = getRuntime();
+        RaiseException eagain = newSSLError(runtime, "write would block");
+        eagain.getException().extend(new IRubyObject[] {runtime.getIO().getConstant("WaitWritable")});
+        throw eagain;
     }
 
     private void doHandshake() throws IOException {
@@ -526,14 +562,7 @@ public class SSLSocket extends RubyObject {
         try {
             // So we need to make sure to only block when there is no data left to process
             if (engine == null || !(peerAppData.hasRemaining() || peerNetData.position() > 0)) {
-                if (nonBlock) {
-                    RaiseException re = newSSLError(runtime, "read would raise");
-                    IRubyObject waitReadable = runtime.getIO().getConstant("WaitReadable");
-                    re.getException().extend(new IRubyObject[] {waitReadable});
-                    throw re;
-                } else {
-                    waitSelect(SelectionKey.OP_READ);
-                }
+                waitSelect(SelectionKey.OP_READ, nonBlock);
             }
 
             ByteBuffer dst = ByteBuffer.allocate(len);
@@ -573,14 +602,7 @@ public class SSLSocket extends RubyObject {
         Ruby runtime = context.getRuntime();
         try {
             checkClosed();
-            if (nonBlock) {
-                RaiseException re = newSSLError(runtime, "write would raise");
-                IRubyObject waitWritable = runtime.getIO().getConstant("WaitWritable");
-                re.getException().extend(new IRubyObject[] {waitWritable});
-                throw re;
-            } else {
-                waitSelect(SelectionKey.OP_WRITE);
-            }
+            waitSelect(SelectionKey.OP_WRITE, nonBlock);
             byte[] bls = arg.convertToString().getBytes();
             ByteBuffer b1 = ByteBuffer.wrap(bls);
             int written;
