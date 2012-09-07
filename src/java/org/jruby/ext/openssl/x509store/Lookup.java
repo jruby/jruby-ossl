@@ -52,6 +52,11 @@ import org.jruby.util.io.FileExistsException;
 import org.jruby.util.io.InvalidValueException;
 import org.jruby.util.io.ModeFlags;
 
+
+import java.security.KeyStore;
+import java.security.cert.PKIXParameters;
+import java.security.cert.TrustAnchor;
+
 /**
  * X509_LOOKUP
  *
@@ -264,6 +269,31 @@ public class Lookup {
         return count; 
     }
 
+    public int loadDefaultJavaCACertsFile() throws Exception {
+        int count = 0;
+        String certsFile = System.getProperty("java.home") + "/lib/security/cacerts".replace('/', File.separatorChar);
+        FileInputStream fin = new FileInputStream(certsFile);
+        try {
+            KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+            // we pass a null password, as the cacerts file isn't password protected
+            keystore.load(fin, null);
+            PKIXParameters params = new PKIXParameters(keystore);
+            for(TrustAnchor trustAnchor : params.getTrustAnchors()) {
+                X509Certificate certificate = trustAnchor.getTrustedCert();
+                store.addCertificate(certificate);
+                count++;
+            }    
+        } finally {
+            if (fin != null) {
+                try {
+                    fin.close();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        return count;
+    }
+
     private InputStream wrapJRubyNormalizedInputStream(String file) throws IOException {
         Ruby runtime = Ruby.getGlobalRuntime();
         try {
@@ -404,7 +434,7 @@ public class Lookup {
                     if (file != null) {
                         ok = ctx.loadCertificateOrCRLFile(file, X509Utils.X509_FILETYPE_PEM) != 0 ? 1 : 0;
                     } else {
-                        ok = (ctx.loadCertificateOrCRLFile(X509Utils.getDefaultCertificateFile(), X509Utils.X509_FILETYPE_PEM) != 0) ? 1 : 0;
+                        ok = (ctx.loadDefaultJavaCACertsFile() != 0) ? 1: 0;
                     }
                     if (ok == 0) {
                         X509Error.addError(X509Utils.X509_R_LOADING_DEFAULTS);
