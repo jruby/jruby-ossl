@@ -160,6 +160,9 @@ public class X509Store extends RubyObject {
             store.loadLocations(file, null);
             String path = (String)env.get(getRuntime().newString(X509Utils.getDefaultCertificateDirectoryEnvironment()));
             store.loadLocations(null, path);
+            if (file == null && path == null) { 
+                store.setDefaultPaths();
+            }
         }
         catch(Exception e) {
             raise("setting default path failed: " + e.getMessage());
