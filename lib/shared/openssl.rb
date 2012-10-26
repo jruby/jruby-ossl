@@ -34,25 +34,9 @@ if defined? JRUBY_VERSION
       File.identical?( __FILE__, File.join( p, 'openssl.rb' ) )
     end
 
-    # Next load what jruby 1.7+ (1.9|1.8)/openssl.rb should be
-    # loading. Note this presents a maintenance issue with any future
-    # changes to jruby's openssl.rb. But hopefully this jruby-openssl
-    # gem will be long forgotten before any such changes occur.
-
-    require 'jopenssl'
-    require 'openssl/bn'
-    require 'openssl/cipher'
-    require 'openssl/config'
-    require 'openssl/digest'
-
-    if RUBY_VERSION >= '1.9.0'
-      require 'openssl/ssl-internal'
-      require 'openssl/x509-internal'
-    else
-      require 'openssl/pkcs7'
-      require 'openssl/ssl'
-      require 'openssl/x509'
-    end
+    # Next load jruby 1.7+ (1.9|1.8)/openssl.rb using the non-gem
+    # extended LOAD_PATH.
+    load 'openssl.rb'
 
   end
 
