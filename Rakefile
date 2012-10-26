@@ -1,7 +1,8 @@
 require 'rake'
 require 'rake/testtask'
 
-MANIFEST = FileList["Rakefile", "History.txt", "Manifest.txt", "README.txt", "License.txt", "lib/shared/jopenssl.jar", "lib/**/*", "test/**/*"]
+MANIFEST = FileList["Rakefile", "History.txt", "Manifest.txt", "README.txt", "License.txt", "lib/shared/jopenssl.jar", "lib/**/*", "test/**/*"].
+           reject { |f| File.directory? f }
 BC_JARS = FileList["build_lib/bc*.jar"]
 
 task :default => [:java_compile, :test]
