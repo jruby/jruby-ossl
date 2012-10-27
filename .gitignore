@@ -6,6 +6,6 @@ pkg
 Manifest.txt
 build.properties
 nbproject/private
-lib/jopenssl.jar
+lib/shared/jopenssl.jar
 *.orig
 *.rej
