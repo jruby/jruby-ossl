@@ -11,7 +11,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: buffering.rb 28004 2010-05-24 23:58:49Z shyouhei $
+  $Id$
 =end
 
 module OpenSSL

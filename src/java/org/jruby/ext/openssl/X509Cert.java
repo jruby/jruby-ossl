@@ -76,6 +76,7 @@ import org.jruby.util.ByteList;
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
+@SuppressWarnings("deprecation")
 public class X509Cert extends RubyObject {
     private static final long serialVersionUID = 5626619026058595493L;
 
@@ -139,7 +140,7 @@ public class X509Cert extends RubyObject {
 
     @JRubyMethod(name="initialize", optional = 1, frame=true)
     public IRubyObject initialize(ThreadContext context, IRubyObject[] args, Block unusedBlock) {
-        Ruby runtime = context.getRuntime();
+        Ruby runtime = context.runtime;
         extensions = new ArrayList<IRubyObject>();
         if(args.length == 0) {
             return this;
@@ -401,7 +402,7 @@ public class X509Cert extends RubyObject {
 
     @JRubyMethod
     public IRubyObject sign(ThreadContext context, final IRubyObject key, IRubyObject digest) {
-        Ruby runtime = context.getRuntime();
+        Ruby runtime = context.runtime;
 
         // Have to obey some artificial constraints of the OpenSSL implementation. Stupid.
         String keyAlg = ((PKey)key).getAlgorithm();

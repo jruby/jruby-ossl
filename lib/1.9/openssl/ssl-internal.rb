@@ -11,7 +11,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: ssl-internal.rb 29189 2010-09-06 01:53:00Z nahi $
+  $Id$
 =end
 
 require "openssl/buffering"

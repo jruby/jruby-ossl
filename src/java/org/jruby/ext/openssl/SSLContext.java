@@ -45,6 +45,7 @@ import org.jruby.RubyModule;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
+import org.jruby.RubySymbol;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.common.IRubyWarnings.ID;
 import org.jruby.exceptions.RaiseException;
@@ -67,6 +68,7 @@ import org.jruby.runtime.builtin.IRubyObject;
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
+@SuppressWarnings("deprecation")
 public class SSLContext extends RubyObject {
     private static final long serialVersionUID = -6203496135962974777L;
 
@@ -123,7 +125,7 @@ public class SSLContext extends RubyObject {
     public static void createSSLContext(Ruby runtime, RubyModule mSSL) {
         RubyClass cSSLContext = mSSL.defineClassUnder("SSLContext",runtime.getObject(),SSLCONTEXT_ALLOCATOR);
         for(int i=0;i<ctx_attrs.length;i++) {
-            cSSLContext.attr_accessor(runtime.getCurrentContext(),new IRubyObject[]{runtime.newSymbol(ctx_attrs[i])});
+            cSSLContext.addReadWriteAttribute(runtime.getCurrentContext(), ctx_attrs[i]);
         }
 
         cSSLContext.defineAnnotatedMethods(SSLContext.class);
@@ -339,8 +341,14 @@ public class SSLContext extends RubyObject {
 
     @JRubyMethod(name = "ssl_version=")
     public IRubyObject set_ssl_version(IRubyObject val) {
-        RubyString str = val.convertToString();
-        String given = str.toString();
+        String given;
+
+        if (val instanceof RubyString) {
+            RubyString str = val.convertToString();
+            given = str.toString();
+        } else {
+            given = val.toString();
+        }
         String mapped = SSL_VERSION_OSSL2JSSE.get(given);
         if (mapped == null) {
             throw newSSLError(getRuntime(), String.format("unknown SSL method `%s'.", given));
@@ -353,7 +361,7 @@ public class SSLContext extends RubyObject {
         if (given.endsWith("_server")) {
             protocolForClient = false;
         }
-        return str;
+        return val;
     }
 
     boolean isProtocolForServer() {
@@ -515,7 +523,7 @@ public class SSLContext extends RubyObject {
             public IRubyObject call(ThreadContext context, IRubyObject[] args, Block block) {
                 Utils.checkKind(getRuntime(), args[0], "OpenSSL::X509::Certificate");
                 result.add((X509Cert) args[0]);
-                return context.getRuntime().getNil();
+                return context.runtime.getNil();
             }
         }, ctx));
         return result.toArray(new X509Cert[0]);

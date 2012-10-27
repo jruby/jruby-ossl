@@ -126,6 +126,7 @@ import org.jruby.ext.openssl.impl.CipherSpec;
  *
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
+@SuppressWarnings("deprecation")
 public class PEMInputOutput {
     public static final String BEF = "-----";
     public static final String AFT = "-----";
@@ -878,10 +879,6 @@ public class PEMInputOutput {
 
     private static void writePemEncrypted(BufferedWriter out, String pemHeader, byte[] encoding, CipherSpec cipher, char[] passwd) throws IOException {
         Cipher c = cipher.getCipher();
-        String algoBase = c.getAlgorithm();
-        if (algoBase.indexOf('/') != -1) {
-            algoBase = algoBase.split("/")[0];
-        }
         byte[] iv = new byte[c.getBlockSize()];
         random.nextBytes(iv);
         byte[] salt = new byte[8];
@@ -889,7 +886,7 @@ public class PEMInputOutput {
         OpenSSLPBEParametersGenerator pGen = new OpenSSLPBEParametersGenerator();
         pGen.init(PBEParametersGenerator.PKCS5PasswordToBytes(passwd), salt);
         KeyParameter param = (KeyParameter) pGen.generateDerivedParameters(cipher.getKeyLenInBits());
-        SecretKey secretKey = new SecretKeySpec(param.getKey(), algoBase);
+        SecretKey secretKey = new SecretKeySpec(param.getKey(), org.jruby.ext.openssl.Cipher.Algorithm.getAlgorithmBase(c));
         byte[] encData = null;
         try {
             c.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));

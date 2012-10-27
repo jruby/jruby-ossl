@@ -78,6 +78,7 @@ import org.jruby.util.ByteList;
 /**
  * @author <a href="mailto:ola.bini@ki.se">Ola Bini</a>
  */
+@SuppressWarnings("deprecation")
 public class ASN1 {
     private static Map<Ruby, Map<String, DERObjectIdentifier>> SYM_TO_OID = new IdentityHashMap<Ruby, Map<String, DERObjectIdentifier>>();
     private static Map<Ruby, Map<DERObjectIdentifier, String>> OID_TO_SYM = new IdentityHashMap<Ruby, Map<DERObjectIdentifier, String>>();
@@ -275,16 +276,18 @@ public class ASN1 {
         }
 
         RubyClass cASN1Data = mASN1.defineClassUnder("ASN1Data",runtime.getObject(), ASN1Data.ALLOCATOR);
-        cASN1Data.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newString("value"),runtime.newString("tag"),runtime.newString("tag_class")});
+        cASN1Data.addReadWriteAttribute(runtime.getCurrentContext(), "value");
+        cASN1Data.addReadWriteAttribute(runtime.getCurrentContext(), "tag");
+        cASN1Data.addReadWriteAttribute(runtime.getCurrentContext(), "tag_class");
         cASN1Data.defineAnnotatedMethods(ASN1Data.class);
 
         RubyClass cASN1Primitive = mASN1.defineClassUnder("Primitive",cASN1Data, ASN1Primitive.ALLOCATOR);
-        cASN1Primitive.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newString("tagging")});
+        cASN1Primitive.addReadWriteAttribute(runtime.getCurrentContext(), "tagging");
         cASN1Primitive.defineAnnotatedMethods(ASN1Primitive.class);
 
         RubyClass cASN1Constructive = mASN1.defineClassUnder("Constructive",cASN1Data,ASN1Constructive.ALLOCATOR);
         cASN1Constructive.includeModule(runtime.getModule("Enumerable"));
-        cASN1Constructive.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newString("tagging")});
+        cASN1Constructive.addReadWriteAttribute(runtime.getCurrentContext(), "tagging");
         cASN1Constructive.defineAnnotatedMethods(ASN1Constructive.class);
 
         mASN1.defineClassUnder("Boolean",cASN1Primitive,cASN1Primitive.getAllocator());
@@ -315,7 +318,7 @@ public class ASN1 {
 
         cASN1ObjectId.defineAnnotatedMethods(ObjectId.class);
 
-        cASN1BitString.attr_accessor(runtime.getCurrentContext(), new IRubyObject[]{runtime.newSymbol("unused_bits")});
+        cASN1BitString.addReadWriteAttribute(runtime.getCurrentContext(), "unused_bits");
     }
 
 
